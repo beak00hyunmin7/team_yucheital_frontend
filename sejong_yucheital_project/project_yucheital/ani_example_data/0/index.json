@@ -1,0 +1,204 @@
+{
+  "series": [
+    {
+      "url": "0",
+      "timeStep": 0.5
+    },
+    {
+      "url": "1",
+      "timeStep": 1.0
+    },
+    {
+      "url": "2",
+      "timeStep": 1.5
+    },
+    {
+      "url": "3",
+      "timeStep": 2.0
+    },
+    {
+      "url": "4",
+      "timeStep": 2.5
+    },
+    {
+      "url": "5",
+      "timeStep": 3.0
+    },
+    {
+      "url": "6",
+      "timeStep": 3.5
+    },
+    {
+      "url": "7",
+      "timeStep": 4.0
+    },
+    {
+      "url": "8",
+      "timeStep": 4.5
+    },
+    {
+      "url": "9",
+      "timeStep": 5.0
+    },
+    {
+      "url": "10",
+      "timeStep": 5.5
+    },
+    {
+      "url": "11",
+      "timeStep": 6.0
+    },
+    {
+      "url": "12",
+      "timeStep": 6.5
+    },
+    {
+      "url": "13",
+      "timeStep": 7.0
+    },
+    {
+      "url": "14",
+      "timeStep": 7.5
+    },
+    {
+      "url": "15",
+      "timeStep": 8.0
+    },
+    {
+      "url": "16",
+      "timeStep": 8.5
+    },
+    {
+      "url": "17",
+      "timeStep": 9.0
+    },
+    {
+      "url": "18",
+      "timeStep": 9.5
+    },
+    {
+      "url": "19",
+      "timeStep": 10.0
+    },
+    {
+      "url": "20",
+      "timeStep": 10.5
+    },
+    {
+      "url": "21",
+      "timeStep": 11.0
+    },
+    {
+      "url": "22",
+      "timeStep": 11.5
+    },
+    {
+      "url": "23",
+      "timeStep": 12.0
+    },
+    {
+      "url": "24",
+      "timeStep": 12.5
+    },
+    {
+      "url": "25",
+      "timeStep": 13.0
+    },
+    {
+      "url": "26",
+      "timeStep": 13.5
+    },
+    {
+      "url": "27",
+      "timeStep": 14.0
+    },
+    {
+      "url": "28",
+      "timeStep": 14.5
+    },
+    {
+      "url": "29",
+      "timeStep": 15.0
+    },
+    {
+      "url": "30",
+      "timeStep": 15.5
+    },
+    {
+      "url": "31",
+      "timeStep": 16.0
+    },
+    {
+      "url": "32",
+      "timeStep": 16.5
+    },
+    {
+      "url": "33",
+      "timeStep": 17.0
+    },
+    {
+      "url": "34",
+      "timeStep": 17.5
+    },
+    {
+      "url": "35",
+      "timeStep": 18.0
+    },
+    {
+      "url": "36",
+      "timeStep": 18.5
+    },
+    {
+      "url": "37",
+      "timeStep": 19.0
+    },
+    {
+      "url": "38",
+      "timeStep": 19.5
+    },
+    {
+      "url": "39",
+      "timeStep": 20.0
+    },
+    {
+      "url": "40",
+      "timeStep": 20.5
+    },
+    {
+      "url": "41",
+      "timeStep": 21.0
+    },
+    {
+      "url": "42",
+      "timeStep": 21.5
+    },
+    {
+      "url": "43",
+      "timeStep": 22.0
+    },
+    {
+      "url": "44",
+      "timeStep": 22.5
+    },
+    {
+      "url": "45",
+      "timeStep": 23.0
+    },
+    {
+      "url": "46",
+      "timeStep": 23.5
+    },
+    {
+      "url": "47",
+      "timeStep": 24.0
+    },
+    {
+      "url": "48",
+      "timeStep": 24.5
+    },
+    {
+      "url": "49",
+      "timeStep": 25.0
+    }
+  ]
+}
