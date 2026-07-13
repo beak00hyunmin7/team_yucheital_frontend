@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="c_practice_sejonguniv/c_practice_sejonguniv.vcxproj" Id="76095219-7f1f-4f3c-8f41-bd494d83a3dc" />
+</Solution>

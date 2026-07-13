@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<!-- 이 문서가 최신 HTML5 문법으로 작성되었음을 브라우저에게 알려줌 -->
+<html lang="en">
+  <!-- lang="en": 문서 언어를 영어로 표시 (화면에는 영향 없음) -->
+  <head>
+    <meta charset="utf-8"> <!-- 문자 인코딩을 UTF-8로 설정 (한글 깨짐 방지) -->
+    <title>yucheital</title> <!-- 브라우저 탭에 표시될 제목 -->
+    <style>
+      body { margin: 0; } /* 브라우저 기본 여백 제거 */
+
+      /* 화면 전체를 가로로 나누는 큰 틀: 왼쪽(빈 공간) + 오른쪽(큐브 영역) */
+      .layout {
+        display: flex;       /* 자식 요소들을 가로로 나란히 배치 */
+        width: 100vw;        /* 뷰포트(브라우저 창) 가로 전체 */
+        height: 100vh;        /* 뷰포트 세로 전체 */
+      }
+ 
+      .left-space {
+        flex: 1;         /* 남는 공간을 전부 차지 -> 왼쪽 영역 */
+        padding: 50px;   /* 입력칸이 화면 끝에 붙지 않도록 여백 */
+        box-sizing: border-box;
+      }  
+
+      #three-container {
+        width: 40%;   /* 화면 가로의 40%만 차지 (큐브가 뜨는 영역) */
+        height: 75%; /* .layout 높이만큼 꽉 채움 */
+      }
+
+      #three-container canvas { display: block; } /* three.js가 만든 canvas 하단 여백 제거 */
+    </style>
+
+    <!-- importmap: "three"라는 이름을 실제 CDN 주소로 연결해주는 지도.
+         main.js에서 import * as THREE from 'three' 라고 쓸 수 있게 해줌 -->
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.169.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.169.0/examples/jsm/"
+      }
+    }
+    </script>
+  </head>
+  <body>
+    <div class="layout">
+      <div class="left-space">
+        <!-- 왼쪽: 큐브의 가로/세로/높이를 입력받는 폼 -->
+        <form id="sizeForm">
+          <label for="boxWidth">가로</label>
+          <input type="number" id="boxWidth" name="boxWidth" value="1.5" step="0.1" min="0.1"><br><br>
+
+          <label for="boxHeight">세로</label>
+          <input type="number" id="boxHeight" name="boxHeight" value="1.5" step="0.1" min="0.1"><br><br>
+
+          <label for="boxDepth">높이</label>
+          <input type="number" id="boxDepth" name="boxDepth" value="1.5" step="0.1" min="0.1"><br><br>
+
+          <button type="submit">제출</button>
+        </form>
+      </div>
+      <div id="three-container"></div>   <!-- 오른쪽: main.js가 여기에 큐브 canvas를 넣음 -->
+    </div>
+
+    <!-- type="module": import 문법을 쓸 수 있는 모드로 main.js 실행 -->
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
