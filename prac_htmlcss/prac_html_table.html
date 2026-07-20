@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>테이블</title>
+</head>
+<body>
+    <table border = "1">
+        <caption>테이블 제목</caption>
+        <thead>
+            <tr>
+                <th>번호</th>
+                <th>상품명</th>
+                <th>수량</th>
+                <th>가격</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>1</td>
+                <td>콜라</td>
+                <td>10</td>
+                <td>1500원</td>
+                </tr>
+            <tr>
+                <td>2</td>
+                <td>사이다</td>
+                <td>5</td>
+                <td rowspan = "2">1200원</td>
+            </tr>
+            <tr>
+                <td>3</td>
+                <td>탄산수</td>
+                <td>10</td>
+            </tr>
+        </tbody>
+        <tfoot>
+            <tr>
+                <td>총금액</td>
+                <td colspan = "3">15000원</td>
+            </tr>
+        </tfoot>
+
+    </table>
+    <table border = "1">
+        <caption>성적표</caption>
+        <tr>
+            <th scope = "col">구분</th>
+            <th scope = "col">중간고사</th>
+            <th scope = "col">기말고사</th>
+        </tr>
+        <tr>
+            <th scope = "row">전공</th>
+            <td>A+</td>
+            <td>B+</td>
+        </tr>
+        <tr>
+            <th scope = "row">교양</th>
+            <td>C-</td>
+            <td>B</td>
+        </tr>
+    </table>
+</body>
+</html>

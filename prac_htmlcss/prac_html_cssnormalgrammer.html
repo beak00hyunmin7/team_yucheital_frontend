@@ -1,0 +1,76 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSS 기본 문법</title>
+    <link rel = "stylesheet" href = "./style1.css">
+    <style>
+        /* dt {
+            color: red;
+            background-color: yellow;
+        } */
+        *{ /* 전체 선택자 */
+            color:red;
+        }
+    </style>
+</head>
+<body>
+    <dl>
+        <dt>CSS</dt>
+        <dd>CSS = Cascading Style Sheets</dd>
+    </dl>
+</body>
+</html> -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSS 선택자</title>
+    <style>
+        #h1 {
+            color: red;
+        }
+
+        .class_h1 {
+            color: blue;
+        }
+        [class] {
+            color: green;
+        }
+        [class = "class_h2"]{
+            color: yellow;
+        }
+        .box > h1 {
+            color: purple;
+        }
+        a:link {
+            color: red;
+        }
+        a:visited {
+            color: purple;
+        }
+        input:focus {
+            background-color: black;
+        }
+
+    </style>
+</head>
+<body>
+    <h1 id="h1">h1 tag</h1>
+    <h1 class = "class_h1">h1 tag</h1>
+    <h1 class = "class_h2">h1 tag</h1>
+    <div class = "box">
+        <h1> h1 box tag</h1>
+        <div>
+            <h1>h1 box tag 2</h1>
+        </div>
+    </div>
+
+    <a href = "https://www.naver.com" target="_blank">네이버</a>
+    <br>
+    <input type = "text"/>
+</body>
+</html>
