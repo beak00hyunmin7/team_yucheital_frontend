@@ -1,0 +1,74 @@
+body {
+      margin: 0;
+      font-family: "Segoe UI", "Malgun Gothic", sans-serif;
+      background-color: #f4f6f8;
+      color: #333;
+      padding: 40px;
+      box-sizing: border-box;
+    }
+
+.layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 40px;
+}
+
+.upload-panel {
+  background-color: #ffffff;
+  padding: 30px 40px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.upload-panel h1 {
+  font-size: 18px;
+  margin: 0 0 16px;
+}
+
+.upload-panel input[type="file"] {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  background-color: #fafafa;
+  box-sizing: border-box;
+}
+
+.upload-panel button {
+  padding: 10px 20px;
+  font-size: 15px;
+  background-color: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.upload-panel button:hover {
+  background-color: #357abd;
+}
+
+#container {
+  width: 40%;
+  height: 65vh;
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); 
+}
+
+#top-right-nav button{ /* 로그인/회원가입 버튼 */
+  font-size: 20px;
+  background-color: #ffffff;
+  
+}
+
+#top-right-nav {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+}

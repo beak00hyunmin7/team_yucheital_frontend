@@ -5,29 +5,7 @@
   <head>
     <meta charset="utf-8"> <!-- 문자 인코딩을 UTF-8로 설정 (한글 깨짐 방지) -->
     <title>yucheital</title> <!-- 브라우저 탭에 표시될 제목 -->
-    <style>
-      body { margin: 0; } /* 브라우저 기본 여백 제거 */
-
-      /* 화면 전체를 가로로 나누는 큰 틀: 왼쪽(빈 공간) + 오른쪽(큐브 영역) */
-      .layout {
-        display: flex;       /* 자식 요소들을 가로로 나란히 배치 */
-        width: 100vw;        /* 뷰포트(브라우저 창) 가로 전체 */
-        height: 100vh;        /* 뷰포트 세로 전체 */
-      }
- 
-      .left-space {
-        flex: 1;         /* 남는 공간을 전부 차지 -> 왼쪽 영역 */
-        padding: 50px;   /* 입력칸이 화면 끝에 붙지 않도록 여백 */
-        box-sizing: border-box;
-      }  
-
-      #three-container {
-        width: 40%;   /* 화면 가로의 40%만 차지 (큐브가 뜨는 영역) */
-        height: 75%; /* .layout 높이만큼 꽉 채움 */
-      }
-
-      #three-container canvas { display: block; } /* three.js가 만든 canvas 하단 여백 제거 */
-    </style>
+    <link rel="stylesheet" href="./style.css">
 
     <!-- importmap: "three"라는 이름을 실제 CDN 주소로 연결해주는 지도.
          main.js에서 import * as THREE from 'three' 라고 쓸 수 있게 해줌 -->

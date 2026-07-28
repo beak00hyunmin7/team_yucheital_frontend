@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>vtk.js viewer</title>
+    <!-- vtk.js 라이브러리 로드 -->
+    <script src="https://unpkg.com/vtk.js"></script>
+    <link rel="stylesheet" href = "./style.css">
+</head>
+<body>
+    <div class="layout">
+        <!-- 파일 받기 -->
+        <div class="upload-panel" style = "margin-top : 20px;">
+            <h1> 이미지(지도) 업로드 </h1>
+            <form id="uploadForm" enctype="multipart/form-data">
+                <input type="file" style="padding: 10px 20px; font-size: 20px" id="fileInput" name="file" accept=".jpg, .png, .jpeg" />
+            <h1> 등고선 업로드 </h1>
+                <input type="file" style="padding: 10px 20px; font-size: 20px;" id="mapInput" name="map" accept=".jpg, .png, .jpeg" />
+                <br />
+                <br />
+                <button type="submit" style="padding: 10px 20px; font-size: 20px;">지도 사진 업로드</button>
+            </form>
+        </div>
+
+        <!-- 3D 뷰어가 들어갈 컨테이너 -->
+        <div id="container" style="width: 40%; height: 65vh; background-color: #ffffff; margin-left: auto; margin-top : 20px;"></div>
+    </div>
+
+    <!-- 회원가입/로그인 버튼 영역 -->
+    <div id="top-right-nav">
+        <button onclick="openAuthModal('login')">로그인</button>
+        <button onclick="openAuthModal('signup')">회원가입</button>
+    </div>
+
+    <!-- 로그인/회원가입 모달 -> 다른창으로 넘어가는것처럼 보이는것, 즉 덮여씌운다 느낌 (평소엔 숨겨져 있음) -->
+    <div id="auth-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
+    
+    <div style="background: white; width: 300px; margin: 100px auto; padding: 20px; border-radius: 8px;">
+        
+        <!-- 제목자리. JS로 나중에 "로그인" 또는 "회원가입"으로 바꿔줄 예정. id는-->
+        <h3 id="modal-title"></h3>
+
+        <input type="email" id="email-input" placeholder="이메일" style="width: 100%; margin-bottom: 10px;">
+        <input type="password" id="password-input" placeholder="비밀번호" style="width: 100%; margin-bottom: 10px;">
+
+        <!-- 제출 버튼. id는 "modal-submit-btn", onclick 함수 submitAuth() 연결 -->
+        <button id="modal-submit-btn" onclick="submitAuth()">확인</button>
+
+        <!-- 닫기 버튼. onclick 함수 closeAuthModal() 연결 -->
+        <button onclick="closeAuthModal()">닫기</button>
+
+        <p id="auth-message" style="color: red;"></p>
+    </div>
+    </div>
+
+    <script>
+        const container = document.getElementById('container');
+        
+      // 렌더링을 위한 기본 컨테이너 설정
+        const fullScreenRenderer = vtk.Rendering.Misc.vtkFullScreenRenderWindow.newInstance({
+        rootContainer: container,
+        containerStyle: { width: '100%', height: '100%', position: 'relative' }
+        });
+
+        const renderer = fullScreenRenderer.getRenderer();
+        const renderWindow = fullScreenRenderer.getRenderWindow();
+
+      // .vtkjs 파일을 불러오는 로더 생성
+        const reader = vtk.IO.Core.vtkHttpSceneLoader.newInstance({ renderer: renderer });
+
+
+        reader.setUrl('example');
+
+        // 현재 모달이 로그인 모드인지 회원가입 모드인지 저장해두는 변수
+        let currentAuthMode = null;
+
+        function openAuthModal(mode) {
+        currentAuthMode = mode; // 'login' 또는 'signup'
+
+        const modal = document.getElementById('auth-modal');
+        const title = document.getElementById('modal-title');
+        const message = document.getElementById('auth-message');
+
+        // 입력창, 메시지 초기화
+        document.getElementById('email-input').value = '';
+        document.getElementById('password-input').value = '';
+        message.textContent = '';
+
+        title.textContent = (mode === 'login') ? '로그인' : '회원가입';
+
+        modal.style.display = 'block'; // 숨겨져 있던 모달을 보이게 함
+        }
+
+        function closeAuthModal() {
+        document.getElementById('auth-modal').style.display = 'none';
+        }
+
+        async function submitAuth() {
+        const email = document.getElementById('email-input').value;
+        const password = document.getElementById('password-input').value;
+        const message = document.getElementById('auth-message');
+
+        // 어느 주소로 보낼지 mode에 따라 결정
+        const endpoint = (currentAuthMode === 'login') ? '/login' : '/signup';
+        const url = 'http://127.0.0.1:8000' + endpoint;
+
+        try {
+            const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email, password: password })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+            // 서버가 에러를 던진 경우 (400, 401 등)
+            message.style.color = 'red';
+            message.textContent = data.detail || '오류가 발생했습니다.';
+            return;
+            }
+
+            // 성공
+            message.style.color = 'green';
+            if (currentAuthMode === 'login') {
+            message.textContent = '로그인 성공!';
+            } else {
+            message.textContent = `회원가입 성공! (${data.email})`;
+            }
+
+        } catch (err) {
+            message.style.color = 'red';
+            message.textContent = '서버에 연결할 수 없습니다.';
+            console.error(err);
+        }
+        }
+    </script>
+
+</body>
+</html>
