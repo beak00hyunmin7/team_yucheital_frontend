@@ -264,19 +264,83 @@
 # else:
 #     print("Win")
 
-n = int(input())
-for i in range(1, n + 1):
-    ns, ew = int(input()), int(input())
-    diff = abs(ns - ew)
-    a, b = 60, 60
-    if diff >= 50:
-        adj = 20
-    elif diff >= 20:
-        adj = 10
-    else:
-        adj = 0
-    if ns > ew:
-        a += adj; b -= adj
-    elif ew > ns:
-        b += adj; a -= adj
-    print(f"Intersection {i} : {a} sec, {b} sec")
+# n = int(input())
+# for i in range(1, n + 1):
+#     ns, ew = int(input()), int(input())
+#     diff = abs(ns - ew)
+#     a, b = 60, 60
+#     if diff >= 50:
+#         adj = 20
+#     elif diff >= 20:
+#         adj = 10
+#     else:
+#         adj = 0
+#     if ns > ew:
+#         a += adj; b -= adj
+#     elif ew > ns:
+#         b += adj; a -= adj
+#     print(f"Intersection {i} : {a} sec, {b} sec")
+
+
+# def solution(numbers, hand):
+#     global lst
+#     lst = [[1, 2, 3], [4, 5, 6], [7, 8, 9], ['*', 0, '#']]
+#     ans = ''
+#     left = [3, 0]
+#     right = [3, 2]
+
+#     for x in range(len(numbers)):
+#         for y in range(4):
+#             for z in range(3):
+#                 if lst[y][z] == numbers[x]:
+#                     col, row = y, z
+#                     break
+#         if judge(left, right, col, row, hand) == 1: #오른손이면
+#             ans += 'R'
+#             right = [col, row]
+#         else:
+#             ans += 'L'
+#             left = [col, row]
+
+#     return ans
+
+
+
+# def judge(left, right, col, row, hand):
+#     left_distance = abs(left[0] - col) + abs(left[1] - row)
+#     right_distance = abs(right[0] - col) + abs(right[1] - row)
+
+#     if left_distance > right_distance:
+#         return 1 #오른손
+#     elif left_distance < right_distance:
+#         return 2 #왼손
+#     else:
+#         if hand == "right":
+#             return 1
+#         else:
+#             return 2
+
+
+# def solution(k, m, score):
+#     score.sort(reverse=True)
+#     n = len(score)
+#     total = 0
+#     for i in range(0, n - n % m, m):
+#         box = score[i:i+m]
+#         total += min(box) * m
+#     return total
+
+
+def solution(s):
+    answer = ''
+    s = s.split(",")
+    lst = []
+    for x in s:
+        if x == ',':
+            pass
+        else:
+            lst.append(int(x))
+    answer += str(min(lst)) + ' ' + str(max(lst))
+    return answer
+
+print(solution("-1, -2, -3, -4"))

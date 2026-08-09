@@ -1283,14 +1283,15 @@
 #     elif a == 1 and judge == 0:
 #         print("Waiting End")
 
-lst = []
-N = int(input())
-for x in range(N):
-    a, b, c, d = input().split()
-    b = int(b); c = int(c); d = int(d)
-    total = b + c + d
-    lst.append([a, b, c, d, total])
+# lst = []
+# N = int(input())
+# for x in range(N):
+#     a, b, c, d = input().split()
+#     b = int(b); c = int(c); d = int(d)
+#     total = b + c + d
+#     lst.append([a, b, c, d, total])
 
-lst.sort(key = lambda x:(-x[4], -x[1], -x[2], x[0]))
-for x in lst:
-    print(x[0], x[-1])
+# lst.sort(key = lambda x:(-x[4], -x[1], -x[2], x[0]))
+# for x in lst:
+#     print(x[0], x[-1])
+
