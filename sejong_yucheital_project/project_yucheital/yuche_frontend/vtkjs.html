@@ -135,6 +135,42 @@
             console.error(err);
         }
         }
+
+        document.getElementById('uploadForm').addEventListener('submit', async(e) => { //id가 "uploadform"인 요소를 찾아와서 폼이 제출될때 함수를 실행해라
+            e.preventDefault(); // 브라우저 새로고침하지마!
+            
+            const mapFile = document.getElementById('fileInput').files[0];
+            const contourFile = document.getElementById('mapInput').files[0];
+            
+            if (!mapFile || !contourFile) {
+                alert('지도 사진과 등고선 사진을 모두 업로드해주세요.');
+                return;
+            }
+
+            const formData = new FormData(); //파일 서버로 보내기 위한 함수 -> 파일은 바이너리이기때문에 이 명령어로 파일을 담는?
+            formData.append('map_image', mapFile);
+            formData.append('contour_image', contourFile);
+            for (const [key, value] of formData.entries()) {
+            console.log(key, value);
+            }
+
+            try {
+                const res = await fetch('http://127.0.0.1:8000/docs',{ //백엔드 주소 서버
+                    method: 'POST', //POST 방식으로 보내기
+                    body: formData // formdata를 body에 담아서 보내기
+                });
+
+                if (!res.ok) {
+                    throw new Error('서버 오류 (${res.status})'); //서버가 오류인경우 응답상태와 함께 콘솔로그 띄우기
+                }
+
+                const data = await res.json(); //서버에서 json형식으로 응답받기
+                console.log('서버 응답:', data);
+            } catch (err) { //접속이 안된다면?
+                console.error(err);
+                alert('서버 연결 불가') //에러메시지 보내기
+            }
+        });
     </script>
 
 </body>
