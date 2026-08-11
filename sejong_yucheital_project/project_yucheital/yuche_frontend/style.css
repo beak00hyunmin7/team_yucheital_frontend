@@ -16,6 +16,7 @@ body {
 .upload-panel {
   background-color: #ffffff;
   padding: 30px 40px;
+  width: 900px;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
@@ -63,7 +64,6 @@ body {
 #top-right-nav button{ /* 로그인/회원가입 버튼 */
   font-size: 20px;
   background-color: #ffffff;
-  
 }
 
 #top-right-nav {
@@ -71,4 +71,60 @@ body {
   top: 20px;
   right: 20px;
   z-index: 1000;
+}
+
+.form-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.form-row label {
+  font-size: 14px;
+  font-weight: bold;
+  color: #555;
+}
+
+.upload-panel input[type="number"] {
+  width: 80px;
+  padding: 6px 8px;
+  font-size: 14px;
+  font-weight: bold;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  text-align: right;
+}
+
+.result-panel {
+  background-color: #ffffff;
+  padding: 30px 40px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin-top: 30px;
+}
+
+.viewer-panel {
+  width: 40%;
+  height: 65vh;
+  margin-left: auto;
+  margin-top: 20px;
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.viewer-panel img {
+  width: 90%;
+  height: 90%;
+  object-fit: contain;
+}
+
+#viewer-placeholder {
+  color: #999;
 }

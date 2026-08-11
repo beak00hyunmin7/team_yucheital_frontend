@@ -12,20 +12,72 @@
     <div class="layout">
         <!-- 파일 받기 -->
         <div class="upload-panel" style = "margin-top : 20px;">
-            <h1> 이미지(지도) 업로드 </h1>
-            <form id="uploadForm" enctype="multipart/form-data">
-                <input type="file" style="padding: 10px 20px; font-size: 20px" id="fileInput" name="file" accept=".jpg, .png, .jpeg" />
             <h1> 등고선 업로드 </h1>
-                <input type="file" style="padding: 10px 20px; font-size: 20px;" id="mapInput" name="map" accept=".jpg, .png, .jpeg" />
+            <form id="uploadForm" enctype="multipart/form-data">
+                <input type="file" style="padding: 10px 20px; font-size: 20px" id="fileInput" name="file" accept=".jpg, .png, .jpeg, .dem" />
+                <div class="form-row">
+                    <label>배수구 개수</label>
+                    <input type="number" id="drainCount" value="3" min="1" max="10" step="1">
+                </div>
+
+                <div class="form-row">
+                    <label>시간당강수량(rainfall_mm_per_hour)</label>
+                    <input type="number" id="rainfall" value="10" min="1" max="1000" step="1">
+                </div>
+
+                <div class="form-row">
+                    <label>유출계수(runoff_coefficient)</label>
+                    <input type="number" id="runoffCoefficient" value="0.8" min="0" max="1" step="0.1">
+                </div>
+
+                <div class="form-row">
+                    <label>셀 크기(미터)(cell_size_m)</label>
+                    <input type="number" id="cellSize" value="10" min="1" max="10000" step="1">
+                </div>
+
+                <div class="form-row">
+                    <label>최소 간격 비율(minimum_spacing_ratio)</label>
+                    <input type="number" id="minimumSpacingRatio" value="0.1" min="0.01" max="0.5" step="0.01">
+                </div>
+
+                <div class="form-row">
+                    <label>흐림 반경(blur_radius)</label>
+                    <input type="number" id="blurRadius" value="1.2" min="0" max="10" step="0.1">
+                </div>
+
+                <div class="form-row">
+                    <label>지형 밝기 해석(high_is_bright)</label>
+                    <label><input type="checkbox" id="highIsBright" checked> 밝을수록 높은 지형</label>
+                </div>
+
+                <div class="form-row">
+                    <label>중첩 레이어 포함(include_overlay)</label>
+                    <label><input type="checkbox" id="includeOverlay" checked> 중첩 레이어 포함</label>
+                </div>
+                
+                
+                
+            <!---
+            <h1> 등고선 업로드 </h1>
+            
+                <input type="file" style="padding: 10px 20px; font-size: 20px;" id="mapInput" name="map" accept=".jpg, .png, .jpeg" />-->
                 <br />
                 <br />
                 <button type="submit" style="padding: 10px 20px; font-size: 20px;">지도 사진 업로드</button>
             </form>
-        </div>
+        </div>  
 
-        <!-- 3D 뷰어가 들어갈 컨테이너 -->
-        <div id="container" style="width: 40%; height: 65vh; background-color: #ffffff; margin-left: auto; margin-top : 20px;"></div>
+        <!-- 결과 컨테이너 -->
+        <div class="viewer-panel">
+            <img id="overlay" style="display: none;" />
+            <p id="viewer-placeholder">이미지를 업로드하면 결과가 표시됩니다</p>
+        </div>
     </div>
+
+    <!-- <div class="result-panel">
+        <h2>분석 결과</h2>
+        <img id="overlay" style="display: none;" />
+    </div> -->
 
     <!-- 회원가입/로그인 버튼 영역 -->
     <div id="top-right-nav">
@@ -55,22 +107,23 @@
     </div>
 
     <script>
-        const container = document.getElementById('container');
+        //const container = document.getElementById('container');
+        
+        const ANALYZE_API = 'http://172.16.52.25:8000';
         
       // 렌더링을 위한 기본 컨테이너 설정
-        const fullScreenRenderer = vtk.Rendering.Misc.vtkFullScreenRenderWindow.newInstance({
-        rootContainer: container,
-        containerStyle: { width: '100%', height: '100%', position: 'relative' }
-        });
+        // const fullScreenRenderer = vtk.Rendering.Misc.vtkFullScreenRenderWindow.newInstance({
+        // rootContainer: container,
+        // containerStyle: { width: '100%', height: '100%', position: 'relative' }
+        // });
 
-        const renderer = fullScreenRenderer.getRenderer();
-        const renderWindow = fullScreenRenderer.getRenderWindow();
+        // const renderer = fullScreenRenderer.getRenderer();
+        // const renderWindow = fullScreenRenderer.getRenderWindow();
 
       // .vtkjs 파일을 불러오는 로더 생성
-        const reader = vtk.IO.Core.vtkHttpSceneLoader.newInstance({ renderer: renderer });
+        // const reader = vtk.IO.Core.vtkHttpSceneLoader.newInstance({ renderer: renderer });
 
 
-        reader.setUrl('example');
 
         // 현재 모달이 로그인 모드인지 회원가입 모드인지 저장해두는 변수
         let currentAuthMode = null;
@@ -138,37 +191,59 @@
 
         document.getElementById('uploadForm').addEventListener('submit', async(e) => { //id가 "uploadform"인 요소를 찾아와서 폼이 제출될때 함수를 실행해라
             e.preventDefault(); // 브라우저 새로고침하지마!
+
+            const btn = e.target.querySelector('button[type="submit"]');
             
             const mapFile = document.getElementById('fileInput').files[0];
-            const contourFile = document.getElementById('mapInput').files[0];
+            //const contourFile = document.getElementById('mapInput').files[0];
             
-            if (!mapFile || !contourFile) {
-                alert('지도 사진과 등고선 사진을 모두 업로드해주세요.');
+            if (!mapFile) {
+                alert('사진을 업로드해주세요.');
                 return;
             }
 
             const formData = new FormData(); //파일 서버로 보내기 위한 함수 -> 파일은 바이너리이기때문에 이 명령어로 파일을 담는?
-            formData.append('map_image', mapFile);
-            formData.append('contour_image', contourFile);
+            formData.append('image', mapFile);
+            //formData.append('contour_image', contourFile);
+            formData.append('drain_count', document.getElementById('drainCount').value);
+            formData.append('rainfall_mm_per_hour', document.getElementById('rainfall').value);
+            formData.append('runoff_coefficient', document.getElementById('runoffCoefficient').value);
+            formData.append('cell_size_m', document.getElementById('cellSize').value);
+            formData.append('minimum_spacing_ratio', document.getElementById('minimumSpacingRatio').value);
+            formData.append('blur_radius', document.getElementById('blurRadius').value);
+            formData.append('high_is_bright', document.getElementById('highIsBright').checked);
+            formData.append('include_overlay', document.getElementById('includeOverlay').checked);
             for (const [key, value] of formData.entries()) {
             console.log(key, value);
             }
 
+
+            btn.disabled = true; //버튼 비활성화
+            btn.textContent = '업로드 중...'; //버튼 글자 바꾸기
+
             try {
-                const res = await fetch('http://127.0.0.1:8000/docs',{ //백엔드 주소 서버
+                const res = await fetch('http://172.16.52.25:8000/api/v1/drainage/analyze',{ //백엔드 주소 서버 -> 나중에 수정해야될듯?
                     method: 'POST', //POST 방식으로 보내기
                     body: formData // formdata를 body에 담아서 보내기
                 });
 
                 if (!res.ok) {
-                    throw new Error('서버 오류 (${res.status})'); //서버가 오류인경우 응답상태와 함께 콘솔로그 띄우기
+                    throw new Error(`서버 오류 (${res.status})`); //서버가 오류인경우 응답상태와 함께 콘솔로그 띄우기
                 }
 
                 const data = await res.json(); //서버에서 json형식으로 응답받기
                 console.log('서버 응답:', data);
+
+                const overlay = document.getElementById('overlay'); //업로드 후 결과값 도출해내기
+                overlay.src = ANALYZE_API + data.overlay_image_url;
+                overlay.style.display = 'block';
+                document.getElementById('viewer-placeholder').style.display = 'none';
             } catch (err) { //접속이 안된다면?
                 console.error(err);
                 alert('서버 연결 불가') //에러메시지 보내기
+            } finally {
+                btn.disabled = false; //버튼 활성화
+                btn.textContent = '지도 사진 업로드'; //버튼 글자 바꾸기
             }
         });
     </script>
