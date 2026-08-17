@@ -3,7 +3,6 @@ body {
       font-family: "Segoe UI", "Malgun Gothic", sans-serif;
       background-color: #f4f6f8;
       color: #333;
-      padding: 40px;
       box-sizing: border-box;
     }
 
@@ -11,6 +10,7 @@ body {
   display: flex;
   align-items: flex-start;
   gap: 40px;
+  padding: 40px;
 }
 
 .upload-panel {
@@ -61,16 +61,55 @@ body {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); 
 }
 
-#top-right-nav button{ /* 로그인/회원가입 버튼 */
-  font-size: 20px;
-  background-color: #ffffff;
+#top-bar {
+  width: 100%;
+  height: 64px;
+  background-color: #4a90e2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 40px;
+  box-sizing: border-box;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
-#top-right-nav {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 1000;
+.top-bar-brand {
+  color: white;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.top-bar-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.top-bar-actions button {
+  font-size: 14px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.top-bar-actions .btn-login {
+  background-color: transparent;
+  color: white;
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.top-bar-actions .btn-login:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+.top-bar-actions .btn-signup {
+  background-color: white;
+  color: #4a90e2;
+}
+
+.top-bar-actions .btn-signup:hover {
+  background-color: #eaf2fc;
 }
 
 .form-row {
@@ -127,4 +166,86 @@ body {
 
 #viewer-placeholder {
   color: #999;
+}
+
+.auth-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.auth-modal-card {
+  background-color: #ffffff;
+  width: 320px;
+  padding: 28px;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.auth-modal-card h3 {
+  margin: 0 0 20px;
+  font-size: 18px;
+  color: #333;
+}
+
+.auth-modal-card input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  box-sizing: border-box;
+}
+
+.auth-modal-card input:focus {
+  outline: none;
+  border-color: #4a90e2;
+}
+
+.auth-modal-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.auth-modal-actions button {
+  flex: 1;
+  padding: 10px;
+  font-size: 14px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-confirm {
+  background-color: #4a90e2;
+  color: white;
+}
+
+.btn-confirm:hover {
+  background-color: #357abd;
+}
+
+.btn-cancel {
+  background-color: #f4f6f8;
+  color: #555;
+}
+
+.btn-cancel:hover {
+  background-color: #e4e7eb;
+}
+
+#auth-message {
+  margin: 12px 0 0;
+  font-size: 13px;
+  min-height: 16px;
 }
