@@ -12,54 +12,89 @@
     <header id="top-bar">
         <div class="top-bar-brand">유체이탈</div>
         <div class="top-bar-actions">
-            <button class="btn-login" onclick="openAuthModal('login')">로그인</button>
-            <button class="btn-signup" onclick="openAuthModal('signup')">회원가입</button>
+            <button class="btn-theme" id="theme-btn" onclick="toggleTheme()">🌙</button>
+            <div id="guest-actions" class="action-group">
+                <button class="btn-login" onclick="openAuthModal('login')">로그인</button>
+                <button class="btn-signup" onclick="openAuthModal('signup')">회원가입</button>
+            </div>
+            <div id="user-actions" class="action-group" style="display: none;">
+                <span id="user-email"></span>
+                <button class="btn-login" onclick="logout()">로그아웃</button>
+            </div>
         </div>
     </header>
+
+    <!-- 안내 배너 -->
+    <div id="notice-bar" style="display: none;">
+        <span class="notice-text">
+            등고선 지도를 업로드하면 배수구 최적 위치를 분석해 드립니다.
+            로그인하면 분석 기록이 저장돼요.
+        </span>
+        <button class="notice-close" onclick="closeNotice()" aria-label="배너 닫기">&times;</button>
+    </div>
     <div class="layout">
         <!-- 파일 받기 -->
-        <div class="upload-panel" style = "margin-top : 20px;">
+        <div class="upload-panel">
             <h1> 등고선 업로드 </h1>
             <form id="uploadForm" enctype="multipart/form-data">
-                <input type="file" style="padding: 10px 20px; font-size: 20px" id="fileInput" name="file" accept=".jpg, .png, .jpeg, .dem" />
+                <div class="dropzone" id="dropzone">
+                    <input type="file" id="fileInput" name="file" accept=".jpg, .png, .jpeg, .dem" hidden />
+                    <label for="fileInput" class="dropzone-label">
+                        <svg class="dropzone-icon" viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M12 15V4M12 4l-4 4M12 4l4 4" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span class="dropzone-text">클릭하거나 파일을 끌어다 놓으세요</span>
+                        <span class="dropzone-hint">.jpg, .png, .jpeg, .dem</span>
+                        <span class="dropzone-filename" id="dropzone-filename"></span>
+                    </label>
+                </div>
+                <p class="field-error" id="err-fileInput"></p>
+
                 <div class="form-row">
                     <label>배수구 개수</label>
                     <input type="number" id="drainCount" value="3" min="1" max="10" step="1">
                 </div>
+                <p class="field-error" id="err-drainCount"></p>
 
                 <div class="form-row">
                     <label>시간당강수량(rainfall_mm_per_hour)</label>
                     <input type="number" id="rainfall" value="10" min="1" max="1000" step="1">
                 </div>
+                <p class="field-error" id="err-rainfall"></p>
 
                 <div class="form-row">
                     <label>유출계수(runoff_coefficient)</label>
                     <input type="number" id="runoffCoefficient" value="0.8" min="0" max="1" step="0.1">
                 </div>
+                <p class="field-error" id="err-runoffCoefficient"></p>
 
                 <div class="form-row">
                     <label>셀 크기(미터)(cell_size_m)</label>
                     <input type="number" id="cellSize" value="10" min="1" max="10000" step="1">
                 </div>
+                <p class="field-error" id="err-cellSize"></p>
 
                 <div class="form-row">
                     <label>최소 간격 비율(minimum_spacing_ratio)</label>
                     <input type="number" id="minimumSpacingRatio" value="0.1" min="0.01" max="0.5" step="0.01">
                 </div>
+                <p class="field-error" id="err-minimumSpacingRatio"></p>
 
                 <div class="form-row">
                     <label>흐림 반경(blur_radius)</label>
                     <input type="number" id="blurRadius" value="1.2" min="0" max="10" step="0.1">
                 </div>
+                <p class="field-error" id="err-blurRadius"></p>
 
                 <div class="form-row">
                     <label>지형 밝기 해석(high_is_bright)</label>
-                    <label><input type="checkbox" id="highIsBright" checked> 밝을수록 높은 지형</label>
+                    <label class="checkbox-field"><input type="checkbox" id="highIsBright" checked> 밝을수록 높은 지형</label>
                 </div>
 
                 <div class="form-row">
                     <label>중첩 레이어 포함(include_overlay)</label>
-                    <label><input type="checkbox" id="includeOverlay" checked> 중첩 레이어 포함</label>
+                    <label class="checkbox-field"><input type="checkbox" id="includeOverlay" checked> 사용</label>
                 </div>
                 
                 
@@ -77,8 +112,25 @@
         <!-- 결과 컨테이너 -->
         <div class="viewer-panel">
             <img id="overlay" style="display: none;" />
-            <p id="viewer-placeholder">이미지를 업로드하면 결과가 표시됩니다</p>
+            <div id="viewer-placeholder" class="viewer-empty">
+                <svg class="viewer-empty-icon" viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <rect x="3" y="4" width="18" height="16" rx="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="8.5" cy="9" r="1.5" fill="currentColor" stroke="none"/>
+                    <path d="M4.5 17l4.5-5.5 3 3.5 2.5-3 4.5 5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <p class="viewer-empty-title">이미지를 업로드하면 결과가 표시됩니다</p>
+                <p class="viewer-empty-sub">등고선 이미지를 분석해 배수구 최적 위치를 보여드려요</p>
+            </div>
         </div>
+    </div>
+
+    <!-- 로그인했을 때만 보이는 분석 기록 -->
+    <div class="history-panel" id="history-panel" style="display: none;">
+        <div class="history-header">
+            <h2>내 분석 기록</h2>
+            <button class="btn-clear" onclick="clearHistory()">전체 삭제</button>
+        </div>
+        <ul id="history-list"></ul>
     </div>
 
     <!-- <div class="result-panel">
@@ -107,28 +159,148 @@
         </div>
     </div>
 
-    <div style="background: white; width: 300px; margin: 100px auto; padding: 20px; border-radius: 8px;">
-        
-        <!-- 제목자리. JS로 나중에 "로그인" 또는 "회원가입"으로 바꿔줄 예정. id는-->
-        <h3 id="modal-title"></h3>
-
-        <input type="email" id="email-input" placeholder="이메일" style="width: 100%; margin-bottom: 10px;">
-        <input type="password" id="password-input" placeholder="비밀번호" style="width: 100%; margin-bottom: 10px;">
-
-        <!-- 제출 버튼. id는 "modal-submit-btn", onclick 함수 submitAuth() 연결 -->
-        <button id="modal-submit-btn" onclick="submitAuth()">확인</button>
-
-        <!-- 닫기 버튼. onclick 함수 closeAuthModal() 연결 -->
-        <button onclick="closeAuthModal()">닫기</button>
-
-        <p id="auth-message" style="color: red;"></p>
-    </div>
-    </div>
 
     <script>
         //const container = document.getElementById('container');
         
         const ANALYZE_API = 'http://172.16.52.25:8000';
+
+        const NOTICE_KEY = 'yuche_notice_closed';
+        const USER_KEY   = 'yuche_user';
+        const THEME_KEY = 'yuche_theme';
+
+        function applyTheme(theme) {
+            const isDark = (theme === 'dark');
+            document.body.classList.toggle('dark', isDark);
+            document.getElementById('theme-btn').textContent = isDark ? '☀️' : '🌙';
+            localStorage.setItem(THEME_KEY, theme);
+        }
+
+        function toggleTheme() {
+            const isDark = document.body.classList.contains('dark');
+            applyTheme(isDark ? 'light' : 'dark');
+        }
+
+        function initTheme() {
+            const saved = localStorage.getItem(THEME_KEY);
+            if (saved) {
+                applyTheme(saved);
+                return;
+            }
+            // 저장된 설정이 없으면 OS 설정을 따라감
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            applyTheme(prefersDark ? 'dark' : 'light');
+        }
+
+        /* ---------- 알림 바 ---------- */
+        function initNotice() {
+            if (localStorage.getItem(NOTICE_KEY) === 'true') return;
+            document.getElementById('notice-bar').style.display = 'flex';
+        }
+
+        function closeNotice() {
+            document.getElementById('notice-bar').style.display = 'none';
+            localStorage.setItem(NOTICE_KEY, 'true');
+        }
+
+        /* ---------- 로그인 상태 ---------- */
+        function getCurrentUser() {
+            return localStorage.getItem(USER_KEY);
+        }
+
+        function setLoggedInUser(email) {
+            localStorage.setItem(USER_KEY, email);
+            applyAuthState();
+        }
+
+        function logout() {
+            localStorage.removeItem(USER_KEY);
+            applyAuthState();
+        }
+
+        function applyAuthState() {
+            const user = getCurrentUser();
+            document.getElementById('guest-actions').style.display = user ? 'none' : 'flex';  // ← 반대
+            document.getElementById('user-actions').style.display  = user ? 'flex' : 'none';
+            document.getElementById('history-panel').style.display = user ? 'block' : 'none';
+
+            if (user) {
+                document.getElementById('user-email').textContent = user;
+                renderHistory();
+            }
+        }
+
+        /* ---------- 기록 저장 ---------- */
+        function historyKey() {
+            return 'yuche_history_' + getCurrentUser();
+        }
+
+        function loadHistory() {
+            const raw = localStorage.getItem(historyKey());
+            if (!raw) return [];
+            try {
+                return JSON.parse(raw);
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function saveRecord(record) {
+            if (!getCurrentUser()) return;          // 비로그인이면 저장 안 함
+            const list = loadHistory();
+            list.unshift(record);
+            localStorage.setItem(historyKey(), JSON.stringify(list.slice(0, 20)));
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const list = loadHistory();
+            const ul = document.getElementById('history-list');
+
+            if (list.length === 0) {
+                ul.innerHTML = '<li class="history-empty">아직 저장된 기록이 없습니다.</li>';
+                return;
+            }
+
+            ul.innerHTML = list.map(r => `
+                <li class="history-item">
+                    <div class="history-info">
+                        <strong>${r.fileName}</strong>
+                        <span>${r.savedAt} · 강수량 ${r.params.rainfall}mm/h · 배수구 ${r.params.drainCount}개</span>
+                    </div>
+                    <div class="history-buttons">
+                        <button onclick="showRecord('${r.id}')">보기</button>
+                        <button onclick="deleteRecord('${r.id}')">삭제</button>
+                    </div>
+                </li>
+            `).join('');
+        }
+
+        function showRecord(id) {
+            const record = loadHistory().find(r => r.id === id);
+            if (!record) return;
+
+            const overlay = document.getElementById('overlay');
+            overlay.src = ANALYZE_API + record.overlayUrl;
+            overlay.style.display = 'block';
+            document.getElementById('viewer-placeholder').style.display = 'none';
+        }
+
+        function deleteRecord(id) {
+            const list = loadHistory().filter(r => r.id !== id);
+            localStorage.setItem(historyKey(), JSON.stringify(list));
+            renderHistory();
+        }
+
+        function clearHistory() {
+            if (!confirm('기록을 전부 삭제할까요?')) return;
+            localStorage.removeItem(historyKey());
+            renderHistory();
+        }
+
+        initNotice();
+        initTheme();
+        applyAuthState();
         
       // 렌더링을 위한 기본 컨테이너 설정
         // const fullScreenRenderer = vtk.Rendering.Misc.vtkFullScreenRenderWindow.newInstance({
@@ -169,57 +341,173 @@
         }
 
         async function submitAuth() {
-        const email = document.getElementById('email-input').value;
-        const password = document.getElementById('password-input').value;
-        const message = document.getElementById('auth-message');
+            const email = document.getElementById('email-input').value;
+            const password = document.getElementById('password-input').value;
+            const message = document.getElementById('auth-message');
 
-        // 어느 주소로 보낼지 mode에 따라 결정
-        const endpoint = (currentAuthMode === 'login') ? '/login' : '/signup';
-        const url = 'http://127.0.0.1:8000' + endpoint;
+            const endpoint = (currentAuthMode === 'login') ? '/login' : '/signup';
+            const url = 'http://127.0.0.1:8000' + endpoint;
 
-        try {
-            const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: email, password: password })
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email, password: password })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    message.style.color = 'red';
+                    message.textContent = data.detail || '오류가 발생했습니다.';
+                    return;
+                }
+
+                message.style.color = 'green';
+                if (currentAuthMode === 'login') {
+                    message.textContent = '로그인 성공!';
+                    setLoggedInUser(email);          // 추가
+                    setTimeout(closeAuthModal, 800); // 추가
+                } else {
+                    message.textContent = `회원가입 성공! (${data.email})`;
+                }
+
+            } catch (err) {
+                message.style.color = 'red';
+                message.textContent = '서버에 연결할 수 없습니다.';
+                console.error(err);
+            }
+        }
+
+        /* ---------- 입력 검증 ---------- */
+        const NUMERIC_FIELDS = [
+            { id: 'drainCount', label: '배수구 개수' },
+            { id: 'rainfall', label: '시간당강수량' },
+            { id: 'runoffCoefficient', label: '유출계수' },
+            { id: 'cellSize', label: '셀 크기' },
+            { id: 'minimumSpacingRatio', label: '최소 간격 비율' },
+            { id: 'blurRadius', label: '흐림 반경' }
+        ];
+
+        function showFieldError(id, message) {
+            const input = document.getElementById(id);
+            const errorEl = document.getElementById('err-' + id);
+            if (input) input.classList.add('input-error');
+            if (errorEl) {
+                errorEl.textContent = message;
+                errorEl.classList.add('visible');
+            }
+            if (id === 'fileInput') {
+                document.getElementById('dropzone').classList.add('input-error');
+            }
+        }
+
+        function clearFieldError(id) {
+            const input = document.getElementById(id);
+            const errorEl = document.getElementById('err-' + id);
+            if (input) input.classList.remove('input-error');
+            if (errorEl) {
+                errorEl.textContent = '';
+                errorEl.classList.remove('visible');
+            }
+            if (id === 'fileInput') {
+                document.getElementById('dropzone').classList.remove('input-error');
+            }
+        }
+
+        function clearAllFieldErrors() {
+            clearFieldError('fileInput');
+            NUMERIC_FIELDS.forEach(({ id }) => clearFieldError(id));
+        }
+
+        function validateForm() {
+            clearAllFieldErrors();
+            let valid = true;
+
+            if (!document.getElementById('fileInput').files[0]) {
+                showFieldError('fileInput', '사진을 업로드해주세요.');
+                valid = false;
+            }
+
+            NUMERIC_FIELDS.forEach(({ id, label }) => {
+                const input = document.getElementById(id);
+                const value = Number(input.value);
+                const min = Number(input.min);
+                const max = Number(input.max);
+
+                if (input.value === '' || Number.isNaN(value)) {
+                    showFieldError(id, `${label} 값을 입력해주세요.`);
+                    valid = false;
+                } else if (value < min || value > max) {
+                    showFieldError(id, `${label}은(는) ${min} ~ ${max} 사이 값이어야 합니다.`);
+                    valid = false;
+                }
             });
 
-            const data = await response.json();
-
-            if (!response.ok) {
-            // 서버가 에러를 던진 경우 (400, 401 등)
-            message.style.color = 'red';
-            message.textContent = data.detail || '오류가 발생했습니다.';
-            return;
-            }
-
-            // 성공
-            message.style.color = 'green';
-            if (currentAuthMode === 'login') {
-            message.textContent = '로그인 성공!';
-            } else {
-            message.textContent = `회원가입 성공! (${data.email})`;
-            }
-
-        } catch (err) {
-            message.style.color = 'red';
-            message.textContent = '서버에 연결할 수 없습니다.';
-            console.error(err);
+            return valid;
         }
+
+        NUMERIC_FIELDS.forEach(({ id }) => {
+            document.getElementById(id).addEventListener('input', () => clearFieldError(id));
+        });
+
+        /* ---------- 드래그앤드롭 업로드 ---------- */
+        const dropzone = document.getElementById('dropzone');
+        const fileInputEl = document.getElementById('fileInput');
+        const dropzoneFilename = document.getElementById('dropzone-filename');
+
+        function updateDropzoneFilename() {
+            const file = fileInputEl.files[0];
+            dropzoneFilename.textContent = file ? file.name : '';
         }
+
+        fileInputEl.addEventListener('change', () => {
+            clearFieldError('fileInput');
+            updateDropzoneFilename();
+        });
+
+        ['dragenter', 'dragover'].forEach(evt => {
+            dropzone.addEventListener(evt, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropzone.classList.add('dragover');
+            });
+        });
+
+        ['dragleave', 'dragend'].forEach(evt => {
+            dropzone.addEventListener(evt, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropzone.classList.remove('dragover');
+            });
+        });
+
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzone.classList.remove('dragover');
+
+            const file = e.dataTransfer.files[0];
+            if (!file) return;
+
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            fileInputEl.files = dataTransfer.files;
+
+            clearFieldError('fileInput');
+            updateDropzoneFilename();
+        });
 
         document.getElementById('uploadForm').addEventListener('submit', async(e) => { //id가 "uploadform"인 요소를 찾아와서 폼이 제출될때 함수를 실행해라
             e.preventDefault(); // 브라우저 새로고침하지마!
 
-            const btn = e.target.querySelector('button[type="submit"]');
-            
-            const mapFile = document.getElementById('fileInput').files[0];
-            //const contourFile = document.getElementById('mapInput').files[0];
-            
-            if (!mapFile) {
-                alert('사진을 업로드해주세요.');
+            if (!validateForm()) {
                 return;
             }
+
+            const btn = e.target.querySelector('button[type="submit"]');
+            const mapFile = document.getElementById('fileInput').files[0];
+            //const contourFile = document.getElementById('mapInput').files[0];
 
             const formData = new FormData(); //파일 서버로 보내기 위한 함수 -> 파일은 바이너리이기때문에 이 명령어로 파일을 담는?
             formData.append('image', mapFile);
@@ -257,6 +545,18 @@
                 overlay.src = ANALYZE_API + data.overlay_image_url;
                 overlay.style.display = 'block';
                 document.getElementById('viewer-placeholder').style.display = 'none';
+
+                saveRecord({                             // ← 추가
+                id: Date.now().toString(),
+                savedAt: new Date().toLocaleString('ko-KR'),
+                fileName: mapFile.name,
+                overlayUrl: data.overlay_image_url,
+                params: {
+                    rainfall: document.getElementById('rainfall').value,
+                    drainCount: document.getElementById('drainCount').value
+                }
+                });
+                
             } catch (err) { //접속이 안된다면?
                 console.error(err);
                 alert('서버 연결 불가') //에러메시지 보내기
