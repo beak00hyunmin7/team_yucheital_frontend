@@ -529,7 +529,7 @@
             btn.textContent = '업로드 중...'; //버튼 글자 바꾸기
 
             try {
-                const res = await fetch('http://172.16.52.25:8000/api/v1/drainage/analyze',{ //백엔드 주소 서버 -> 나중에 수정해야될듯?
+                const res = await fetch('http.://172.16.52.25:8000/api/v1/drainage/analyze',{ //백엔드 주소 서버 -> 나중에 수정해야될듯?
                     method: 'POST', //POST 방식으로 보내기
                     body: formData // formdata를 body에 담아서 보내기
                 });
