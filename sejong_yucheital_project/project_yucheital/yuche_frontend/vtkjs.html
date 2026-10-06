@@ -27,7 +27,7 @@
     <!-- 안내 배너 -->
     <div id="notice-bar" style="display: none;">
         <span class="notice-text">
-            등고선 지도를 업로드하면 배수구 최적 위치를 분석해 드립니다.
+            등고선 지도를 업로드하면 AI가 배수 취약 지점과 배수구 후보 위치를 예측해 드립니다.
             로그인하면 분석 기록이 저장돼요.
         </span>
         <button class="notice-close" onclick="closeNotice()" aria-label="배너 닫기">&times;</button>
@@ -36,82 +36,67 @@
         <!-- 파일 받기 -->
         <div class="upload-panel">
             <h1> 등고선 업로드 </h1>
+            <p class="model-status" id="model-status">모델 서버 상태 확인 중…</p>
+
             <form id="uploadForm" enctype="multipart/form-data">
+                <!-- mode: AI 서버가 반드시 요구하는 값 (image / terrain) -->
+                <div class="form-row">
+                    <label>입력 종류(mode)</label>
+                    <label class="checkbox-field"><input type="radio" name="mode" value="image" checked> 등고선 이미지</label>
+                    <label class="checkbox-field"><input type="radio" name="mode" value="terrain"> 등고선 데이터(고도 격자)</label>
+                </div>
+                <p class="form-hint" id="mode-hint"></p>
+
                 <div class="dropzone" id="dropzone">
-                    <input type="file" id="fileInput" name="file" accept=".jpg, .png, .jpeg, .dem" hidden />
+                    <input type="file" id="fileInput" name="file" hidden />
                     <label for="fileInput" class="dropzone-label">
                         <svg class="dropzone-icon" viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5">
                             <path d="M12 15V4M12 4l-4 4M12 4l4 4" stroke-linecap="round" stroke-linejoin="round"/>
                             <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                         <span class="dropzone-text">클릭하거나 파일을 끌어다 놓으세요</span>
-                        <span class="dropzone-hint">.jpg, .png, .jpeg, .dem</span>
+                        <span class="dropzone-hint" id="dropzone-hint"></span>
                         <span class="dropzone-filename" id="dropzone-filename"></span>
                     </label>
                 </div>
                 <p class="field-error" id="err-fileInput"></p>
 
                 <div class="form-row">
-                    <label>배수구 개수</label>
-                    <input type="number" id="drainCount" value="3" min="1" max="10" step="1">
+                    <label>강우량 mm(rain_mm)</label>
+                    <input type="number" id="rainMm" value="50" min="20" max="80" step="1">
                 </div>
-                <p class="field-error" id="err-drainCount"></p>
+                <p class="field-error" id="err-rainMm"></p>
+                <p class="form-hint" id="rain-hint"></p>
 
-                <div class="form-row">
-                    <label>시간당강수량(rainfall_mm_per_hour)</label>
-                    <input type="number" id="rainfall" value="10" min="1" max="1000" step="1">
+                <div class="form-row" id="time-row">
+                    <label>경과 시간 초(time_s)</label>
+                    <input type="number" id="timeS" value="18" min="0" max="120" step="1">
                 </div>
-                <p class="field-error" id="err-rainfall"></p>
+                <p class="field-error" id="err-timeS"></p>
+                <p class="form-hint" id="time-hint"></p>
 
-                <div class="form-row">
-                    <label>유출계수(runoff_coefficient)</label>
-                    <input type="number" id="runoffCoefficient" value="0.8" min="0" max="1" step="0.1">
-                </div>
-                <p class="field-error" id="err-runoffCoefficient"></p>
-
-                <div class="form-row">
-                    <label>셀 크기(미터)(cell_size_m)</label>
-                    <input type="number" id="cellSize" value="10" min="1" max="10000" step="1">
-                </div>
-                <p class="field-error" id="err-cellSize"></p>
-
-                <div class="form-row">
-                    <label>최소 간격 비율(minimum_spacing_ratio)</label>
-                    <input type="number" id="minimumSpacingRatio" value="0.1" min="0.01" max="0.5" step="0.01">
-                </div>
-                <p class="field-error" id="err-minimumSpacingRatio"></p>
-
-                <div class="form-row">
-                    <label>흐림 반경(blur_radius)</label>
-                    <input type="number" id="blurRadius" value="1.2" min="0" max="10" step="0.1">
-                </div>
-                <p class="field-error" id="err-blurRadius"></p>
-
-                <div class="form-row">
-                    <label>지형 밝기 해석(high_is_bright)</label>
-                    <label class="checkbox-field"><input type="checkbox" id="highIsBright" checked> 밝을수록 높은 지형</label>
+                <!-- dx: terrain 모드에서, 파일에 셀 크기 정보가 없을 때만 쓰인다 -->
+                <div id="dx-block" style="display: none;">
+                    <div class="form-row">
+                        <label>격자 셀 크기 m(dx)</label>
+                        <input type="number" id="dx" value="10.4166667" min="0.01" max="10000" step="any">
+                    </div>
+                    <p class="field-error" id="err-dx"></p>
+                    <p class="form-hint">.asc/.grd 파일은 헤더의 cellsize 를 자동으로 씁니다.</p>
                 </div>
 
-                <div class="form-row">
-                    <label>중첩 레이어 포함(include_overlay)</label>
-                    <label class="checkbox-field"><input type="checkbox" id="includeOverlay" checked> 사용</label>
-                </div>
-                
-                
-                
-            <!---
-            <h1> 등고선 업로드 </h1>
-            
-                <input type="file" style="padding: 10px 20px; font-size: 20px;" id="mapInput" name="map" accept=".jpg, .png, .jpeg" />-->
                 <br />
-                <br />
-                <button type="submit" style="padding: 10px 20px; font-size: 20px;">지도 사진 업로드</button>
+                <button type="submit" id="submit-btn" style="padding: 10px 20px; font-size: 20px;">배수 예측 실행</button>
             </form>
-        </div>  
+        </div>
 
         <!-- 결과 컨테이너 -->
         <div class="viewer-panel">
-            <img id="overlay" style="display: none;" />
+            <div id="result-box" class="result-box" style="display: none;">
+                <div class="result-tabs" id="result-tabs"></div>
+                <img id="overlay" alt="예측 결과" />
+                <ul class="result-info" id="result-info"></ul>
+            </div>
             <div id="viewer-placeholder" class="viewer-empty">
                 <svg class="viewer-empty-icon" viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.5">
                     <rect x="3" y="4" width="18" height="16" rx="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -119,7 +104,7 @@
                     <path d="M4.5 17l4.5-5.5 3 3.5 2.5-3 4.5 5" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
                 <p class="viewer-empty-title">이미지를 업로드하면 결과가 표시됩니다</p>
-                <p class="viewer-empty-sub">등고선 이미지를 분석해 배수구 최적 위치를 보여드려요</p>
+                <p class="viewer-empty-sub">등고선을 분석해 배수 취약 지점과 배수구 후보 위치를 보여드려요</p>
             </div>
         </div>
     </div>
@@ -133,22 +118,13 @@
         <ul id="history-list"></ul>
     </div>
 
-    <!-- <div class="result-panel">
-        <h2>분석 결과</h2>
-        <img id="overlay" style="display: none;" />
-    </div> -->
-
     <!-- 로그인/회원가입 모달 -> 다른창으로 넘어가는것처럼 보이는것, 즉 덮여씌운다 느낌 (평소엔 숨겨져 있음) -->
-    <!--
-    <div id="auth-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
-    -->
-
     <div id="auth-modal" class="auth-modal-backdrop" style="display: none;">
         <div class="auth-modal-card">
             <h3 id="modal-title"></h3>
 
             <input type="email" id="email-input" placeholder="이메일">
-            <input type="password" id="password-input" placeholder="비밀번호">
+            <input type="password" id="password-input" placeholder="비밀번호 (6자 이상)">
 
             <div class="auth-modal-actions">
                 <button class="btn-cancel" onclick="closeAuthModal()">닫기</button>
@@ -161,13 +137,36 @@
 
 
     <script>
-        //const container = document.getElementById('container');
-        
-        const ANALYZE_API = 'http://172.16.52.25:8000';
+        /* ================================================================
+           AI 모델 서버 (team_yucheital_ai_model / terrainFlowSim/webapp)
+           - 예측 : POST /api/predict   (mode, file, rain_mm, time_s, dx)
+           - 로그인: POST /api/auth/login, /api/auth/signup  -> { email, token }
+           - 상태 : GET  /api/health
+           run_windows.bat 기본값이 127.0.0.1:8000 이다. 다른 PC 에서 서버를 띄우면
+           그 PC 는 --host 0.0.0.0 으로 실행하고 여기 주소를 그 PC 의 IP 로 바꾼다.
+           ================================================================ */
+        const ANALYZE_API = 'http://127.0.0.1:8000';  // AI 모델 서버 (예측)
+        const AUTH_API = ANALYZE_API;                  // 로그인도 같은 서버 (토큰을 받아야 예측 가능)
 
         const NOTICE_KEY = 'yuche_notice_closed';
         const USER_KEY   = 'yuche_user';
+        const TOKEN_KEY  = 'yuche_token';
         const THEME_KEY = 'yuche_theme';
+
+        // 서버 /api/health 로 갱신되는 모델 정보
+        const modelInfo = {
+            rainRange: [20, 80],      // 학습 강우 범위 (이 범위 밖은 서버가 잘라서 씀)
+            timeRange: [0, 120],
+            timeConditioned: true,    // 체크포인트가 time_s 를 쓰는지
+            rainConditioned: true,
+            authEnabled: false        // 서버 DB 가 켜져 있으면 로그인 필수
+        };
+
+        function escapeHtml(text) {
+            return String(text ?? '').replace(/[&<>"']/g, ch => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[ch]));
+        }
 
         function applyTheme(theme) {
             const isDark = (theme === 'dark');
@@ -208,13 +207,19 @@
             return localStorage.getItem(USER_KEY);
         }
 
-        function setLoggedInUser(email) {
+        function getToken() {
+            return localStorage.getItem(TOKEN_KEY) || '';
+        }
+
+        function setLoggedInUser(email, token) {
             localStorage.setItem(USER_KEY, email);
+            if (token) localStorage.setItem(TOKEN_KEY, token);
             applyAuthState();
         }
 
         function logout() {
             localStorage.removeItem(USER_KEY);
+            localStorage.removeItem(TOKEN_KEY);
             applyAuthState();
         }
 
@@ -245,12 +250,36 @@
             }
         }
 
+        function writeHistory(list) {
+            // 결과 그림(썸네일) 때문에 용량이 클 수 있다. 저장 공간이 모자라면 오래된 기록부터 뺀다.
+            while (true) {
+                try {
+                    localStorage.setItem(historyKey(), JSON.stringify(list));
+                    return;
+                } catch (e) {
+                    if (list.length <= 1) return;
+                    list = list.slice(0, list.length - 1);
+                }
+            }
+        }
+
         function saveRecord(record) {
             if (!getCurrentUser()) return;          // 비로그인이면 저장 안 함
             const list = loadHistory();
             list.unshift(record);
-            localStorage.setItem(historyKey(), JSON.stringify(list.slice(0, 20)));
+            writeHistory(list.slice(0, 20));
             renderHistory();
+        }
+
+        function describeParams(p) {
+            if (!p) return '';
+            if (p.rain_mm === undefined) {
+                // 예전 분석 서버 시절 기록
+                return `강수량 ${escapeHtml(p.rainfall)}mm/h · 배수구 ${escapeHtml(p.drainCount)}개 (이전 서버)`;
+            }
+            const parts = [MODE_TEXT[p.mode] ? MODE_TEXT[p.mode].short : p.mode, `강우 ${p.rain_mm}mm`];
+            if (p.time_s !== null && p.time_s !== undefined) parts.push(`경과 ${p.time_s}초`);
+            return parts.map(escapeHtml).join(' · ');
         }
 
         function renderHistory() {
@@ -265,12 +294,12 @@
             ul.innerHTML = list.map(r => `
                 <li class="history-item">
                     <div class="history-info">
-                        <strong>${r.fileName}</strong>
-                        <span>${r.savedAt} · 강수량 ${r.params.rainfall}mm/h · 배수구 ${r.params.drainCount}개</span>
+                        <strong>${escapeHtml(r.fileName)}</strong>
+                        <span>${escapeHtml(r.savedAt)} · ${describeParams(r.params)}</span>
                     </div>
                     <div class="history-buttons">
-                        <button onclick="showRecord('${r.id}')">보기</button>
-                        <button onclick="deleteRecord('${r.id}')">삭제</button>
+                        <button onclick="showRecord('${escapeHtml(r.id)}')">보기</button>
+                        <button onclick="deleteRecord('${escapeHtml(r.id)}')">삭제</button>
                     </div>
                 </li>
             `).join('');
@@ -280,15 +309,19 @@
             const record = loadHistory().find(r => r.id === id);
             if (!record) return;
 
-            const overlay = document.getElementById('overlay');
-            overlay.src = ANALYZE_API + record.overlayUrl;
-            overlay.style.display = 'block';
-            document.getElementById('viewer-placeholder').style.display = 'none';
+            if (!record.thumbnail) {
+                alert('이전 분석 서버에서 만든 기록이라 결과 그림을 다시 불러올 수 없습니다.');
+                return;
+            }
+            showResult(
+                [{ key: 'saved', label: record.imageLabel || '저장된 결과', src: record.thumbnail }],
+                record.info || []
+            );
         }
 
         function deleteRecord(id) {
             const list = loadHistory().filter(r => r.id !== id);
-            localStorage.setItem(historyKey(), JSON.stringify(list));
+            writeHistory(list);
             renderHistory();
         }
 
@@ -298,28 +331,130 @@
             renderHistory();
         }
 
+        // 기록용 썸네일: 원본 base64 PNG 는 수백 KB 라서 긴 변 360px JPEG 로 줄여 저장한다
+        function makeThumbnail(dataUrl, maxSide = 360) {
+            return new Promise(resolve => {
+                const img = new Image();
+                img.onload = () => {
+                    const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+                    const canvas = document.createElement('canvas');
+                    canvas.width = Math.round(img.width * scale);
+                    canvas.height = Math.round(img.height * scale);
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = '#fff';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    resolve(canvas.toDataURL('image/jpeg', 0.8));
+                };
+                img.onerror = () => resolve(null);
+                img.src = dataUrl;
+            });
+        }
+
+        /* ---------- 입력 종류(mode) ---------- */
+        const MODE_TEXT = {
+            image: {
+                short: '등고선 이미지',
+                hint: '',
+                accept: '.png,.jpg,.jpeg,.webp',
+                fileHint: '.png, .jpg, .jpeg, .webp',
+                exts: ['png', 'jpg', 'jpeg', 'webp']
+            },
+            terrain: {
+                short: '등고선 데이터',
+                hint: '고도값 격자 파일. 서버가 학습 때와 같은 방식으로 등고선을 그려 예측하므로 가장 정확하고, 배수구 후보 위치도 함께 나옵니다.',
+                accept: '.npy,.csv,.txt,.dat,.asc,.grd,.tif,.tiff,.png,.jpg,.jpeg',
+                fileHint: '.npy, .csv, .txt, .dat, .asc, .grd, .tif, (회색조 높이맵 .png/.jpg)',
+                exts: ['npy', 'csv', 'txt', 'dat', 'asc', 'grd', 'tif', 'tiff', 'png', 'jpg', 'jpeg']
+            }
+        };
+        const MAX_UPLOAD_MB = 25;   // 서버 MAX_UPLOAD_BYTES
+
+        function getMode() {
+            return document.querySelector('input[name="mode"]:checked').value;
+        }
+
+        function applyMode() {
+            const t = MODE_TEXT[getMode()];
+            document.getElementById('mode-hint').textContent = t.hint;
+            document.getElementById('fileInput').setAttribute('accept', t.accept);
+            document.getElementById('dropzone-hint').textContent = t.fileHint;
+            document.getElementById('dx-block').style.display = (getMode() === 'terrain') ? 'block' : 'none';
+            clearFieldError('fileInput');
+        }
+
+        document.querySelectorAll('input[name="mode"]').forEach(radio => {
+            radio.addEventListener('change', applyMode);
+        });
+
+        /* ---------- 모델 서버 상태 (/api/health) ---------- */
+        async function initHealth() {
+            const status = document.getElementById('model-status');
+            try {
+                const h = await (await fetch(ANALYZE_API + '/api/health')).json();
+
+                modelInfo.rainConditioned = !!h.rain_conditioned;
+                modelInfo.timeConditioned = !!h.time_conditioned;
+                modelInfo.authEnabled = !!h.auth_enabled && h.db === 'ok';
+                if (Array.isArray(h.rain_range_mm)) modelInfo.rainRange = h.rain_range_mm;
+                if (Array.isArray(h.time_range_s)) modelInfo.timeRange = h.time_range_s;
+
+                // 입력칸 범위를 서버가 알려준 학습 범위에 맞춘다
+                const rain = document.getElementById('rainMm');
+                rain.min = modelInfo.rainRange[0];
+                rain.max = modelInfo.rainRange[1];
+                document.getElementById('rain-hint').textContent =
+                    `모델 학습 범위는 ${modelInfo.rainRange[0]}~${modelInfo.rainRange[1]}mm 입니다.`;
+                if (!modelInfo.rainConditioned) {
+                    rain.disabled = true;
+                    document.getElementById('rain-hint').textContent = '현재 모델은 강우량을 쓰지 않습니다.';
+                }
+
+                const time = document.getElementById('timeS');
+                time.min = modelInfo.timeRange[0];
+                time.max = modelInfo.timeRange[1];
+                if (h.default_time_s != null) time.value = h.default_time_s;
+                const showTime = modelInfo.timeConditioned;
+                document.getElementById('time-row').style.display = showTime ? 'flex' : 'none';
+                document.getElementById('time-hint').style.display = showTime ? 'block' : 'none';
+
+                const auth = modelInfo.authEnabled ? '로그인 필요' : '로그인 없이 사용 가능';
+                status.textContent = `● 모델 연결됨 · ${h.checkpoint} · ${String(h.device).toUpperCase()} · ${auth}`;
+                status.classList.add('ok');
+            } catch (err) {
+                console.error(err);
+                status.textContent = `● 모델 서버에 연결할 수 없습니다 (${ANALYZE_API})`;
+                status.classList.add('down');
+            }
+        }
+
+        // 저장된 토큰이 아직 유효한지 확인 (만료됐으면 로그아웃 처리)
+        async function verifySavedToken() {
+            if (!getToken()) {
+                if (getCurrentUser()) logout();   // 예전 로그인 서버 시절 상태 -> 토큰이 없으니 정리
+                return;
+            }
+            try {
+                const res = await fetch(AUTH_API + '/api/auth/me', {
+                    headers: { Authorization: 'Bearer ' + getToken() }
+                });
+                if (res.status === 401) logout();
+            } catch (e) {
+                // 서버가 꺼져 있으면 판단하지 않고 그대로 둔다
+            }
+        }
+
         initNotice();
         initTheme();
         applyAuthState();
-        
-      // 렌더링을 위한 기본 컨테이너 설정
-        // const fullScreenRenderer = vtk.Rendering.Misc.vtkFullScreenRenderWindow.newInstance({
-        // rootContainer: container,
-        // containerStyle: { width: '100%', height: '100%', position: 'relative' }
-        // });
-
-        // const renderer = fullScreenRenderer.getRenderer();
-        // const renderWindow = fullScreenRenderer.getRenderWindow();
-
-      // .vtkjs 파일을 불러오는 로더 생성
-        // const reader = vtk.IO.Core.vtkHttpSceneLoader.newInstance({ renderer: renderer });
-
-
+        applyMode();
+        initHealth();
+        verifySavedToken();
 
         // 현재 모달이 로그인 모드인지 회원가입 모드인지 저장해두는 변수
         let currentAuthMode = null;
 
-        function openAuthModal(mode) {
+        function openAuthModal(mode, notice) {
         currentAuthMode = mode; // 'login' 또는 'signup'
 
         const modal = document.getElementById('auth-modal');
@@ -329,9 +464,13 @@
         // 입력창, 메시지 초기화
         document.getElementById('email-input').value = '';
         document.getElementById('password-input').value = '';
-        message.textContent = '';
+        message.style.color = 'red';
+        message.textContent = notice || '';
 
-        title.textContent = (mode === 'login') ? '로그인' : '회원가입';
+        const label = (mode === 'login') ? '로그인' : '회원가입';
+        title.textContent = label;
+        // 제출 버튼 글자도 모드에 맞춘다 (HTML 에 '확인'으로 고정돼 있던 것)
+        document.getElementById('modal-submit-btn').textContent = label;
 
         modal.style.display = 'flex'; // 숨겨져    있던 모달을 보이게 함
         }
@@ -341,12 +480,23 @@
         }
 
         async function submitAuth() {
-            const email = document.getElementById('email-input').value;
+            const email = document.getElementById('email-input').value.trim();
             const password = document.getElementById('password-input').value;
             const message = document.getElementById('auth-message');
 
-            const endpoint = (currentAuthMode === 'login') ? '/login' : '/signup';
-            const url = 'http://127.0.0.1:8000' + endpoint;
+            if (!email || !password) {
+                message.style.color = 'red';
+                message.textContent = '이메일과 비밀번호를 입력하세요.';
+                return;
+            }
+            if (currentAuthMode === 'signup' && password.length < 6) {
+                message.style.color = 'red';
+                message.textContent = '비밀번호는 6자 이상이어야 합니다.';
+                return;
+            }
+
+            const endpoint = (currentAuthMode === 'login') ? '/api/auth/login' : '/api/auth/signup';
+            const url = AUTH_API + endpoint;
 
             try {
                 const response = await fetch(url, {
@@ -359,18 +509,17 @@
 
                 if (!response.ok) {
                     message.style.color = 'red';
-                    message.textContent = data.detail || '오류가 발생했습니다.';
+                    message.textContent = (typeof data.detail === 'string' ? data.detail : '') || '오류가 발생했습니다.';
                     return;
                 }
 
+                // 로그인·회원가입 모두 서버가 토큰을 준다 -> 바로 로그인 상태로
+                setLoggedInUser(data.email, data.token);
                 message.style.color = 'green';
-                if (currentAuthMode === 'login') {
-                    message.textContent = '로그인 성공!';
-                    setLoggedInUser(email);          // 추가
-                    setTimeout(closeAuthModal, 800); // 추가
-                } else {
-                    message.textContent = `회원가입 성공! (${data.email})`;
-                }
+                message.textContent = (currentAuthMode === 'login')
+                    ? '로그인 성공!'
+                    : `회원가입 성공! (${data.email}) 바로 로그인되었습니다.`;
+                setTimeout(closeAuthModal, 800);
 
             } catch (err) {
                 message.style.color = 'red';
@@ -380,13 +529,11 @@
         }
 
         /* ---------- 입력 검증 ---------- */
+        // AI 서버로 보내는 숫자 변수들. visible() 이 false 면 검사하지 않는다(숨겨진 칸)
         const NUMERIC_FIELDS = [
-            { id: 'drainCount', label: '배수구 개수' },
-            { id: 'rainfall', label: '시간당강수량' },
-            { id: 'runoffCoefficient', label: '유출계수' },
-            { id: 'cellSize', label: '셀 크기' },
-            { id: 'minimumSpacingRatio', label: '최소 간격 비율' },
-            { id: 'blurRadius', label: '흐림 반경' }
+            { id: 'rainMm', label: '강우량', visible: () => modelInfo.rainConditioned },
+            { id: 'timeS', label: '경과 시간', visible: () => modelInfo.timeConditioned },
+            { id: 'dx', label: '격자 셀 크기', visible: () => getMode() === 'terrain' }
         ];
 
         function showFieldError(id, message) {
@@ -420,16 +567,30 @@
             NUMERIC_FIELDS.forEach(({ id }) => clearFieldError(id));
         }
 
+        function fileExt(name) {
+            const i = name.lastIndexOf('.');
+            return i < 0 ? '' : name.slice(i + 1).toLowerCase();
+        }
+
         function validateForm() {
             clearAllFieldErrors();
             let valid = true;
 
-            if (!document.getElementById('fileInput').files[0]) {
-                showFieldError('fileInput', '사진을 업로드해주세요.');
+            const file = document.getElementById('fileInput').files[0];
+            const t = MODE_TEXT[getMode()];
+            if (!file) {
+                showFieldError('fileInput', '파일을 업로드해주세요.');
+                valid = false;
+            } else if (!t.exts.includes(fileExt(file.name))) {
+                showFieldError('fileInput', `${t.short} 모드에서는 ${t.fileHint} 파일만 올릴 수 있습니다.`);
+                valid = false;
+            } else if (file.size > MAX_UPLOAD_MB * 1024 * 1024) {
+                showFieldError('fileInput', `파일이 ${MAX_UPLOAD_MB}MB 를 넘습니다.`);
                 valid = false;
             }
 
-            NUMERIC_FIELDS.forEach(({ id, label }) => {
+            NUMERIC_FIELDS.forEach(({ id, label, integer, visible }) => {
+                if (visible && !visible()) return;
                 const input = document.getElementById(id);
                 const value = Number(input.value);
                 const min = Number(input.min);
@@ -440,6 +601,9 @@
                     valid = false;
                 } else if (value < min || value > max) {
                     showFieldError(id, `${label}은(는) ${min} ~ ${max} 사이 값이어야 합니다.`);
+                    valid = false;
+                } else if (integer && !Number.isInteger(value)) {
+                    showFieldError(id, `${label}은(는) 정수로 입력해주세요.`);
                     valid = false;
                 }
             });
@@ -498,71 +662,147 @@
             updateDropzoneFilename();
         });
 
+        /* ---------- 결과 표시 ---------- */
+        // images: [{ key, label, src }] - 첫 번째가 기본으로 보인다. info: 문자열 배열
+        function showResult(images, info) {
+            const tabs = document.getElementById('result-tabs');
+            const overlay = document.getElementById('overlay');
+
+            tabs.innerHTML = '';
+            images.forEach((im, i) => {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.textContent = im.label;
+                b.onclick = () => {
+                    overlay.src = im.src;
+                    tabs.querySelectorAll('button').forEach(x => x.classList.remove('active'));
+                    b.classList.add('active');
+                };
+                if (i === 0) b.classList.add('active');
+                tabs.appendChild(b);
+            });
+            tabs.style.display = images.length > 1 ? 'flex' : 'none';
+            overlay.src = images[0].src;
+
+            document.getElementById('result-info').innerHTML =
+                info.map(line => `<li>${escapeHtml(line)}</li>`).join('');
+
+            document.getElementById('result-box').style.display = 'flex';
+            document.getElementById('viewer-placeholder').style.display = 'none';
+        }
+
         document.getElementById('uploadForm').addEventListener('submit', async(e) => { //id가 "uploadform"인 요소를 찾아와서 폼이 제출될때 함수를 실행해라
             e.preventDefault(); // 브라우저 새로고침하지마!
 
             if (!validateForm()) {
                 return;
             }
+            if (modelInfo.authEnabled && !getToken()) {
+                openAuthModal('login', '이 서버는 로그인해야 예측할 수 있어요.');
+                return;
+            }
 
             const btn = e.target.querySelector('button[type="submit"]');
             const mapFile = document.getElementById('fileInput').files[0];
-            //const contourFile = document.getElementById('mapInput').files[0];
+            const mode = getMode();
+            const rainMm = Number(document.getElementById('rainMm').value);
+            const timeS = Number(document.getElementById('timeS').value);
+            const dx = Number(document.getElementById('dx').value);
 
-            const formData = new FormData(); //파일 서버로 보내기 위한 함수 -> 파일은 바이너리이기때문에 이 명령어로 파일을 담는?
-            formData.append('image', mapFile);
-            //formData.append('contour_image', contourFile);
-            formData.append('drain_count', document.getElementById('drainCount').value);
-            formData.append('rainfall_mm_per_hour', document.getElementById('rainfall').value);
-            formData.append('runoff_coefficient', document.getElementById('runoffCoefficient').value);
-            formData.append('cell_size_m', document.getElementById('cellSize').value);
-            formData.append('minimum_spacing_ratio', document.getElementById('minimumSpacingRatio').value);
-            formData.append('blur_radius', document.getElementById('blurRadius').value);
-            formData.append('high_is_bright', document.getElementById('highIsBright').checked);
-            formData.append('include_overlay', document.getElementById('includeOverlay').checked);
+            // AI 모델 서버 /api/predict 가 받는 값 그대로
+            const formData = new FormData();
+            formData.append('mode', mode);                // 'image' | 'terrain'
+            formData.append('file', mapFile);
+            formData.append('rain_mm', rainMm);            // 강우량 [mm]
+            formData.append('time_s', timeS);              // 경과 시간 [초]
+            formData.append('dx', dx);                     // 셀 크기 [m] (terrain 모드만 의미 있음)
             for (const [key, value] of formData.entries()) {
             console.log(key, value);
             }
 
+            const headers = getToken() ? { Authorization: 'Bearer ' + getToken() } : {};
 
             btn.disabled = true; //버튼 비활성화
-            btn.textContent = '업로드 중...'; //버튼 글자 바꾸기
+            btn.textContent = '예측 중...'; //버튼 글자 바꾸기
 
             try {
-                const res = await fetch('http.://172.16.52.25:8000/api/v1/drainage/analyze',{ //백엔드 주소 서버 -> 나중에 수정해야될듯?
-                    method: 'POST', //POST 방식으로 보내기
-                    body: formData // formdata를 body에 담아서 보내기
+                const res = await fetch(ANALYZE_API + '/api/predict', { // 서버 주소는 위의 ANALYZE_API 상수에서 변경
+                    method: 'POST',
+                    body: formData,
+                    headers
                 });
 
-                if (!res.ok) {
-                    throw new Error(`서버 오류 (${res.status})`); //서버가 오류인경우 응답상태와 함께 콘솔로그 띄우기
+                if (res.status === 401) {
+                    logout();
+                    openAuthModal('login', '로그인이 필요하거나 세션이 만료되었습니다. 다시 로그인해 주세요.');
+                    return;
                 }
 
-                const data = await res.json(); //서버에서 json형식으로 응답받기
+                let data;
+                try {
+                    data = await res.json(); //서버에서 json형식으로 응답받기
+                } catch {
+                    throw new Error(`서버 오류 (${res.status})`);
+                }
+                if (!res.ok) {
+                    // FastAPI 검증 오류는 detail 이 배열일 수 있다
+                    const d = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
+                    throw new Error(`[${res.status}] ${d}`);
+                }
                 console.log('서버 응답:', data);
 
-                const overlay = document.getElementById('overlay'); //업로드 후 결과값 도출해내기
-                overlay.src = ANALYZE_API + data.overlay_image_url;
-                overlay.style.display = 'block';
-                document.getElementById('viewer-placeholder').style.display = 'none';
+                const png = b64 => 'data:image/png;base64,' + b64;
+                const images = [];
+                // terrain 모드는 실제 등고선 + 배수구 후보가 그려진 분석 지도가 가장 유용하다
+                if (data.analysis_png_base64) images.push({ key: 'analysis', label: '분석 지도', src: png(data.analysis_png_base64) });
+                images.push({ key: 'overlay', label: '예측 오버레이', src: png(data.overlay_png_base64) });
+                images.push({ key: 'prediction', label: '예측 배수맵', src: png(data.prediction_png_base64) });
+                images.push({ key: 'contour', label: '입력 등고선', src: png(data.contour_png_base64) });
 
-                saveRecord({                             // ← 추가
-                id: Date.now().toString(),
-                savedAt: new Date().toLocaleString('ko-KR'),
-                fileName: mapFile.name,
-                overlayUrl: data.overlay_image_url,
-                params: {
-                    rainfall: document.getElementById('rainfall').value,
-                    drainCount: document.getElementById('drainCount').value
+                // 서버 meta 에 들어간 값이 아니라 모델이 실제로 쓴 값을 보여준다 (강우는 학습 범위로 잘림)
+                const usedRain = Math.min(Math.max(rainMm, modelInfo.rainRange[0]), modelInfo.rainRange[1]);
+                const meta = data.meta || {};
+                const info = [];
+                if (data.drain_candidate) {
+                    const p = data.drain_candidate.pixel;
+                    const n = data.drain_candidate.normalized;
+                    info.push(`배수구 설치 후보(예측 유출 최대점): 격자 (${p.x}, ${p.y}) · 가로 ${Math.round(n.x * 100)}% / 세로 ${Math.round(n.y * 100)}% 지점`);
+                } else if (mode === 'image') {
+                    info.push('배수구 후보 좌표는 "등고선 데이터" 모드에서만 계산됩니다.');
                 }
+                const cond = [];
+                if (meta.rain_conditioned) cond.push(`강우 ${usedRain}mm`);
+                if (meta.time_conditioned) cond.push(`경과 ${meta.time_s}초`);
+                if (meta.dx_m) cond.push(`셀 ${Number(meta.dx_m).toFixed(2)}m`);
+                info.push(`조건: ${cond.join(' · ') || '없음'} · 모델 ${data.checkpoint}`);
+                (data.notes || []).forEach(n => info.push(n));
+
+                showResult(images, info);
+
+                const main = images[0];
+                saveRecord({
+                    id: Date.now().toString(),
+                    savedAt: new Date().toLocaleString('ko-KR'),
+                    fileName: mapFile.name,
+                    params: {
+                        mode,
+                        rain_mm: usedRain,
+                        time_s: meta.time_conditioned ? meta.time_s : null,
+                        dx: meta.dx_m ?? null
+                    },
+                    drain: data.drain_candidate ? data.drain_candidate.pixel : null,
+                    checkpoint: data.checkpoint,
+                    imageLabel: main.label,
+                    thumbnail: getCurrentUser() ? await makeThumbnail(main.src) : null,
+                    info: info.slice(0, 2)
                 });
-                
+
             } catch (err) { //접속이 안된다면?
                 console.error(err);
-                alert('서버 연결 불가') //에러메시지 보내기
+                alert(err instanceof TypeError ? '서버 연결 불가' : '예측 실패: ' + err.message); //에러메시지 보내기
             } finally {
                 btn.disabled = false; //버튼 활성화
-                btn.textContent = '지도 사진 업로드'; //버튼 글자 바꾸기
+                btn.textContent = '배수 예측 실행'; //버튼 글자 바꾸기
             }
         });
     </script>

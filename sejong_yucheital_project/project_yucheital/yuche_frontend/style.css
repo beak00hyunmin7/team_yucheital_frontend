@@ -589,3 +589,78 @@ body {
   font-size: 13px;
   min-height: 16px;
 }
+/* ===== AI 모델 연동 (추가) ===== */
+.model-status {
+  margin: -8px 0 16px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.model-status.ok { color: #2e9e5b; }
+.model-status.down { color: var(--error); }
+
+.form-hint {
+  margin: 0 0 12px calc(300px + 16px);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+#mode-hint {
+  margin-left: 0;
+}
+
+.result-box {
+  width: 100%;
+  height: 100%;
+  padding: 20px;
+  box-sizing: border-box;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.result-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.result-tabs button {
+  padding: 6px 12px;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background-color: var(--subtle-bg);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.result-tabs button:hover {
+  background-color: var(--subtle-hover);
+}
+
+.result-tabs button.active {
+  background-color: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.viewer-panel .result-box img {
+  width: 100%;
+  height: auto;
+  max-height: 60vh;
+  object-fit: contain;
+}
+
+.result-info {
+  width: 100%;
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.result-info li:first-child {
+  font-weight: bold;
+}

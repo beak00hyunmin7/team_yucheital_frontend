@@ -461,12 +461,12 @@
 # a = int(input())
 # b = int(input())
 
-# a_degit = get_digit_sum(a)
-# b_degit = get_digit_sum(b)
+# a_ait = get_digit_sum(a)
+# b_ait = get_digit_sum(b)
 
-# if a_degit > b_degit:
+# if a_ait > b_ait:
 #     print("Sejong Win")
-# elif a_degit < b_degit:
+# elif a_ait < b_ait:
 #     print("Daeyang Win")
 # else:
 #     print("Draw")
@@ -1295,3 +1295,142 @@
 # for x in lst:
 #     print(x[0], x[-1])
 
+
+# a = int(input())
+# cnt = 1
+# while True:
+#     if ((6 * cnt) % a) == 0:
+#         print(cnt)
+#         break
+#     cnt+=1
+
+# lst = []
+# a = int(input())
+# for x in range(a):
+#     ipt = input()
+#     lst.append(ipt)
+# if lst.count("sejong") >= a - 2:
+#     print("Yes")
+# else:
+#     print("No")
+
+# a = int(input())
+# for x in range(1, a+1):
+#     for y in range(1, a+1):
+#         if x == 1:
+#             print("F", end = "")
+#         elif x == 2:
+#             print(".", end = "")
+#         else:
+#             print("M", end = "")
+#     print()
+
+# import sys
+# a = list(input())
+# lst = []
+# if "E" in a and "A" in a and "S" in a and "Y" in a:
+#     if (a.index("E") < a.index("A")) and (a.index("A") < a.index("S") and (a.index("S") < a.index("Y"))):
+#         for x in range(a.index("E"), a.index("A")+1):
+#             lst.append(a[x])
+#         for x in range(a.index("A"), a.index("S")+1):
+#             lst.append(a[x])
+#         for x in range(a.index("S"), a.index("Y")+1):
+#             lst.append(a[x])
+#     lst2 = list(set(lst))
+#     for x in lst2:
+#         if lst.count(x) >= 2:
+#             print("NO")
+#             sys.exit()
+#     print("YES")
+# else:
+#     print("NO")
+
+
+# a1, a2 = map(int, input().split())
+# b1, b2 = map(int, input().split())
+# c1, c2 = map(int, input().split())
+
+# if a1 + a2 == 7 or b1 + b2 == 7 or c1 + c2 == 7:
+#     print("No")
+# else:
+#     print("Yes")
+
+# N, K = map(int, input().split())
+# a = list(map(int, input().split()))
+# a.sort()
+# #큰거 K고르면?... 1, 2, 3 -> 1, 2, 6
+# #작은거 ... 1, 2, 3 -> 6, 2, 3 -->> 이게 정답
+# #최대 = 큰 수 + 안고른거 합, 최소 = a[0]
+# ans1 = a[N-1] + sum(a[:N-K]) - a[0]
+# #최대 = a[K-1] + 안고른거 합, 최소 = a[K]
+# ans2 = a[K-1] + sum(a[K:]) - a[K]
+# print(min(ans1, ans2))
+
+# n = int(input())
+# a = [0] * (n + 1)
+# b = [[] for _ in range(n + 1)]
+
+# for x in range(n - 1):
+#     u, v = map(int, input().split())
+#     b[u].append(v); b[v].append(u)
+#     a[u] += 1; a[v] += 1
+
+# L = 0
+# for v in range(1, n + 1):
+#     if a[v] == 1:
+#         L += 1
+
+# out = []
+# for i in range(1, n + 1):
+#     r = L
+#     if a[i] == 1:
+#         r -= 1
+#     for u in b[i]:
+#         if a[u] == 1:
+#             r -= 1
+#         elif a[u] == 2:
+#             r += 1
+#     out.append(r)
+
+# for x in out:
+#     print(x)
+
+
+
+# s = input()
+# piece = [("", "EASY"), ("E", "ASY"), ("EA", "SY"), ("EAS", "Y"), ("EASY", "")]
+# ans = "No"
+# for p, q in piece:
+#     if p == "":
+#         locate = 0
+#     elif p in s:
+#         locate = s.find(p) + len(p)
+#     else:
+#         continue
+
+#     if q == "":
+#         locate2 = len(s)
+#     elif q in s:
+#         locate2 = s.rfind(q)
+#     else:
+#         continue
+#     left = s[:locate]
+#     right = s[locate2:]
+
+#     if locate <= locate2 and "HARD" not in left and "HARD" not in right:
+#         ans = "Yes"
+#         break
+
+# print(ans)
+
+
+N = int(input())
+lst = list(map(int, input().split()))
+
+c1 = lst.count(1)
+c2 = N - c1
+
+if c1 >= c2 and (c1 - c2) % 3 == 0:
+    print("Yes")
+else:
+    print("No")
