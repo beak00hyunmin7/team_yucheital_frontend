@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<!-- 이 문서가 최신 HTML5 문법으로 작성되었음을 브라우저에게 알려줌 -->
+<html lang="en">
+  <!-- lang="en": 문서 언어를 영어로 표시 (화면에는 영향 없음) -->
+  <head>
+    <meta charset="utf-8"> <!-- 문자 인코딩을 UTF-8로 설정 (한글 깨짐 방지) -->
+    <title>yucheital</title> <!-- 브라우저 탭에 표시될 제목 -->
+    <link rel="stylesheet" href="./style.css">
+
+    <!-- importmap: "three"라는 이름을 실제 CDN 주소로 연결해주는 지도.
+         main.js에서 import * as THREE from 'three' 라고 쓸 수 있게 해줌 -->
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.169.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.169.0/examples/jsm/"
+      }
+    }
+    </script>
+  </head>
+  <body>
+    <div class="layout">
+      <div class="left-space">
+        <!-- 왼쪽: 큐브의 가로/세로/높이를 입력받는 폼 -->
+        <form id="sizeForm">
+          <label for="boxWidth">가로</label>
+          <input type="number" id="boxWidth" name="boxWidth" value="1.5" step="0.1" min="0.1"><br><br>
+
+          <label for="boxHeight">세로</label>
+          <input type="number" id="boxHeight" name="boxHeight" value="1.5" step="0.1" min="0.1"><br><br>
+
+          <label for="boxDepth">높이</label>
+          <input type="number" id="boxDepth" name="boxDepth" value="1.5" step="0.1" min="0.1"><br><br>
+
+          <button type="submit">제출</button>
+        </form>
+      </div>
+      <div id="three-container"></div>   <!-- 오른쪽: main.js가 여기에 큐브 canvas를 넣음 -->
+    </div>
+
+    <!-- type="module": import 문법을 쓸 수 있는 모드로 main.js 실행 -->
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,1262 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>유체이탈 · 배수 예측</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <header id="top-bar">
+        <div class="top-bar-brand">
+            <span class="brand-name">유체이탈</span>
+            <nav class="view-tabs" aria-label="화면 전환">
+                <a href="#" class="view-tab" data-view="predict">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                        <path d="M12 3c3.5 4.2 6 7.6 6 10.5a6 6 0 0 1-12 0C6 10.6 8.5 7.2 12 3z" stroke-linejoin="round"/>
+                    </svg>예측
+                </a>
+                <a href="#history" class="view-tab" data-view="history">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                        <rect x="4" y="4" width="16" height="16" rx="2"/>
+                        <path d="M4 10h16M10 10v10" stroke-linecap="round"/>
+                    </svg>분석 기록<span class="tab-count" id="history-count"></span>
+                </a>
+            </nav>
+        </div>
+        <div class="top-bar-actions">
+            <span class="model-status" id="model-status">모델 서버 확인 중…</span>
+            <button class="btn-theme" id="theme-btn" onclick="toggleTheme()" aria-label="테마 전환">🌙</button>
+            <div id="guest-actions" class="action-group">
+                <button class="btn btn-ghost" onclick="openAuthModal('login')">로그인</button>
+                <button class="btn btn-primary" onclick="openAuthModal('signup')">회원가입</button>
+            </div>
+            <div id="user-actions" class="action-group" style="display: none;">
+                <span id="user-email"></span>
+                <button class="btn btn-ghost" onclick="logout()">로그아웃</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 안내 배너 -->
+    <div id="notice-bar" style="display: none;">
+        <span class="notice-text">
+            등고선 지도를 올리면 AI가 OpenFOAM 시뮬레이션 없이 침수 수심맵과 배수구 후보 위치를 바로 예측해 드립니다.
+            로그인하면 분석 기록이 저장돼요.
+        </span>
+        <button class="notice-close" onclick="closeNotice()" aria-label="배너 닫기">&times;</button>
+    </div>
+
+    <main class="page">
+        <!-- 화면 1: 예측 (기본) -->
+        <div id="view-predict" class="stack">
+        <div class="view-head">
+            <h1>배수 예측</h1>
+            <p>등고선을 올리고 강우 조건을 정해 침수 수심맵과 배수 취약 지점을 예측합니다.</p>
+        </div>
+        <form id="uploadForm" enctype="multipart/form-data" novalidate>
+            <div class="stack">
+                <!-- 1. 입력 방식 -->
+                <section class="card">
+                    <h2 class="card-title"><span class="step-num">1</span>입력 방식</h2>
+
+                    <span class="field-label">데이터 종류</span>
+                    <div class="segmented" role="radiogroup" aria-label="입력 종류">
+                        <label><input type="radio" name="mode" value="image" checked><span>등고선 이미지</span></label>
+                        <label><input type="radio" name="mode" value="terrain"><span>등고선 데이터 (고도 격자)</span></label>
+                    </div>
+                    <p class="form-hint" id="mode-hint"></p>
+
+                    <div class="dropzone" id="dropzone">
+                        <input type="file" id="fileInput" name="file" hidden />
+                        <label for="fileInput" class="dropzone-label">
+                            <!-- 파일 없을 때: 안내 -->
+                            <span class="dropzone-empty" id="dropzone-empty">
+                                <svg class="dropzone-icon" viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5">
+                                    <path d="M12 15V4M12 4l-4 4M12 4l4 4" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                <span class="dropzone-text">클릭하거나 파일을 끌어다 놓으세요</span>
+                                <span class="dropzone-hint" id="dropzone-hint"></span>
+                            </span>
+                            <!-- 파일 있을 때: 미리보기 (그림이 아닌 고도 격자 파일은 파일 아이콘) -->
+                            <span class="dropzone-preview" id="dropzone-preview" style="display: none;">
+                                <img id="dropzone-img" alt="올린 파일 미리보기">
+                                <span class="dropzone-fileicon" id="dropzone-fileicon">
+                                    <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5">
+                                        <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" stroke-linejoin="round"/>
+                                        <path d="M14 3v5h5M8 13h8M8 17h5" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </span>
+                                <span class="dropzone-info">
+                                    <span id="dropzone-filename"></span>
+                                    <span class="dropzone-change">클릭하거나 끌어다 놓아 다른 파일로 바꾸기</span>
+                                </span>
+                            </span>
+                        </label>
+                        <button type="button" class="dropzone-remove" id="dropzone-remove" style="display: none;" aria-label="파일 빼기" title="파일 빼기">&times;</button>
+                    </div>
+                    <p class="field-error" id="err-fileInput"></p>
+
+                    <!-- 서버 /api/samples 의 학습 스타일 등고선. 이미지 모드에서만 보인다 -->
+                    <div class="samples" id="samples-block">
+                        <span class="field-label">또는 샘플 등고선으로 바로 테스트</span>
+                        <div class="sample-grid" id="sample-grid"></div>
+                        <p class="sample-empty" id="sample-empty">샘플을 불러오는 중…</p>
+                    </div>
+                </section>
+
+                <!-- 2. 조건 -->
+                <section class="card">
+                    <h2 class="card-title"><span class="step-num">2</span>강우 조건</h2>
+                    <div class="cond-grid">
+                        <div id="rain-block">
+                            <label class="field-label" for="rainMm">강우량</label>
+                            <div class="slider-row">
+                                <input type="range" id="rainRange" min="20" max="80" step="1" value="50" aria-label="강우량 슬라이더">
+                                <span class="num-input"><input type="number" id="rainMm" value="50" min="20" max="80" step="1"> mm</span>
+                            </div>
+                            <p class="field-error" id="err-rainMm"></p>
+                            <p class="form-hint" id="rain-hint"></p>
+                        </div>
+
+                        <div id="time-row">
+                            <label class="field-label" for="timeS">강우 시작 후 경과 시간</label>
+                            <div class="slider-row">
+                                <input type="range" id="timeRange" min="0" max="120" step="1" value="18" aria-label="경과 시간 슬라이더">
+                                <span class="num-input"><input type="number" id="timeS" value="18" min="0" max="120" step="1"> 초</span>
+                            </div>
+                            <p class="field-error" id="err-timeS"></p>
+                            <p class="form-hint" id="time-hint">비가 초반에 내리고 빠지는 시뮬레이션이라 시간이 짧을수록 물이 많습니다. 가장 심한 상태는 20초 부근이에요.</p>
+                        </div>
+                    </div>
+
+                    <!-- dx: terrain 모드에서, 파일에 셀 크기 정보가 없을 때만 쓰인다 -->
+                    <div id="dx-block" style="display: none;">
+                        <label class="field-label" for="dx">격자 셀 크기</label>
+                        <span class="num-input"><input type="number" id="dx" class="wide" value="10.4166667" min="0.01" max="10000" step="any"> m</span>
+                        <p class="field-error" id="err-dx"></p>
+                        <p class="form-hint">.asc/.grd 파일은 헤더의 cellsize 를 자동으로 씁니다.</p>
+                    </div>
+                </section>
+
+                <!-- 실행 -->
+                <section class="card run-bar">
+                    <button type="submit" id="submit-btn" class="btn btn-primary">배수 예측 실행</button>
+                    <span class="run-summary" id="run-summary"></span>
+                </section>
+            </div>
+        </form>
+
+        <!-- 3. 결과 -->
+        <section class="card" id="result-section">
+            <h2 class="card-title"><span class="step-num">3</span>결과</h2>
+            <div id="result-box" style="display: none;">
+                <div class="result-grid" id="result-grid"></div>
+                <ul class="result-info" id="result-info"></ul>
+                <pre class="result-meta" id="result-meta"></pre>
+            </div>
+            <div id="viewer-placeholder" class="viewer-empty">
+                <svg class="viewer-empty-icon" viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <rect x="3" y="4" width="18" height="16" rx="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="8.5" cy="9" r="1.5" fill="currentColor" stroke="none"/>
+                    <path d="M4.5 17l4.5-5.5 3 3.5 2.5-3 4.5 5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <p class="viewer-empty-title">예측을 실행하면 결과가 여기에 표시됩니다</p>
+                <p class="viewer-empty-sub">입력 등고선 · 예측 배수맵 · 오버레이를 나란히 보여드려요</p>
+            </div>
+        </section>
+        </div>
+
+        <!-- 화면 2: 분석 기록 (상단 '분석 기록' 탭 = #history). 로그인 전에는 안내만 -->
+        <div class="view-head" id="history-head" style="display: none;">
+            <h1>분석 기록</h1>
+            <p>지금까지 실행한 예측이 날짜별로 저장됩니다. 이름을 바꾸거나 다시 열어볼 수 있어요.</p>
+        </div>
+        <section class="card" id="history-panel" style="display: none;">
+            <div class="history-header">
+                <h2 class="card-title">내 분석 기록</h2>
+                <button class="btn-clear" id="history-clear" onclick="clearHistory()">전체 삭제</button>
+            </div>
+
+            <div id="history-locked" class="history-locked">
+                <svg class="viewer-empty-icon" viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <rect x="5" y="11" width="14" height="9" rx="2" stroke-linejoin="round"/>
+                    <path d="M8 11V8a4 4 0 0 1 8 0v3" stroke-linecap="round"/>
+                </svg>
+                <p class="history-locked-title">로그인하면 분석 기록을 볼 수 있어요</p>
+                <p class="history-locked-sub">예측 결과가 날짜별로 저장되고, 이름을 바꾸거나 다시 열어볼 수 있습니다.</p>
+                <div class="history-locked-actions">
+                    <button class="btn btn-primary" onclick="openAuthModal('login')">로그인</button>
+                    <button class="btn btn-ghost" onclick="openAuthModal('signup')">회원가입</button>
+                </div>
+            </div>
+
+            <div id="history-content" style="display: none;">
+                <p class="history-tip">행을 더블클릭하면 상세 정보가 열립니다 · ✎ 로 이름 변경</p>
+                <div class="history-table-wrap">
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th>이름</th>
+                                <th>시간</th>
+                                <th>입력 파일</th>
+                                <th>조건</th>
+                                <th>배수구 후보</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-list"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 기록 상세 (행 더블클릭) -->
+    <div id="detail-modal" class="auth-modal-backdrop" style="display: none;">
+        <div class="detail-card" role="dialog" aria-labelledby="detail-title">
+            <div class="detail-head">
+                <h3 id="detail-title"></h3>
+                <button class="notice-close" onclick="closeDetail()" aria-label="닫기">&times;</button>
+            </div>
+            <div class="detail-body">
+                <img id="detail-img" alt="저장된 결과">
+                <dl class="detail-list" id="detail-list"></dl>
+            </div>
+            <ul class="result-info" id="detail-info"></ul>
+            <div class="auth-modal-actions">
+                <button class="btn-cancel" onclick="closeDetail()">닫기</button>
+                <button class="btn-confirm" id="detail-open-btn">결과 화면에 열기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 로그인/회원가입 모달 -> 다른창으로 넘어가는것처럼 보이는것, 즉 덮여씌운다 느낌 (평소엔 숨겨져 있음) -->
+    <div id="auth-modal" class="auth-modal-backdrop" style="display: none;">
+        <div class="auth-modal-card">
+            <h3 id="modal-title"></h3>
+
+            <input type="email" id="email-input" placeholder="이메일">
+            <input type="password" id="password-input" placeholder="비밀번호 (6자 이상)">
+
+            <div class="auth-modal-actions">
+                <button class="btn-cancel" onclick="closeAuthModal()">닫기</button>
+                <button id="modal-submit-btn" class="btn-confirm" onclick="submitAuth()">확인</button>
+            </div>
+
+            <p id="auth-message"></p>
+        </div>
+    </div>
+
+
+    <script>
+        /* ================================================================
+           AI 모델 서버 (team_yucheital_ai_model / terrainFlowSim/webapp)
+           - 예측 : POST /api/predict   (mode, file, rain_mm, time_s, dx)
+           - 샘플 : GET  /api/samples  -> { samples: [파일명] },  GET /api/sample/{name} -> PNG
+           - 로그인: POST /api/auth/login, /api/auth/signup  -> { email, token }
+           - 상태 : GET  /api/health
+           run_windows.bat 기본값이 127.0.0.1:8000 이다. 다른 PC 에서 서버를 띄우면
+           그 PC 는 --host 0.0.0.0 으로 실행하고 아래 DEFAULT_API 를 그 PC 의 IP 로 바꾼다.
+           파일을 고치지 않고 잠깐 바꿔 보려면 주소 뒤에 ?api=http://IP:포트 를 붙인다.
+           자세한 내용: 저장소 맨 위 README.md
+           ================================================================ */
+        const DEFAULT_API = 'http://127.0.0.1:8000';   // ← 서버 주소는 여기서 바꾼다
+        const ANALYZE_API = (new URLSearchParams(location.search).get('api') || DEFAULT_API).replace(/\/+$/, '');  // AI 모델 서버 (예측)
+        const AUTH_API = ANALYZE_API;                  // 로그인도 같은 서버 (토큰을 받아야 예측 가능)
+
+        const NOTICE_KEY = 'yuche_notice_closed';
+        const USER_KEY   = 'yuche_user';
+        const TOKEN_KEY  = 'yuche_token';
+        const THEME_KEY = 'yuche_theme';
+        const SUBMIT_LABEL = '배수 예측 실행';
+
+        // 서버 /api/health 로 갱신되는 모델 정보
+        const modelInfo = {
+            rainRange: [20, 80],      // 학습 강우 범위 (이 범위 밖은 서버가 잘라서 씀)
+            timeRange: [0, 120],
+            timeConditioned: true,    // 체크포인트가 time_s 를 쓰는지
+            rainConditioned: true,
+            authEnabled: false        // 서버 DB 가 켜져 있으면 로그인 필수
+        };
+
+        function escapeHtml(text) {
+            return String(text ?? '').replace(/[&<>"']/g, ch => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[ch]));
+        }
+
+        function applyTheme(theme) {
+            const isDark = (theme === 'dark');
+            document.body.classList.toggle('dark', isDark);
+            document.getElementById('theme-btn').textContent = isDark ? '☀️' : '🌙';
+            localStorage.setItem(THEME_KEY, theme);
+        }
+
+        function toggleTheme() {
+            const isDark = document.body.classList.contains('dark');
+            applyTheme(isDark ? 'light' : 'dark');
+        }
+
+        function initTheme() {
+            const saved = localStorage.getItem(THEME_KEY);
+            if (saved) {
+                applyTheme(saved);
+                return;
+            }
+            // 저장된 설정이 없으면 다크 테마로 시작 (참고 화면 기준)
+            applyTheme('dark');
+        }
+
+        /* ---------- 알림 바 ---------- */
+        function initNotice() {
+            if (localStorage.getItem(NOTICE_KEY) === 'true') return;
+            document.getElementById('notice-bar').style.display = 'flex';
+        }
+
+        function closeNotice() {
+            document.getElementById('notice-bar').style.display = 'none';
+            localStorage.setItem(NOTICE_KEY, 'true');
+        }
+
+        /* ---------- 로그인 상태 ---------- */
+        function getCurrentUser() {
+            return localStorage.getItem(USER_KEY);
+        }
+
+        function getToken() {
+            return localStorage.getItem(TOKEN_KEY) || '';
+        }
+
+        function setLoggedInUser(email, token) {
+            localStorage.setItem(USER_KEY, email);
+            if (token) localStorage.setItem(TOKEN_KEY, token);
+            applyAuthState();
+        }
+
+        function logout() {
+            localStorage.removeItem(USER_KEY);
+            localStorage.removeItem(TOKEN_KEY);
+            applyAuthState();
+        }
+
+        function applyAuthState() {
+            const user = getCurrentUser();
+            document.getElementById('guest-actions').style.display = user ? 'none' : 'flex';
+            document.getElementById('user-actions').style.display  = user ? 'flex' : 'none';
+            // 기록 영역은 항상 보이고, 로그인 전에는 가운데 로그인 안내만 보인다
+            document.getElementById('history-locked').style.display  = user ? 'none' : 'flex';
+            document.getElementById('history-content').style.display = user ? 'block' : 'none';
+            document.getElementById('history-clear').style.display   = user ? 'inline-block' : 'none';
+            if (!user) document.getElementById('history-count').textContent = '';
+
+            if (user) {
+                document.getElementById('user-email').textContent = user;
+                renderHistory();
+            }
+        }
+
+        /* ---------- 기록 저장 ---------- */
+        function historyKey() {
+            return 'yuche_history_' + getCurrentUser();
+        }
+
+        function loadHistory() {
+            const raw = localStorage.getItem(historyKey());
+            if (!raw) return [];
+            try {
+                return JSON.parse(raw);
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function writeHistory(list) {
+            // 결과 그림(썸네일) 때문에 용량이 클 수 있다. 저장 공간이 모자라면 오래된 기록부터 뺀다.
+            while (true) {
+                try {
+                    localStorage.setItem(historyKey(), JSON.stringify(list));
+                    return;
+                } catch (e) {
+                    if (list.length <= 1) return;
+                    list = list.slice(0, list.length - 1);
+                }
+            }
+        }
+
+        function saveRecord(record) {
+            if (!getCurrentUser()) return;          // 비로그인이면 저장 안 함
+            const list = loadHistory();
+            list.unshift(record);
+            writeHistory(list.slice(0, 20));
+            renderHistory();
+        }
+
+        function describeParams(p) {
+            if (!p) return '';
+            if (p.rain_mm === undefined) {
+                // 예전 분석 서버 시절 기록
+                return `강수량 ${escapeHtml(p.rainfall)}mm/h · 배수구 ${escapeHtml(p.drainCount)}개 (이전 서버)`;
+            }
+            const parts = [MODE_TEXT[p.mode] ? MODE_TEXT[p.mode].short : p.mode, `강우 ${p.rain_mm}mm`];
+            if (p.time_s !== null && p.time_s !== undefined) parts.push(`경과 ${p.time_s}초`);
+            return parts.map(escapeHtml).join(' · ');
+        }
+
+        /* 날짜·이름: id 가 Date.now() 라서 예전 기록도 시각을 복원할 수 있다 */
+        const pad2 = n => String(n).padStart(2, '0');
+        const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
+
+        function recordDate(r) {
+            return new Date(r.createdAt || Number(r.id));
+        }
+
+        function dateKey(d) {
+            return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+        }
+
+        function timeText(d) {
+            return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+        }
+
+        function defaultName(d) {
+            return `${dateKey(d)} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+        }
+
+        function recordName(r) {
+            return r.name || defaultName(recordDate(r));
+        }
+
+        function drainText(r) {
+            return r.drain ? `(${r.drain.x}, ${r.drain.y})` : '—';
+        }
+
+        function renderHistory() {
+            const list = loadHistory();
+            const tbody = document.getElementById('history-list');
+            document.getElementById('history-count').textContent = list.length ? list.length : '';
+
+            if (list.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="history-empty">아직 저장된 기록이 없습니다. 예측을 실행하면 여기에 쌓여요.</td></tr>';
+                return;
+            }
+
+            // 날짜별로 묶기 (list 는 최신순)
+            const groups = [];
+            list.forEach(r => {
+                const d = recordDate(r);
+                const key = dateKey(d);
+                let g = groups[groups.length - 1];
+                if (!g || g.key !== key) {
+                    g = { key, label: `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 (${WEEKDAYS[d.getDay()]})`, rows: [] };
+                    groups.push(g);
+                }
+                g.rows.push(r);
+            });
+
+            tbody.innerHTML = groups.map(g => `
+                <tr class="date-row"><td colspan="6">${g.label}<span>${g.rows.length}건</span></td></tr>
+                ${g.rows.map(r => `
+                    <tr class="history-row" data-id="${escapeHtml(r.id)}" title="더블클릭하면 상세 정보">
+                        <td class="name-cell">
+                            <span class="record-name">${escapeHtml(recordName(r))}</span>
+                            <button type="button" class="icon-btn" data-action="rename" aria-label="이름 변경">✎</button>
+                        </td>
+                        <td class="muted-cell">${timeText(recordDate(r))}</td>
+                        <td class="file-cell">${escapeHtml(r.fileName)}</td>
+                        <td class="muted-cell">${describeParams(r.params)}</td>
+                        <td class="muted-cell">${escapeHtml(drainText(r))}</td>
+                        <td>
+                            <div class="history-buttons">
+                                <button type="button" data-action="show">보기</button>
+                                <button type="button" data-action="delete">삭제</button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('')}
+            `).join('');
+        }
+
+        // 표 안의 버튼/더블클릭은 위임으로 처리
+        const historyBody = document.getElementById('history-list');
+        historyBody.addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-action]');
+            const row = e.target.closest('tr.history-row');
+            if (!btn || !row) return;
+            const id = row.dataset.id;
+            if (btn.dataset.action === 'show') showRecord(id);
+            else if (btn.dataset.action === 'delete') deleteRecord(id);
+            else if (btn.dataset.action === 'rename') startRename(row);
+        });
+        historyBody.addEventListener('dblclick', (e) => {
+            const row = e.target.closest('tr.history-row');
+            if (!row || e.target.closest('button, input')) return;
+            showDetail(row.dataset.id);
+        });
+
+        function updateRecord(id, changes) {
+            const list = loadHistory();
+            const r = list.find(x => x.id === id);
+            if (!r) return;
+            Object.assign(r, changes);
+            writeHistory(list);
+        }
+
+        // 이름 칸을 입력창으로 바꿔서 수정. Enter/포커스 이탈 = 저장, Esc = 취소. 비우면 기본 이름(날짜 시간)으로
+        function startRename(row) {
+            const cell = row.querySelector('.name-cell');
+            if (cell.querySelector('input')) return;
+            const id = row.dataset.id;
+            const record = loadHistory().find(r => r.id === id);
+            if (!record) return;
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'rename-input';
+            input.maxLength = 60;
+            input.value = recordName(record);
+            cell.innerHTML = '';
+            cell.appendChild(input);
+            input.focus();
+            input.select();
+
+            let done = false;
+            const finish = (save) => {
+                if (done) return;
+                done = true;
+                if (save) {
+                    const name = input.value.trim();
+                    updateRecord(id, { name: name || null });
+                }
+                renderHistory();
+            };
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') finish(true);
+                else if (e.key === 'Escape') finish(false);
+            });
+            input.addEventListener('blur', () => finish(true));
+        }
+
+        function showRecord(id) {
+            const record = loadHistory().find(r => r.id === id);
+            if (!record) return;
+
+            if (!record.thumbnail) {
+                alert('이전 분석 서버에서 만든 기록이라 결과 그림을 다시 불러올 수 없습니다.');
+                return;
+            }
+            showResult(
+                [{ key: 'saved', label: `${recordName(record)} · ${record.imageLabel || '저장된 결과'}`, src: record.thumbnail }],
+                record.info || [],
+                record.meta
+            );
+            goToView('predict');   // 기록 화면에서 눌렀으면 예측 화면으로 넘어가서 결과를 보여준다
+            document.getElementById('result-section').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        /* ---------- 화면 전환: 예측 / 분석 기록 (주소 #history) ---------- */
+        function currentView() {
+            return location.hash === '#history' ? 'history' : 'predict';
+        }
+
+        function applyView() {
+            const view = currentView();
+            document.getElementById('view-predict').style.display = view === 'predict' ? 'flex' : 'none';
+            document.getElementById('history-panel').style.display = view === 'history' ? 'block' : 'none';
+            document.getElementById('history-head').style.display = view === 'history' ? 'block' : 'none';
+            document.querySelectorAll('.view-tab').forEach(tab => {
+                const active = tab.dataset.view === view;
+                tab.classList.toggle('active', active);
+                if (active) tab.setAttribute('aria-current', 'page');
+                else tab.removeAttribute('aria-current');
+            });
+            window.scrollTo(0, 0);
+        }
+
+        function goToView(view) {
+            if (view === currentView()) return;
+            if (view === 'history') location.hash = 'history';
+            else history.pushState(null, '', location.pathname + location.search);   // '#' 없이 깔끔하게
+            applyView();
+        }
+
+        document.querySelectorAll('.view-tab').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                e.preventDefault();
+                goToView(tab.dataset.view);
+            });
+        });
+        window.addEventListener('hashchange', applyView);
+        window.addEventListener('popstate', applyView);
+
+        /* ---------- 기록 상세 (더블클릭) ---------- */
+        function showDetail(id) {
+            const r = loadHistory().find(x => x.id === id);
+            if (!r) return;
+            const d = recordDate(r);
+            const p = r.params || {};
+
+            document.getElementById('detail-title').textContent = recordName(r);
+            const img = document.getElementById('detail-img');
+            img.style.display = r.thumbnail ? 'block' : 'none';
+            if (r.thumbnail) img.src = r.thumbnail;
+            // 그림이 없는 기록(비로그인 시절·이전 서버)은 정보만 한 칸으로, 다시 열기 버튼도 숨김
+            document.querySelector('.detail-body').classList.toggle('no-img', !r.thumbnail);
+            document.getElementById('detail-open-btn').style.display = r.thumbnail ? 'block' : 'none';
+
+            const rows = [
+                ['저장 시각', `${dateKey(d)} ${timeText(d)}`],
+                ['입력 파일', r.fileName],
+                ['입력 종류', MODE_TEXT[p.mode] ? MODE_TEXT[p.mode].short : (p.mode || '—')],
+                ['강우량', p.rain_mm != null ? `${p.rain_mm} mm` : (p.rainfall != null ? `${p.rainfall} mm/h` : '—')],
+                ['경과 시간', p.time_s != null ? `${p.time_s} 초` : '—'],
+                ['격자 셀 크기', p.dx != null ? `${Number(p.dx).toFixed(2)} m` : '—'],
+                ['배수구 후보', drainText(r)],
+                ['모델', r.checkpoint || '—'],
+                ['대표 그림', r.imageLabel || '—']
+            ];
+            document.getElementById('detail-list').innerHTML = rows.map(([k, v]) =>
+                `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd>`).join('');
+            document.getElementById('detail-info').innerHTML =
+                (r.info || []).map(line => `<li>${escapeHtml(line)}</li>`).join('');
+
+            document.getElementById('detail-open-btn').onclick = () => {
+                closeDetail();
+                showRecord(id);
+            };
+            document.getElementById('detail-modal').style.display = 'flex';
+        }
+
+        function closeDetail() {
+            document.getElementById('detail-modal').style.display = 'none';
+        }
+
+        document.getElementById('detail-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'detail-modal') closeDetail();   // 바깥 어두운 부분 클릭
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeDetail();
+                closeAuthModal();
+            }
+        });
+
+        function deleteRecord(id) {
+            const list = loadHistory().filter(r => r.id !== id);
+            writeHistory(list);
+            renderHistory();
+        }
+
+        function clearHistory() {
+            if (!confirm('기록을 전부 삭제할까요?')) return;
+            localStorage.removeItem(historyKey());
+            renderHistory();
+        }
+
+        // 기록용 썸네일: 원본 base64 PNG 는 수백 KB 라서 긴 변 360px JPEG 로 줄여 저장한다
+        function makeThumbnail(dataUrl, maxSide = 360) {
+            return new Promise(resolve => {
+                const img = new Image();
+                img.onload = () => {
+                    const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+                    const canvas = document.createElement('canvas');
+                    canvas.width = Math.round(img.width * scale);
+                    canvas.height = Math.round(img.height * scale);
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = '#fff';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    resolve(canvas.toDataURL('image/jpeg', 0.8));
+                };
+                img.onerror = () => resolve(null);
+                img.src = dataUrl;
+            });
+        }
+
+        /* ---------- 입력 종류(mode) ---------- */
+        const MODE_TEXT = {
+            image: {
+                short: '등고선 이미지',
+                hint: '모델은 학습 데이터와 같은 스타일(채색 20단계 + 검은 등고선)의 이미지에서 가장 정확합니다.',
+                accept: '.png,.jpg,.jpeg,.webp',
+                fileHint: 'PNG · JPG · WEBP',
+                exts: ['png', 'jpg', 'jpeg', 'webp']
+            },
+            terrain: {
+                short: '등고선 데이터',
+                hint: '고도값 격자 파일. 서버가 학습 때와 같은 방식으로 등고선을 그려 예측하므로 가장 정확하고, 배수구 후보 위치도 함께 나옵니다.',
+                accept: '.npy,.csv,.txt,.dat,.asc,.grd,.tif,.tiff,.png,.jpg,.jpeg',
+                fileHint: '.npy · .csv · .txt · .dat · .asc · .grd · .tif · 회색조 높이맵 .png/.jpg',
+                exts: ['npy', 'csv', 'txt', 'dat', 'asc', 'grd', 'tif', 'tiff', 'png', 'jpg', 'jpeg']
+            }
+        };
+        const MAX_UPLOAD_MB = 25;   // 서버 MAX_UPLOAD_BYTES
+
+        function getMode() {
+            return document.querySelector('input[name="mode"]:checked').value;
+        }
+
+        function applyMode() {
+            const t = MODE_TEXT[getMode()];
+            document.getElementById('mode-hint').textContent = t.hint;
+            document.getElementById('fileInput').setAttribute('accept', t.accept);
+            document.getElementById('dropzone-hint').textContent = t.fileHint;
+            document.getElementById('dx-block').style.display = (getMode() === 'terrain') ? 'block' : 'none';
+            document.getElementById('samples-block').style.display = (getMode() === 'image') ? 'block' : 'none';
+            clearFieldError('fileInput');
+            updateRunSummary();
+        }
+
+        document.querySelectorAll('input[name="mode"]').forEach(radio => {
+            radio.addEventListener('change', applyMode);
+        });
+
+        /* ---------- 슬라이더 <-> 숫자 입력 동기화 ---------- */
+        function linkSlider(rangeId, numberId) {
+            const range = document.getElementById(rangeId);
+            const num = document.getElementById(numberId);
+            range.addEventListener('input', () => {
+                num.value = range.value;
+                clearFieldError(numberId);
+                updateRunSummary();
+            });
+            num.addEventListener('input', () => {
+                if (num.value !== '') range.value = num.value;
+                updateRunSummary();
+            });
+        }
+
+        function syncSliderBounds(rangeId, numberId) {
+            const range = document.getElementById(rangeId);
+            const num = document.getElementById(numberId);
+            range.min = num.min;
+            range.max = num.max;
+            range.value = num.value;
+            range.disabled = num.disabled;
+        }
+
+        linkSlider('rainRange', 'rainMm');
+        linkSlider('timeRange', 'timeS');
+
+        function updateRunSummary() {
+            const parts = [MODE_TEXT[getMode()].short];
+            if (modelInfo.rainConditioned) parts.push(`강우 ${document.getElementById('rainMm').value}mm`);
+            if (modelInfo.timeConditioned) parts.push(`경과 ${document.getElementById('timeS').value}초`);
+            const file = document.getElementById('fileInput').files[0];
+            parts.push(file ? file.name : '파일 미선택');
+            document.getElementById('run-summary').textContent = parts.join(' · ');
+        }
+
+        /* ---------- 모델 서버 상태 (/api/health) ---------- */
+        async function initHealth() {
+            const status = document.getElementById('model-status');
+            try {
+                const h = await (await fetch(ANALYZE_API + '/api/health')).json();
+
+                modelInfo.rainConditioned = !!h.rain_conditioned;
+                modelInfo.timeConditioned = !!h.time_conditioned;
+                modelInfo.authEnabled = !!h.auth_enabled && h.db === 'ok';
+                if (Array.isArray(h.rain_range_mm)) modelInfo.rainRange = h.rain_range_mm;
+                if (Array.isArray(h.time_range_s)) modelInfo.timeRange = h.time_range_s;
+
+                // 입력칸 범위를 서버가 알려준 학습 범위에 맞춘다
+                const rain = document.getElementById('rainMm');
+                rain.min = modelInfo.rainRange[0];
+                rain.max = modelInfo.rainRange[1];
+                document.getElementById('rain-hint').textContent =
+                    `학습 범위는 ${modelInfo.rainRange[0]}~${modelInfo.rainRange[1]}mm 입니다. 범위를 벗어난 값은 경계값처럼 처리됩니다.`;
+                if (!modelInfo.rainConditioned) {
+                    rain.disabled = true;
+                    document.getElementById('rain-hint').textContent = '현재 모델은 강우량을 쓰지 않습니다.';
+                }
+                syncSliderBounds('rainRange', 'rainMm');
+
+                const time = document.getElementById('timeS');
+                time.min = modelInfo.timeRange[0];
+                time.max = modelInfo.timeRange[1];
+                if (h.default_time_s != null) time.value = h.default_time_s;
+                syncSliderBounds('timeRange', 'timeS');
+                document.getElementById('time-row').style.display = modelInfo.timeConditioned ? 'block' : 'none';
+
+                const auth = modelInfo.authEnabled ? '로그인 필요' : '로그인 없이 사용 가능';
+                status.textContent = `${h.checkpoint} · ${String(h.device).toUpperCase()} · ${auth}`;
+                status.classList.add('ok');
+                updateRunSummary();
+            } catch (err) {
+                console.error(err);
+                status.textContent = '모델 서버 연결 안 됨';
+                status.title = ANALYZE_API;
+                status.classList.add('down');
+            }
+        }
+
+        /* ---------- 샘플 등고선 갤러리 (/api/samples) ---------- */
+        async function initSamples() {
+            const grid = document.getElementById('sample-grid');
+            const empty = document.getElementById('sample-empty');
+            try {
+                const { samples = [] } = await (await fetch(ANALYZE_API + '/api/samples?limit=24')).json();
+                if (samples.length === 0) {
+                    empty.textContent = '서버에 샘플이 없습니다.';
+                    return;
+                }
+                empty.style.display = 'none';
+                samples.forEach(name => {
+                    const b = document.createElement('button');
+                    b.type = 'button';
+                    b.title = name;
+                    b.innerHTML = `<img src="${ANALYZE_API}/api/sample/${encodeURIComponent(name)}" alt="${escapeHtml(name)}" loading="lazy">`;
+                    b.onclick = () => pickSample(name, b);
+                    grid.appendChild(b);
+                });
+            } catch (err) {
+                empty.textContent = '모델 서버에 연결되면 샘플 등고선이 표시됩니다.';
+            }
+        }
+
+        // 샘플 PNG 를 받아 업로드한 파일처럼 fileInput 에 넣는다
+        async function pickSample(name, button) {
+            try {
+                const blob = await (await fetch(`${ANALYZE_API}/api/sample/${encodeURIComponent(name)}`)).blob();
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(new File([blob], name, { type: 'image/png' }));
+                fileInputEl.files = dataTransfer.files;
+
+                document.querySelectorAll('#sample-grid button').forEach(x => x.classList.remove('selected'));
+                button.classList.add('selected');
+                clearFieldError('fileInput');
+                updateDropzonePreview();
+            } catch (err) {
+                alert('샘플을 불러오지 못했습니다.');
+            }
+        }
+
+        // 저장된 토큰이 아직 유효한지 확인 (만료됐으면 로그아웃 처리)
+        async function verifySavedToken() {
+            if (!getToken()) {
+                if (getCurrentUser()) logout();   // 예전 로그인 서버 시절 상태 -> 토큰이 없으니 정리
+                return;
+            }
+            try {
+                const res = await fetch(AUTH_API + '/api/auth/me', {
+                    headers: { Authorization: 'Bearer ' + getToken() }
+                });
+                if (res.status === 401) logout();
+            } catch (e) {
+                // 서버가 꺼져 있으면 판단하지 않고 그대로 둔다
+            }
+        }
+
+        // 현재 모달이 로그인 모드인지 회원가입 모드인지 저장해두는 변수
+        let currentAuthMode = null;
+
+        function setAuthMessage(text, kind) {
+            const message = document.getElementById('auth-message');
+            message.textContent = text;
+            message.className = kind || '';
+        }
+
+        function openAuthModal(mode, notice) {
+            currentAuthMode = mode; // 'login' 또는 'signup'
+
+            // 입력창, 메시지 초기화
+            document.getElementById('email-input').value = '';
+            document.getElementById('password-input').value = '';
+            setAuthMessage(notice || '', 'error');
+
+            const label = (mode === 'login') ? '로그인' : '회원가입';
+            document.getElementById('modal-title').textContent = label;
+            document.getElementById('modal-submit-btn').textContent = label;
+
+            document.getElementById('auth-modal').style.display = 'flex'; // 숨겨져 있던 모달을 보이게 함
+            document.getElementById('email-input').focus();                // 바로 입력할 수 있게
+        }
+
+        function closeAuthModal() {
+            document.getElementById('auth-modal').style.display = 'none';
+        }
+
+        // 이메일/비밀번호 칸에서 Enter = 로그인·회원가입 버튼 누르기 (이메일 칸이 비어 있지 않으면 비밀번호 칸으로)
+        ['email-input', 'password-input'].forEach(id => {
+            document.getElementById(id).addEventListener('keydown', (e) => {
+                if (e.key !== 'Enter' || e.isComposing) return;   // 한글 조합 중 Enter 는 무시
+                e.preventDefault();
+                const pw = document.getElementById('password-input');
+                if (id === 'email-input' && !pw.value) pw.focus();
+                else submitAuth();
+            });
+        });
+
+        let authBusy = false;   // Enter 연타로 두 번 보내지 않도록
+
+        async function submitAuth() {
+            if (authBusy) return;
+            const email = document.getElementById('email-input').value.trim();
+            const password = document.getElementById('password-input').value;
+
+            if (!email || !password) {
+                setAuthMessage('이메일과 비밀번호를 입력하세요.', 'error');
+                return;
+            }
+            if (currentAuthMode === 'signup' && password.length < 6) {
+                setAuthMessage('비밀번호는 6자 이상이어야 합니다.', 'error');
+                return;
+            }
+
+            const endpoint = (currentAuthMode === 'login') ? '/api/auth/login' : '/api/auth/signup';
+
+            authBusy = true;
+            try {
+                const response = await fetch(AUTH_API + endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email, password: password })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    setAuthMessage((typeof data.detail === 'string' ? data.detail : '') || '오류가 발생했습니다.', 'error');
+                    return;
+                }
+
+                // 로그인·회원가입 모두 서버가 토큰을 준다 -> 바로 로그인 상태로
+                setLoggedInUser(data.email, data.token);
+                setAuthMessage((currentAuthMode === 'login')
+                    ? '로그인 성공!'
+                    : `회원가입 성공! (${data.email}) 바로 로그인되었습니다.`, 'success');
+                setTimeout(closeAuthModal, 800);
+
+            } catch (err) {
+                setAuthMessage(`서버에 연결할 수 없습니다. 서버(run_test_server.bat)가 켜져 있는지 확인하세요. (${AUTH_API})`, 'error');
+                console.error(err);
+            } finally {
+                authBusy = false;
+            }
+        }
+
+        /* ---------- 입력 검증 ---------- */
+        // AI 서버로 보내는 숫자 변수들. visible() 이 false 면 검사하지 않는다(숨겨진 칸)
+        const NUMERIC_FIELDS = [
+            { id: 'rainMm', label: '강우량', visible: () => modelInfo.rainConditioned },
+            { id: 'timeS', label: '경과 시간', visible: () => modelInfo.timeConditioned },
+            { id: 'dx', label: '격자 셀 크기', visible: () => getMode() === 'terrain' }
+        ];
+
+        function showFieldError(id, message) {
+            const input = document.getElementById(id);
+            const errorEl = document.getElementById('err-' + id);
+            if (input) input.classList.add('input-error');
+            if (errorEl) {
+                errorEl.textContent = message;
+                errorEl.classList.add('visible');
+            }
+            if (id === 'fileInput') {
+                document.getElementById('dropzone').classList.add('input-error');
+            }
+        }
+
+        function clearFieldError(id) {
+            const input = document.getElementById(id);
+            const errorEl = document.getElementById('err-' + id);
+            if (input) input.classList.remove('input-error');
+            if (errorEl) {
+                errorEl.textContent = '';
+                errorEl.classList.remove('visible');
+            }
+            if (id === 'fileInput') {
+                document.getElementById('dropzone').classList.remove('input-error');
+            }
+        }
+
+        function clearAllFieldErrors() {
+            clearFieldError('fileInput');
+            NUMERIC_FIELDS.forEach(({ id }) => clearFieldError(id));
+        }
+
+        function fileExt(name) {
+            const i = name.lastIndexOf('.');
+            return i < 0 ? '' : name.slice(i + 1).toLowerCase();
+        }
+
+        function validateForm() {
+            clearAllFieldErrors();
+            let valid = true;
+
+            const file = document.getElementById('fileInput').files[0];
+            const t = MODE_TEXT[getMode()];
+            if (!file) {
+                showFieldError('fileInput', '파일을 업로드하거나 샘플을 선택해주세요.');
+                valid = false;
+            } else if (!t.exts.includes(fileExt(file.name))) {
+                showFieldError('fileInput', `${t.short} 모드에서는 ${t.fileHint} 파일만 올릴 수 있습니다.`);
+                valid = false;
+            } else if (file.size > MAX_UPLOAD_MB * 1024 * 1024) {
+                showFieldError('fileInput', `파일이 ${MAX_UPLOAD_MB}MB 를 넘습니다.`);
+                valid = false;
+            }
+
+            NUMERIC_FIELDS.forEach(({ id, label, integer, visible }) => {
+                if (visible && !visible()) return;
+                const input = document.getElementById(id);
+                const value = Number(input.value);
+                const min = Number(input.min);
+                const max = Number(input.max);
+
+                if (input.value === '' || Number.isNaN(value)) {
+                    showFieldError(id, `${label} 값을 입력해주세요.`);
+                    valid = false;
+                } else if (value < min || value > max) {
+                    showFieldError(id, `${label}은(는) ${min} ~ ${max} 사이 값이어야 합니다.`);
+                    valid = false;
+                } else if (integer && !Number.isInteger(value)) {
+                    showFieldError(id, `${label}은(는) 정수로 입력해주세요.`);
+                    valid = false;
+                }
+            });
+
+            return valid;
+        }
+
+        NUMERIC_FIELDS.forEach(({ id }) => {
+            document.getElementById(id).addEventListener('input', () => clearFieldError(id));
+        });
+
+        /* ---------- 드래그앤드롭 업로드 ---------- */
+        const dropzone = document.getElementById('dropzone');
+        const fileInputEl = document.getElementById('fileInput');
+        const PREVIEW_EXTS = ['png', 'jpg', 'jpeg', 'webp'];   // 브라우저가 바로 그릴 수 있는 형식
+        let previewUrl = null;
+
+        function formatSize(bytes) {
+            return bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+        }
+
+        // 파일이 없으면 안내 문구, 있으면 미리보기(그림) 또는 파일 아이콘 + 이름·크기
+        function updateDropzonePreview() {
+            const file = fileInputEl.files[0];
+            const img = document.getElementById('dropzone-img');
+            const icon = document.getElementById('dropzone-fileicon');
+
+            if (previewUrl) {
+                URL.revokeObjectURL(previewUrl);
+                previewUrl = null;
+            }
+
+            document.getElementById('dropzone-empty').style.display = file ? 'none' : 'flex';
+            document.getElementById('dropzone-preview').style.display = file ? 'flex' : 'none';
+            document.getElementById('dropzone-remove').style.display = file ? 'flex' : 'none';
+            dropzone.classList.toggle('has-file', !!file);
+
+            if (file) {
+                const canPreview = PREVIEW_EXTS.includes(fileExt(file.name));
+                if (canPreview) {
+                    previewUrl = URL.createObjectURL(file);
+                    img.src = previewUrl;
+                    img.title = `${file.name} · ${formatSize(file.size)}`;
+                }
+                img.style.display = canPreview ? 'block' : 'none';
+                icon.style.display = canPreview ? 'none' : 'flex';
+                document.getElementById('dropzone-filename').textContent = `${file.name} · ${formatSize(file.size)}`;
+            }
+            updateRunSummary();
+        }
+
+        function clearSelectedFile() {
+            fileInputEl.value = '';
+            document.querySelectorAll('#sample-grid button').forEach(x => x.classList.remove('selected'));
+            clearFieldError('fileInput');
+            updateDropzonePreview();
+        }
+
+        document.getElementById('dropzone-remove').addEventListener('click', clearSelectedFile);
+
+        fileInputEl.addEventListener('change', () => {
+            clearFieldError('fileInput');
+            document.querySelectorAll('#sample-grid button').forEach(x => x.classList.remove('selected'));
+            updateDropzonePreview();
+        });
+
+        ['dragenter', 'dragover'].forEach(evt => {
+            dropzone.addEventListener(evt, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropzone.classList.add('dragover');
+            });
+        });
+
+        ['dragleave', 'dragend'].forEach(evt => {
+            dropzone.addEventListener(evt, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropzone.classList.remove('dragover');
+            });
+        });
+
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzone.classList.remove('dragover');
+
+            const file = e.dataTransfer.files[0];
+            if (!file) return;
+
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            fileInputEl.files = dataTransfer.files;
+
+            clearFieldError('fileInput');
+            document.querySelectorAll('#sample-grid button').forEach(x => x.classList.remove('selected'));
+            updateDropzonePreview();
+        });
+
+        /* ---------- 결과 표시 ---------- */
+        // images: [{ key, label, src }] - 카드로 나란히 보인다. info: 문자열 배열, meta: 서버 meta (선택)
+        function showResult(images, info, meta) {
+            document.getElementById('result-grid').innerHTML = images.map(im => `
+                <figure class="result-card">
+                    <figcaption>${escapeHtml(im.label)}</figcaption>
+                    <img src="${im.src}" alt="${escapeHtml(im.label)}">
+                    <a href="${im.src}" download="yuche_${escapeHtml(im.key)}.png">PNG 저장</a>
+                </figure>
+            `).join('');
+
+            document.getElementById('result-info').innerHTML =
+                info.map(line => `<li>${escapeHtml(line)}</li>`).join('');
+            document.getElementById('result-meta').textContent = meta ? JSON.stringify(meta, null, 2) : '';
+
+            document.getElementById('result-box').style.display = 'block';
+            document.getElementById('viewer-placeholder').style.display = 'none';
+        }
+
+        document.getElementById('uploadForm').addEventListener('submit', async(e) => { //id가 "uploadform"인 요소를 찾아와서 폼이 제출될때 함수를 실행해라
+            e.preventDefault(); // 브라우저 새로고침하지마!
+
+            if (!validateForm()) {
+                return;
+            }
+            if (modelInfo.authEnabled && !getToken()) {
+                openAuthModal('login', '이 서버는 로그인해야 예측할 수 있어요.');
+                return;
+            }
+
+            const btn = document.getElementById('submit-btn');
+            const mapFile = document.getElementById('fileInput').files[0];
+            const mode = getMode();
+            const rainMm = Number(document.getElementById('rainMm').value);
+            const timeS = Number(document.getElementById('timeS').value);
+            const dx = Number(document.getElementById('dx').value);
+
+            // AI 모델 서버 /api/predict 가 받는 값 그대로
+            const formData = new FormData();
+            formData.append('mode', mode);                // 'image' | 'terrain'
+            formData.append('file', mapFile);
+            formData.append('rain_mm', rainMm);            // 강우량 [mm]
+            formData.append('time_s', timeS);              // 경과 시간 [초]
+            formData.append('dx', dx);                     // 셀 크기 [m] (terrain 모드만 의미 있음)
+
+            const headers = getToken() ? { Authorization: 'Bearer ' + getToken() } : {};
+
+            btn.disabled = true; //버튼 비활성화
+            btn.textContent = '예측 중...'; //버튼 글자 바꾸기
+
+            try {
+                const res = await fetch(ANALYZE_API + '/api/predict', { // 서버 주소는 위의 ANALYZE_API 상수에서 변경
+                    method: 'POST',
+                    body: formData,
+                    headers
+                });
+
+                if (res.status === 401) {
+                    logout();
+                    openAuthModal('login', '로그인이 필요하거나 세션이 만료되었습니다. 다시 로그인해 주세요.');
+                    return;
+                }
+
+                let data;
+                try {
+                    data = await res.json(); //서버에서 json형식으로 응답받기
+                } catch {
+                    throw new Error(`서버 오류 (${res.status})`);
+                }
+                if (!res.ok) {
+                    // FastAPI 검증 오류는 detail 이 배열일 수 있다
+                    const d = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
+                    throw new Error(`[${res.status}] ${d}`);
+                }
+                console.log('서버 응답:', data);
+
+                const png = b64 => 'data:image/png;base64,' + b64;
+                // 참고 화면 순서: 입력 → 예측 → 오버레이. terrain 모드는 배수구 후보가 그려진 분석 지도를 맨 앞에
+                const images = [];
+                if (data.analysis_png_base64) images.push({ key: 'analysis', label: '분석 지도 (배수구 후보)', src: png(data.analysis_png_base64) });
+                images.push({ key: 'contour', label: '입력 등고선 (모델에 들어간 이미지)', src: png(data.contour_png_base64) });
+                images.push({ key: 'prediction', label: '예측 배수맵', src: png(data.prediction_png_base64) });
+                images.push({ key: 'overlay', label: '오버레이 (등고선 + 예측)', src: png(data.overlay_png_base64) });
+
+                // 서버 meta 에 들어간 값이 아니라 모델이 실제로 쓴 값을 보여준다 (강우는 학습 범위로 잘림)
+                const usedRain = Math.min(Math.max(rainMm, modelInfo.rainRange[0]), modelInfo.rainRange[1]);
+                const meta = data.meta || {};
+                const info = [];
+                if (data.drain_candidate) {
+                    const p = data.drain_candidate.pixel;
+                    const n = data.drain_candidate.normalized;
+                    info.push(`배수구 설치 후보(예측 유출 최대점): 격자 (${p.x}, ${p.y}) · 가로 ${Math.round(n.x * 100)}% / 세로 ${Math.round(n.y * 100)}% 지점`);
+                } else if (mode === 'image') {
+                    info.push('배수구 후보 좌표는 "등고선 데이터" 모드에서만 계산됩니다.');
+                }
+                const cond = [];
+                if (meta.rain_conditioned) cond.push(`강우 ${usedRain}mm`);
+                if (meta.time_conditioned) cond.push(`경과 ${meta.time_s}초`);
+                if (meta.dx_m) cond.push(`셀 ${Number(meta.dx_m).toFixed(2)}m`);
+                info.push(`조건: ${cond.join(' · ') || '없음'} · 모델 ${data.checkpoint}`);
+                (data.notes || []).forEach(n => info.push(n));
+
+                showResult(images, info, { checkpoint: data.checkpoint, ...meta });
+                document.getElementById('result-section').scrollIntoView({ behavior: 'smooth' });
+
+                // 기록 썸네일은 가장 유용한 그림 하나 (분석 지도가 있으면 그것, 없으면 오버레이)
+                const main = images.find(im => im.key === 'analysis') || images.find(im => im.key === 'overlay');
+                const now = new Date();
+                saveRecord({
+                    id: now.getTime().toString(),
+                    createdAt: now.toISOString(),
+                    name: null,                      // null 이면 화면에 '날짜 시간'이 기본 이름으로 보인다
+                    savedAt: now.toLocaleString('ko-KR'),
+                    meta: { checkpoint: data.checkpoint, ...meta },
+                    fileName: mapFile.name,
+                    params: {
+                        mode,
+                        rain_mm: usedRain,
+                        time_s: meta.time_conditioned ? meta.time_s : null,
+                        dx: meta.dx_m ?? null
+                    },
+                    drain: data.drain_candidate ? data.drain_candidate.pixel : null,
+                    checkpoint: data.checkpoint,
+                    imageLabel: main.label,
+                    thumbnail: getCurrentUser() ? await makeThumbnail(main.src) : null,
+                    info
+                });
+
+            } catch (err) { //접속이 안된다면?
+                console.error(err);
+                alert(err instanceof TypeError ? '서버 연결 불가' : '예측 실패: ' + err.message); //에러메시지 보내기
+            } finally {
+                btn.disabled = false; //버튼 활성화
+                btn.textContent = SUBMIT_LABEL; //버튼 글자 바꾸기
+            }
+        });
+
+        initNotice();
+        initTheme();
+        applyView();
+        applyAuthState();
+        applyMode();
+        initHealth();
+        initSamples();
+        verifySavedToken();
+    </script>
+
+</body>
+</html>

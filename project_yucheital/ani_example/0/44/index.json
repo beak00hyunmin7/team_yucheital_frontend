@@ -1,0 +1,135 @@
+{
+  "vtkClass": "vtkPolyData",
+  "points": {
+    "vtkClass": "vtkPoints",
+    "name": "points",
+    "numberOfComponents": 3,
+    "dataType": "Float32Array",
+    "ref": {
+      "encode": "LittleEndian",
+      "basepath": "../../data",
+      "id": "Float32_2883-71448c80c692e113b14f92629783049a"
+    },
+    "size": 2883
+  },
+  "polys": {
+    "vtkClass": "vtkCellArray",
+    "name": "polys",
+    "numberOfComponents": 1,
+    "dataType": "Int32Array",
+    "ref": {
+      "encode": "LittleEndian",
+      "basepath": "../../data",
+      "id": "Int32_4500-85f2a5985e67e211d1eb193968f8d09a"
+    },
+    "size": 4500
+  },
+  "pointData": {
+    "vtkClass": "vtkDataSetAttributes",
+    "arrays": [
+      {
+        "data": {
+          "vtkClass": "vtkDataArray",
+          "name": "vtkCompositeIndex",
+          "numberOfComponents": 1,
+          "dataType": "Uint32Array",
+          "ref": {
+            "encode": "LittleEndian",
+            "basepath": "../../data",
+            "id": "Uint32_961-7887ab2060276d06aee04b0a2812c183"
+          },
+          "size": 961
+        }
+      }
+    ],
+    "activeTCoords": -1,
+    "activeScalars": -1,
+    "activeNormals": -1,
+    "activeGlobalIds": -1,
+    "activeTensors": -1,
+    "activePedigreeIds": -1,
+    "activeVectors": -1
+  },
+  "cellData": {
+    "vtkClass": "vtkDataSetAttributes",
+    "arrays": [
+      {
+        "data": {
+          "vtkClass": "vtkDataArray",
+          "name": "U",
+          "numberOfComponents": 3,
+          "dataType": "Float32Array",
+          "ref": {
+            "encode": "LittleEndian",
+            "basepath": "../../data",
+            "id": "Float32_2700-fa9ecd3de660283ba08df3696a94f6ae"
+          },
+          "size": 2700
+        }
+      },
+      {
+        "data": {
+          "vtkClass": "vtkDataArray",
+          "name": "alpha.water",
+          "numberOfComponents": 1,
+          "dataType": "Float32Array",
+          "ref": {
+            "encode": "LittleEndian",
+            "basepath": "../../data",
+            "id": "Float32_900-6453e92986851fb2d243197f09d009af"
+          },
+          "size": 900
+        }
+      },
+      {
+        "data": {
+          "vtkClass": "vtkDataArray",
+          "name": "p",
+          "numberOfComponents": 1,
+          "dataType": "Float32Array",
+          "ref": {
+            "encode": "LittleEndian",
+            "basepath": "../../data",
+            "id": "Float32_900-cc9714c0b69be6d0f3549ab43b6679a5"
+          },
+          "size": 900
+        }
+      },
+      {
+        "data": {
+          "vtkClass": "vtkDataArray",
+          "name": "p_rgh",
+          "numberOfComponents": 1,
+          "dataType": "Float32Array",
+          "ref": {
+            "encode": "LittleEndian",
+            "basepath": "../../data",
+            "id": "Float32_900-bcfa674b5db70a920a7bab431670afc4"
+          },
+          "size": 900
+        }
+      },
+      {
+        "data": {
+          "vtkClass": "vtkDataArray",
+          "name": "vtkCompositeIndex",
+          "numberOfComponents": 1,
+          "dataType": "Uint32Array",
+          "ref": {
+            "encode": "LittleEndian",
+            "basepath": "../../data",
+            "id": "Uint32_900-b37480f6e799a9f0f425a3b97106e877"
+          },
+          "size": 900
+        }
+      }
+    ],
+    "activeTCoords": -1,
+    "activeScalars": 2,
+    "activeNormals": -1,
+    "activeGlobalIds": -1,
+    "activeTensors": -1,
+    "activePedigreeIds": -1,
+    "activeVectors": 0
+  }
+}

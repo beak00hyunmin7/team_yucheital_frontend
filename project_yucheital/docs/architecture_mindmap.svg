@@ -1,0 +1,174 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1210" viewBox="0 0 1600 1210" font-family="'Malgun Gothic','Segoe UI',sans-serif">
+<rect width="1600" height="1210" fill="#0f141a"/>
+<text x="40" y="52" font-size="26" font-weight="700" fill="#e6eaef" text-anchor="start">유체이탈 시스템 구조</text>
+<text x="40" y="80" font-size="14" font-weight="400" fill="#8592a3" text-anchor="start">프론트엔드 · AI 모델 서버 · 백엔드가 어떻게 연결되는지 한눈에 보기</text>
+<defs><marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8592a3"/></marker></defs>
+<g transform="translate(0,70)">
+<path d="M680,470 C662.5,470 662.5,240 645.0,240" fill="none" stroke="#3398e0" stroke-width="3" stroke-linecap="round"/>
+<path d="M395.0,240 C367.5,240 367.5,88.0 340,88.0" fill="none" stroke="#3398e0" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M395.0,240 C367.5,240 367.5,164.0 340,164.0" fill="none" stroke="#3398e0" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M395.0,240 C367.5,240 367.5,240.0 340,240.0" fill="none" stroke="#3398e0" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M395.0,240 C367.5,240 367.5,316.0 340,316.0" fill="none" stroke="#3398e0" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M395.0,240 C367.5,240 367.5,392.0 340,392.0" fill="none" stroke="#3398e0" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M920,470 C937.5,470 937.5,240 955.0,240" fill="none" stroke="#2bb39b" stroke-width="3" stroke-linecap="round"/>
+<path d="M1205.0,240 C1232.5,240 1232.5,88.0 1260,88.0" fill="none" stroke="#2bb39b" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M1205.0,240 C1232.5,240 1232.5,164.0 1260,164.0" fill="none" stroke="#2bb39b" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M1205.0,240 C1232.5,240 1232.5,240.0 1260,240.0" fill="none" stroke="#2bb39b" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M1205.0,240 C1232.5,240 1232.5,316.0 1260,316.0" fill="none" stroke="#2bb39b" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M1205.0,240 C1232.5,240 1232.5,392.0 1260,392.0" fill="none" stroke="#2bb39b" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M920,470 C937.5,470 937.5,710 955.0,710" fill="none" stroke="#9b7be0" stroke-width="3" stroke-linecap="round"/>
+<path d="M1205.0,710 C1232.5,710 1232.5,558.0 1260,558.0" fill="none" stroke="#9b7be0" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M1205.0,710 C1232.5,710 1232.5,634.0 1260,634.0" fill="none" stroke="#9b7be0" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M1205.0,710 C1232.5,710 1232.5,710.0 1260,710.0" fill="none" stroke="#9b7be0" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M1205.0,710 C1232.5,710 1232.5,786.0 1260,786.0" fill="none" stroke="#9b7be0" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M1205.0,710 C1232.5,710 1232.5,862.0 1260,862.0" fill="none" stroke="#9b7be0" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M680,470 C662.5,470 662.5,710 645.0,710" fill="none" stroke="#e0a33b" stroke-width="3" stroke-linecap="round"/>
+<path d="M395.0,710 C367.5,710 367.5,558.0 340,558.0" fill="none" stroke="#e0a33b" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M395.0,710 C367.5,710 367.5,634.0 340,634.0" fill="none" stroke="#e0a33b" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M395.0,710 C367.5,710 367.5,710.0 340,710.0" fill="none" stroke="#e0a33b" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M395.0,710 C367.5,710 367.5,786.0 340,786.0" fill="none" stroke="#e0a33b" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M395.0,710 C367.5,710 367.5,862.0 340,862.0" fill="none" stroke="#e0a33b" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M625.0,204.0 C625.0,134.0 975.0,134.0 975.0,204.0" fill="none" stroke="#8592a3" stroke-width="1.5" stroke-dasharray="6 6" marker-end="url(#arr)"/>
+<path d="M1110,276.0 L1110,674.0" fill="none" stroke="#8592a3" stroke-width="1.5" stroke-dasharray="6 6" marker-end="url(#arr)"/>
+<path d="M625.0,746.0 C625.0,816.0 975.0,816.0 975.0,746.0" fill="none" stroke="#8592a3" stroke-width="1.5" stroke-dasharray="6 6" marker-end="url(#arr)"/>
+<rect x="395.0" y="204.0" width="250" height="72" rx="12" fill="#18202a" stroke="#3398e0" stroke-width="2.5" />
+<text x="520" y="236" font-size="18" font-weight="700" fill="#3398e0" text-anchor="middle">프론트엔드</text>
+<text x="520" y="260" font-size="12" font-weight="400" fill="#8592a3" text-anchor="middle">yuche_frontend · vtkjs.html</text>
+<rect x="40" y="58.0" width="300" height="60" rx="8" fill="#18202a" stroke="#2a3542" stroke-width="1" />
+<rect x="40" y="68.0" width="4" height="40" rx="2" fill="#3398e0"/>
+<text x="56" y="83.0" font-size="14" font-weight="600" fill="#e6eaef" text-anchor="start">화면 구성</text>
+<text x="56" y="103.0" font-size="12" font-weight="400" fill="#8592a3" text-anchor="start">단일 페이지 · 다크/라이트 토큰(style.css)</text>
+<rect x="40" y="134.0" width="300" height="60" rx="8" fill="#18202a" stroke="#2a3542" stroke-width="1" />
+<rect x="40" y="144.0" width="4" height="40" rx="2" fill="#3398e0"/>
+<text x="56" y="159.0" font-size="14" font-weight="600" fill="#e6eaef" text-anchor="start">1. 입력</text>
+<text x="56" y="179.0" font-size="12" font-weight="400" fill="#8592a3" text-anchor="start">등고선 이미지 / 고도 격자 · 샘플 갤러리</text>
+<rect x="40" y="210.0" width="300" height="60" rx="8" fill="#18202a" stroke="#2a3542" stroke-width="1" />
+<rect x="40" y="220.0" width="4" height="40" rx="2" fill="#3398e0"/>
+<text x="56" y="235.0" font-size="14" font-weight="600" fill="#e6eaef" text-anchor="start">2. 조건</text>
+<text x="56" y="255.0" font-size="12" font-weight="400" fill="#8592a3" text-anchor="start">강우 20–80mm · 경과 0–120초 · dx</text>
+<rect x="40" y="286.0" width="300" height="60" rx="8" fill="#18202a" stroke="#2a3542" stroke-width="1" />
+<rect x="40" y="296.0" width="4" height="40" rx="2" fill="#3398e0"/>
+<text x="56" y="311.0" font-size="14" font-weight="600" fill="#e6eaef" text-anchor="start">3. 결과</text>
+<text x="56" y="331.0" font-size="12" font-weight="400" fill="#8592a3" text-anchor="start">입력 등고선 · 예측 배수맵 · 오버레이</text>
+<rect x="40" y="362.0" width="300" height="60" rx="8" fill="#18202a" stroke="#2a3542" stroke-width="1" />
+<rect x="40" y="372.0" width="4" height="40" rx="2" fill="#3398e0"/>
+<text x="56" y="387.0" font-size="14" font-weight="600" fill="#e6eaef" text-anchor="start">기록 · 로그인</text>
+<text x="56" y="407.0" font-size="12" font-weight="400" fill="#8592a3" text-anchor="start">localStorage 최근 20건 · Bearer 토큰</text>
+<rect x="955.0" y="204.0" width="250" height="72" rx="12" fill="#18202a" stroke="#2bb39b" stroke-width="2.5" />
+<text x="1080" y="236" font-size="18" font-weight="700" fill="#2bb39b" text-anchor="middle">AI 모델 서버</text>
+<text x="1080" y="260" font-size="12" font-weight="400" fill="#8592a3" text-anchor="middle">terrainFlowSim/webapp · FastAPI :8000</text>
+<rect x="1260" y="58.0" width="300" height="60" rx="8" fill="#18202a" stroke="#2a3542" stroke-width="1" />
+<rect x="1260" y="68.0" width="4" height="40" rx="2" fill="#2bb39b"/>
+<text x="1276" y="83.0" font-size="14" font-weight="600" fill="#e6eaef" text-anchor="start">GET /api/health</text>
+<text x="1276" y="103.0" font-size="12" font-weight="400" fill="#8592a3" text-anchor="start">체크포인트 · CPU/CUDA · 학습 범위</text>
+<rect x="1260" y="134.0" width="300" height="60" rx="8" fill="#18202a" stroke="#2a3542" stroke-width="1" />
+<rect x="1260" y="144.0" width="4" height="40" rx="2" fill="#2bb39b"/>
+<text x="1276" y="159.0" font-size="14" font-weight="600" fill="#e6eaef" text-anchor="start">GET /api/samples</text>
+<text x="1276" y="179.0" font-size="12" font-weight="400" fill="#8592a3" text-anchor="start">지역별 샘플 등고선 PNG 목록</text>
+<rect x="1260" y="210.0" width="300" height="60" rx="8" fill="#18202a" stroke="#2a3542" stroke-width="1" />
+<rect x="1260" y="220.0" width="4" height="40" rx="2" fill="#2bb39b"/>
+<text x="1276" y="235.0" font-size="14" font-weight="600" fill="#e6eaef" text-anchor="start">POST /api/predict</text>
+<text x="1276" y="255.0" font-size="12" font-weight="400" fill="#8592a3" text-anchor="start">mode·file·rain_mm·time_s·dx → PNG 4종</text>
+<rect x="1260" y="286.0" width="300" height="60" rx="8" fill="#18202a" stroke="#2a3542" stroke-width="1" />
+<rect x="1260" y="296.0" width="4" height="40" rx="2" fill="#2bb39b"/>
+<text x="1276" y="311.0" font-size="14" font-weight="600" fill="#e6eaef" text-anchor="start">/api/auth/*</text>
+<text x="1276" y="331.0" font-size="12" font-weight="400" fill="#8592a3" text-anchor="start">login · signup · me (MySQL 있을 때만)</text>
+<rect x="1260" y="362.0" width="300" height="60" rx="8" fill="#18202a" stroke="#2a3542" stroke-width="1" />
+<rect x="1260" y="372.0" width="4" height="40" rx="2" fill="#2bb39b"/>
+<text x="1276" y="387.0" font-size="14" font-weight="600" fill="#e6eaef" text-anchor="start">/api/testset · testcase</text>
+<text x="1276" y="407.0" font-size="12" font-weight="400" fill="#8592a3" text-anchor="start">OpenFOAM 정답과 나란히 검증</text>
+<rect x="955.0" y="674.0" width="250" height="72" rx="12" fill="#18202a" stroke="#9b7be0" stroke-width="2.5" />
+<text x="1080" y="706" font-size="18" font-weight="700" fill="#9b7be0" text-anchor="middle">AI 모델</text>
+<text x="1080" y="730" font-size="12" font-weight="400" fill="#8592a3" text-anchor="middle">team_yucheital_ai_model</text>
+<rect x="1260" y="528.0" width="300" height="60" rx="8" fill="#18202a" stroke="#2a3542" stroke-width="1" />
+<rect x="1260" y="538.0" width="4" height="40" rx="2" fill="#9b7be0"/>
+<text x="1276" y="553.0" font-size="14" font-weight="600" fill="#e6eaef" text-anchor="start">U-Net 생성자</text>
+<text x="1276" y="573.0" font-size="12" font-weight="400" fill="#8592a3" text-anchor="start">10.5M 파라미터 · 128×128 입력</text>
+<rect x="1260" y="604.0" width="300" height="60" rx="8" fill="#18202a" stroke="#2a3542" stroke-width="1" />
+<rect x="1260" y="614.0" width="4" height="40" rx="2" fill="#9b7be0"/>
+<text x="1276" y="629.0" font-size="14" font-weight="600" fill="#e6eaef" text-anchor="start">FiLM 조건 주입</text>
+<text x="1276" y="649.0" font-size="12" font-weight="400" fill="#8592a3" text-anchor="start">강우량 + 경과시간 → 병목층</text>
+<rect x="1260" y="680.0" width="300" height="60" rx="8" fill="#18202a" stroke="#2a3542" stroke-width="1" />
+<rect x="1260" y="690.0" width="4" height="40" rx="2" fill="#9b7be0"/>
+<text x="1276" y="705.0" font-size="14" font-weight="600" fill="#e6eaef" text-anchor="start">체크포인트</text>
+<text x="1276" y="725.0" font-size="12" font-weight="400" fill="#8592a3" text-anchor="start">checkpoints_p2_wet8/best.pt</text>
+<rect x="1260" y="756.0" width="300" height="60" rx="8" fill="#18202a" stroke="#2a3542" stroke-width="1" />
+<rect x="1260" y="766.0" width="4" height="40" rx="2" fill="#9b7be0"/>
+<text x="1276" y="781.0" font-size="14" font-weight="600" fill="#e6eaef" text-anchor="start">학습 데이터</text>
+<text x="1276" y="801.0" font-size="12" font-weight="400" fill="#8592a3" text-anchor="start">OpenFOAM interFoam · 586지형 · 48,528쌍</text>
+<rect x="1260" y="832.0" width="300" height="60" rx="8" fill="#18202a" stroke="#2a3542" stroke-width="1" />
+<rect x="1260" y="842.0" width="4" height="40" rx="2" fill="#9b7be0"/>
+<text x="1276" y="857.0" font-size="14" font-weight="600" fill="#e6eaef" text-anchor="start">성능 (미학습 지형)</text>
+<text x="1276" y="877.0" font-size="12" font-weight="400" fill="#8592a3" text-anchor="start">MAE 0.0115m · IoU@1cm 0.69 · r 0.68</text>
+<rect x="395.0" y="674.0" width="250" height="72" rx="12" fill="#18202a" stroke="#e0a33b" stroke-width="2.5" />
+<text x="520" y="706" font-size="18" font-weight="700" fill="#e0a33b" text-anchor="middle">백엔드 · DB</text>
+<text x="520" y="730" font-size="12" font-weight="400" fill="#8592a3" text-anchor="middle">team_yucheital_backend</text>
+<rect x="40" y="528.0" width="300" height="60" rx="8" fill="#18202a" stroke="#2a3542" stroke-width="1" />
+<rect x="40" y="538.0" width="4" height="40" rx="2" fill="#e0a33b"/>
+<text x="56" y="553.0" font-size="14" font-weight="600" fill="#e6eaef" text-anchor="start">FastAPI + MySQL</text>
+<text x="56" y="573.0" font-size="12" font-weight="400" fill="#8592a3" text-anchor="start">Docker compose · Swagger /docs</text>
+<rect x="40" y="604.0" width="300" height="60" rx="8" fill="#18202a" stroke="#2a3542" stroke-width="1" />
+<rect x="40" y="614.0" width="4" height="40" rx="2" fill="#e0a33b"/>
+<text x="56" y="629.0" font-size="14" font-weight="600" fill="#e6eaef" text-anchor="start">AI_BACKEND</text>
+<text x="56" y="649.0" font-size="12" font-weight="400" fill="#8592a3" text-anchor="start">unet 기본 · 실패 시 D8 흐름누적 폴백</text>
+<rect x="40" y="680.0" width="300" height="60" rx="8" fill="#18202a" stroke="#2a3542" stroke-width="1" />
+<rect x="40" y="690.0" width="4" height="40" rx="2" fill="#e0a33b"/>
+<text x="56" y="705.0" font-size="14" font-weight="600" fill="#e6eaef" text-anchor="start">자동 검증</text>
+<text x="56" y="725.0" font-size="12" font-weight="400" fill="#8592a3" text-anchor="start">규칙 · D8 모의배수 · 최대 2회 재분석</text>
+<rect x="40" y="756.0" width="300" height="60" rx="8" fill="#18202a" stroke="#2a3542" stroke-width="1" />
+<rect x="40" y="766.0" width="4" height="40" rx="2" fill="#e0a33b"/>
+<text x="56" y="781.0" font-size="14" font-weight="600" fill="#e6eaef" text-anchor="start">저장</text>
+<text x="56" y="801.0" font-size="12" font-weight="400" fill="#8592a3" text-anchor="start">입력·워터맵·좌표 → 재학습 대기 등록</text>
+<rect x="40" y="832.0" width="300" height="60" rx="8" fill="#18202a" stroke="#2a3542" stroke-width="1" />
+<rect x="40" y="842.0" width="4" height="40" rx="2" fill="#e0a33b"/>
+<text x="56" y="857.0" font-size="14" font-weight="600" fill="#e6eaef" text-anchor="start">yuche_backend (로컬)</text>
+<text x="56" y="877.0" font-size="12" font-weight="400" fill="#8592a3" text-anchor="start">/signup · /login · bcrypt · users 테이블</text>
+<rect x="729.1" y="138.5" width="141.8" height="24" rx="12" fill="#0f141a" stroke="#2a3542" stroke-width="1" />
+<text x="800.0" y="155.5" font-size="12" font-weight="400" fill="#8592a3" text-anchor="middle">HTTP fetch · JSON</text>
+<rect x="1122" y="462.0" width="164.0" height="24" rx="12" fill="#0f141a" stroke="#2a3542" stroke-width="1" />
+<text x="1204.0" y="479.0" font-size="12" font-weight="400" fill="#8592a3" text-anchor="middle">predict_from_image()</text>
+<rect x="681.0" y="785.5" width="238.0" height="24" rx="12" fill="#0f141a" stroke="#2a3542" stroke-width="1" />
+<text x="800.0" y="802.5" font-size="12" font-weight="400" fill="#8592a3" text-anchor="middle">unet_infer 사본 (deploy_package)</text>
+<rect x="680" y="418" width="240" height="104" rx="16" fill="#15293a" stroke="#3398e0" stroke-width="2.5" />
+<text x="800" y="462" font-size="28" font-weight="700" fill="#e6eaef" text-anchor="middle">유체이탈</text>
+<text x="800" y="490" font-size="14" font-weight="400" fill="#a6cbec" text-anchor="middle">등고선 → 침수 수심 예측</text>
+<text x="800" y="510" font-size="12" font-weight="400" fill="#8592a3" text-anchor="middle">OpenFOAM 10~20분 → 수백 ms</text>
+<rect x="40" y="910" width="1520" height="170" rx="12" fill="#18202a" stroke="#2a3542" stroke-width="1" />
+<text x="64" y="940" font-size="16" font-weight="700" fill="#e6eaef" text-anchor="start">예측 요청 한 번의 흐름</text>
+<rect x="64.0" y="966" width="225.33333333333334" height="72" rx="8" fill="#0f141a" stroke="#2a3542" stroke-width="1" />
+<circle cx="84.0" cy="988" r="11" fill="#3398e0"/>
+<text x="84.0" y="993" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">1</text>
+<text x="102.0" y="993" font-size="14" font-weight="600" fill="#e6eaef" text-anchor="start">사용자 입력</text>
+<text x="80.0" y="1020" font-size="12" font-weight="400" fill="#8592a3" text-anchor="start">등고선 + 강우·시간</text>
+<path d="M293.33333333333337,1002 L309.33333333333337,1002" stroke="#8592a3" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="313.33333333333337" y="966" width="225.33333333333334" height="72" rx="8" fill="#0f141a" stroke="#2a3542" stroke-width="1" />
+<circle cx="333.33333333333337" cy="988" r="11" fill="#3398e0"/>
+<text x="333.33333333333337" y="993" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">2</text>
+<text x="351.33333333333337" y="993" font-size="14" font-weight="600" fill="#e6eaef" text-anchor="start">POST /api/predict</text>
+<text x="329.33333333333337" y="1020" font-size="12" font-weight="400" fill="#8592a3" text-anchor="start">FormData 전송</text>
+<path d="M542.6666666666667,1002 L558.6666666666667,1002" stroke="#8592a3" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="562.6666666666667" y="966" width="225.33333333333334" height="72" rx="8" fill="#0f141a" stroke="#2a3542" stroke-width="1" />
+<circle cx="582.6666666666667" cy="988" r="11" fill="#3398e0"/>
+<text x="582.6666666666667" y="993" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">3</text>
+<text x="600.6666666666667" y="993" font-size="14" font-weight="600" fill="#e6eaef" text-anchor="start">전처리</text>
+<text x="578.6666666666667" y="1020" font-size="12" font-weight="400" fill="#8592a3" text-anchor="start">고도 격자 → 등고선 렌더</text>
+<path d="M792.0000000000001,1002 L808.0000000000001,1002" stroke="#8592a3" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="812.0" y="966" width="225.33333333333334" height="72" rx="8" fill="#15293a" stroke="#9b7be0" stroke-width="1.5" />
+<circle cx="832.0" cy="988" r="11" fill="#3398e0"/>
+<text x="832.0" y="993" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">4</text>
+<text x="850.0" y="993" font-size="14" font-weight="600" fill="#e6eaef" text-anchor="start">U-Net 추론</text>
+<text x="828.0" y="1020" font-size="12" font-weight="400" fill="#8592a3" text-anchor="start">FiLM 조건 반영</text>
+<path d="M1041.3333333333333,1002 L1057.3333333333333,1002" stroke="#8592a3" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="1061.3333333333335" y="966" width="225.33333333333334" height="72" rx="8" fill="#0f141a" stroke="#2a3542" stroke-width="1" />
+<circle cx="1081.3333333333335" cy="988" r="11" fill="#3398e0"/>
+<text x="1081.3333333333335" y="993" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">5</text>
+<text x="1099.3333333333335" y="993" font-size="14" font-weight="600" fill="#e6eaef" text-anchor="start">응답</text>
+<text x="1077.3333333333335" y="1020" font-size="12" font-weight="400" fill="#8592a3" text-anchor="start">base64 PNG + 배수구 좌표</text>
+<path d="M1290.6666666666667,1002 L1306.6666666666667,1002" stroke="#8592a3" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="1310.6666666666667" y="966" width="225.33333333333334" height="72" rx="8" fill="#0f141a" stroke="#2a3542" stroke-width="1" />
+<circle cx="1330.6666666666667" cy="988" r="11" fill="#3398e0"/>
+<text x="1330.6666666666667" y="993" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">6</text>
+<text x="1348.6666666666667" y="993" font-size="14" font-weight="600" fill="#e6eaef" text-anchor="start">화면 · 기록</text>
+<text x="1326.6666666666667" y="1020" font-size="12" font-weight="400" fill="#8592a3" text-anchor="start">3분할 결과 · 썸네일 저장</text>
+</g>
+</svg>

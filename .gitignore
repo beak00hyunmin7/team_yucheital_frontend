@@ -1,0 +1,16 @@
+# 파이썬 가상환경 · 캐시
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# 테스트 서버가 실행할 때마다 자동으로 만드는 파일
+project_yucheital/dev_server/test_inputs/
+
+# 프린터 작업 파일 등 잡파일
+*.prn
+
+# 에디터 · 도구 설정
+.vscode/
+.vs/
+.claude/
