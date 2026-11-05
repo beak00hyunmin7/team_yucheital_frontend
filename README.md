@@ -16,31 +16,22 @@ git clone https://github.com/beak00hyunmin7/team_yucheital_frontend.git
 - **진짜 AI 서버**를 쓰려면 AI 저장소의 `terrainFlowSim/webapp/run_windows.bat` 을 실행하고(체크포인트 `best.pt` 필요), 테스트 서버는 끈 채로 `yuche_frontend/vtkjs.html` 을 열면 됩니다.
 - 서버 주소는 `yuche_frontend/vtkjs.html` 의 `DEFAULT_API` 한 줄에서 바꿉니다. 파일을 고치지 않으려면 주소 뒤에 `?api=http://IP:포트` 를 붙여도 됩니다.
 
-## 기록을 백엔드 서버에 저장하게 되면 바꿀 부분
+## 분석 기록 저장
 
-지금 분석 기록은 **브라우저 localStorage** 에만 저장됩니다(사용자별 키 `yuche_history_{이메일}`, 최근 20건).
-그래서 다른 PC·브라우저에서는 기록이 안 보입니다. 서버 저장으로 바꿀 때 `yuche_frontend/vtkjs.html` 에서 고칠 곳:
+분석 기록은 AI 서버의 `/api/history` 에 저장됩니다(MySQL + 썸네일 파일). 로그인한 사용자 본인 기록만 보이고, 다른 PC·브라우저에서도 같은 기록이 보입니다. 목록은 최신순 최대 50건입니다.
 
-| 함수 | 지금 | 바꿀 내용 |
-|---|---|---|
-| `loadHistory()` | localStorage 읽기 | `GET /api/history` (헤더 `Authorization: Bearer 토큰`) |
-| `saveRecord(record)` | 맨 앞에 추가 후 저장 | `POST /api/history` |
-| `updateRecord(id, changes)` | 이름 변경 저장 | `PATCH /api/history/{id}` (`{ name }`) |
-| `deleteRecord(id)` / `clearHistory()` | 목록에서 삭제 | `DELETE /api/history/{id}` / `DELETE /api/history` |
-| `historyKey()` · `writeHistory()` | localStorage 키·용량 처리 | 필요 없어짐 (삭제) |
+| 동작 | API |
+|---|---|
+| 목록 | `GET /api/history` |
+| 저장 (예측 완료 시 자동) | `POST /api/history` |
+| 이름 변경 | `PATCH /api/history/{id}` (`{ name }`) |
+| 삭제 / 전체 삭제 | `DELETE /api/history/{id}` / `DELETE /api/history` |
 
-- 서버 호출은 비동기라서 `loadHistory()` 를 쓰는 `renderHistory()`, `showRecord()`, `showDetail()`, `startRename()` 도 `async/await` 로 바꿔야 합니다.
-- 결과 그림(`thumbnail`)은 지금 base64 JPEG 문자열로 저장합니다(`makeThumbnail()`). 서버에서는 파일로 저장하고 URL만 돌려주는 편이 좋습니다.
-- 기록 하나에 저장하는 값(= DB 테이블 칼럼 후보):
+- 모든 요청에 `Authorization: Bearer 토큰` 헤더가 필요합니다. 토큰은 `/api/auth/login` 에서 받아 `localStorage['yuche_token']` 에 저장합니다.
+- 비로그인 상태나 DB 가 끊긴 상태에서는 기록이 저장되지 않습니다. 저장에 실패하면 결과 안내에 한 줄로 표시됩니다.
+- 예전 localStorage 기록(`yuche_history_{이메일}`)은 서버로 옮기지 않았고, 화면에도 보이지 않습니다.
+- 테스트 서버도 같은 API 를 제공하지만 기록을 메모리에만 두므로 서버를 끄면 사라집니다.
 
-  | 필드 | 내용 |
-  |---|---|
-  | `id`, `createdAt` | 기록 ID, 저장 시각 (ISO) |
-  | `name` | 사용자가 정한 이름. `null` 이면 화면에 '날짜 시간' 표시 |
-  | `fileName` | 입력 파일 이름 |
-  | `params` | `{ mode, rain_mm, time_s, dx }` |
-  | `drain` | 배수구 후보 좌표 `{ x, y }` 또는 `null` |
-  | `checkpoint`, `meta`, `info` | 사용한 모델, 서버 meta, 결과 안내문 |
-  | `imageLabel`, `thumbnail` | 대표 그림 이름, 그림 |
+## 배수구 후보 위치
 
-- 로그인 토큰은 이미 AI 서버의 `/api/auth/login` 에서 받아 `localStorage['yuche_token']` 에 저장하고 있으니 그대로 쓰면 됩니다. 기록 API를 다른 서버에 만들면 그 서버 주소용 상수를 `DEFAULT_API` 옆에 하나 더 추가하세요.
+`POST /api/predict` 응답의 `drain_candidate.image` `{ x, y }` 는 그림 왼쪽 위 기준 0~1 비율입니다. 예측 배수맵과 오버레이 위에 빨간 원으로 표시하고, 기록의 `drain` 에도 이 값을 저장합니다.
