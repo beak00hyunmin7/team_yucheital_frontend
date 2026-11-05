@@ -1165,3 +1165,67 @@ input:disabled {
   .cond-grid { grid-template-columns: 1fr; }
   .run-bar { flex-direction: column; align-items: stretch; }
 }
+
+/* 시간 경과 재생 */
+.timelapse {
+  margin-top: 24px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.timelapse-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin-bottom: 12px;
+}
+.timelapse-head h3 {
+  margin: 0;
+  font-size: 15px;
+}
+.timelapse-status {
+  color: var(--muted);
+  font-size: 13px;
+}
+.timelapse-stage {
+  position: relative;
+  width: 100%;
+  max-width: 520px;
+  aspect-ratio: 1;
+  margin: 0 auto 12px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--border-light);
+}
+.timelapse-stage canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.timelapse-star {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  color: #e02424;
+  font-size: 24px;
+  line-height: 1;
+  text-shadow: 0 0 3px #fff, 0 0 3px #fff;
+  pointer-events: none;
+}
+.timelapse-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 520px;
+  margin: 0 auto;
+}
+.timelapse-controls input[type="range"] {
+  flex: 1;
+  min-width: 0;
+}
+.timelapse-time {
+  min-width: 42px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
