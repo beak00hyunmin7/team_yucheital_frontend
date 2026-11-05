@@ -22,8 +22,10 @@ import secrets
 import sys
 import threading
 import time
+import uuid
 import webbrowser
 from email.parser import BytesParser
+from datetime import datetime, timezone
 from email.policy import default as email_policy
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -46,6 +48,8 @@ CHECKPOINT = "mock_best.pt (테스트 서버)"
 
 USERS: dict[str, str] = {}      # email -> sha256(password)
 TOKENS: dict[str, str] = {}     # token -> email
+HISTORY: dict[str, list[dict]] = {}   # email -> 기록 (최신순). 서버를 끄면 사라짐
+HISTORY_MAX = 50
 LOCK = threading.Lock()
 REQUIRE_LOGIN = False
 
@@ -194,7 +198,14 @@ def predict(mode: str, raw: bytes, filename: str, rain_mm: float, time_s: float,
         result["drain_candidate"] = {
             "pixel": {"x": int(c), "y": int(r)},
             "normalized": {"x": round(c / max(w - 1, 1), 4), "y": round(r / max(h - 1, 1), 4)},
+            # 화면 그림 위 위치 (왼쪽 위 = 0, 0). 그림은 terrain 배열과 상하가 반대라서 y 를 뒤집는다
+            "image": {"x": round(c / max(w - 1, 1), 4), "y": round(1 - r / max(h - 1, 1), 4)},
         }
+    else:
+        h, w = raw_depth.shape
+        r, c = np.unravel_index(int(np.argmax(raw_depth)), raw_depth.shape)
+        pos = {"x": round(c / max(w - 1, 1), 4), "y": round(r / max(h - 1, 1), 4)}
+        result["drain_candidate"] = {"pixel": {"x": int(c), "y": int(r)}, "normalized": pos, "image": pos}
     return result
 
 
@@ -230,7 +241,7 @@ class Handler(BaseHTTPRequestHandler):
     def _cors(self):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Headers", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
 
     def _json(self, obj, status=200):
         body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
@@ -263,6 +274,52 @@ class Handler(BaseHTTPRequestHandler):
         self._cors()
         self.end_headers()
 
+    # ---- 분석 기록 (진짜 서버 history.py 와 같은 주소·형식, 저장만 메모리에) ----
+    def _history_user(self) -> str | None:
+        user = self._user()
+        if not user:
+            self._error(401, "로그인이 필요합니다.")
+        return user
+
+    def _read_json(self) -> dict:
+        length = int(self.headers.get("Content-Length") or 0)
+        return json.loads(self.rfile.read(length) or b"{}")
+
+    def do_PATCH(self):
+        path = urlparse(self.path).path
+        if not path.startswith("/api/history/"):
+            return self._error(404, "없는 주소입니다.")
+        user = self._history_user()
+        if not user:
+            return
+        record_id = path.rsplit("/", 1)[-1]
+        name = (self._read_json().get("name") or "").strip() or None
+        with LOCK:
+            for rec in HISTORY.get(user, []):
+                if rec["id"] == record_id:
+                    rec["name"] = name
+                    return self._json(rec)
+        self._error(404, "기록을 찾을 수 없습니다.")
+
+    def do_DELETE(self):
+        path = urlparse(self.path).path
+        if path != "/api/history" and not path.startswith("/api/history/"):
+            return self._error(404, "없는 주소입니다.")
+        user = self._history_user()
+        if not user:
+            return
+        with LOCK:
+            records = HISTORY.get(user, [])
+            if path == "/api/history":
+                HISTORY[user] = []
+                return self._json({"ok": True, "deleted": len(records)})
+            record_id = path.rsplit("/", 1)[-1]
+            kept = [r for r in records if r["id"] != record_id]
+            if len(kept) == len(records):
+                return self._error(404, "기록을 찾을 수 없습니다.")
+            HISTORY[user] = kept
+        self._json({"ok": True})
+
     # ---- GET ----
     def do_GET(self):
         url = urlparse(self.path)
@@ -293,6 +350,11 @@ class Handler(BaseHTTPRequestHandler):
         elif path == "/api/auth/me":
             user = self._user()
             self._json({"email": user}) if user else self._error(401, "토큰이 없거나 만료되었습니다.")
+        elif path == "/api/history":
+            user = self._history_user()
+            if user:
+                with LOCK:
+                    self._json({"records": HISTORY.get(user, [])[:HISTORY_MAX]})
         elif path.startswith("/test_inputs/"):
             target = (TEST_INPUT_DIR / path[len("/test_inputs/"):]).resolve()
             if target.parent != TEST_INPUT_DIR.resolve() or not target.is_file():
@@ -335,6 +397,28 @@ class Handler(BaseHTTPRequestHandler):
                 token = secrets.token_urlsafe(24)
                 TOKENS[token] = email
             return self._json({"email": email, "token": token})
+
+        if path == "/api/history":
+            user = self._history_user()
+            if not user:
+                return
+            data = json.loads(body or b"{}")
+            rec = {
+                "id": uuid.uuid4().hex,
+                "createdAt": datetime.now(timezone.utc).isoformat(),
+                "name": (data.get("name") or "").strip() or None,
+                "fileName": data.get("fileName"),
+                "params": data.get("params"),
+                "drain": data.get("drain"),
+                "checkpoint": data.get("checkpoint"),
+                "meta": data.get("meta"),
+                "info": data.get("info") or [],
+                "imageLabel": data.get("imageLabel"),
+                "thumbnail": data.get("thumbnail"),
+            }
+            with LOCK:
+                HISTORY.setdefault(user, []).insert(0, rec)
+            return self._json(rec)
 
         if path == "/api/predict":
             if REQUIRE_LOGIN and not self._user():

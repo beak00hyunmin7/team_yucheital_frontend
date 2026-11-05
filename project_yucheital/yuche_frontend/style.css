@@ -727,6 +727,28 @@ input:disabled {
   border-radius: 6px;
 }
 
+/* 배수구 후보 표시: 비율 좌표가 그림과 정확히 맞도록 틀을 그림 크기에 맞춘다 */
+.result-image {
+  position: relative;
+}
+
+.result-image img {
+  display: block;
+  aspect-ratio: auto;
+}
+
+.drain-marker {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border: 3px solid #e5534b;
+  border-radius: 50%;
+  background-color: rgba(229, 83, 75, 0.25);
+  box-shadow: 0 0 0 2px #fff;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
 .result-card a {
   align-self: flex-start;
   font-size: 12px;

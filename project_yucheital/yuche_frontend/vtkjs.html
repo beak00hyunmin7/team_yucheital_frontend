@@ -171,7 +171,7 @@
         <!-- 화면 2: 분석 기록 (상단 '분석 기록' 탭 = #history). 로그인 전에는 안내만 -->
         <div class="view-head" id="history-head" style="display: none;">
             <h1>분석 기록</h1>
-            <p>지금까지 실행한 예측이 날짜별로 저장됩니다. 이름을 바꾸거나 다시 열어볼 수 있어요.</p>
+            <p>지금까지 실행한 예측이 서버에 날짜별로 저장됩니다. 다른 PC·브라우저에서 로그인해도 같은 기록이 보여요.</p>
         </div>
         <section class="card" id="history-panel" style="display: none;">
             <div class="history-header">
@@ -257,6 +257,7 @@
            - 샘플 : GET  /api/samples  -> { samples: [파일명] },  GET /api/sample/{name} -> PNG
            - 로그인: POST /api/auth/login, /api/auth/signup  -> { email, token }
            - 상태 : GET  /api/health
+           - 기록 : GET/POST/DELETE /api/history, PATCH/DELETE /api/history/{id}  (로그인 토큰 필요)
            run_windows.bat 기본값이 127.0.0.1:8000 이다. 다른 PC 에서 서버를 띄우면
            그 PC 는 --host 0.0.0.0 으로 실행하고 아래 DEFAULT_API 를 그 PC 의 IP 로 바꾼다.
            파일을 고치지 않고 잠깐 바꿔 보려면 주소 뒤에 ?api=http://IP:포트 를 붙인다.
@@ -349,48 +350,80 @@
             document.getElementById('history-locked').style.display  = user ? 'none' : 'flex';
             document.getElementById('history-content').style.display = user ? 'block' : 'none';
             document.getElementById('history-clear').style.display   = user ? 'inline-block' : 'none';
-            if (!user) document.getElementById('history-count').textContent = '';
+            if (!user) {
+                historyCache = [];
+                historyError = '';
+                document.getElementById('history-count').textContent = '';
+            }
 
             if (user) {
                 document.getElementById('user-email').textContent = user;
                 renderHistory();
+                loadHistory();
             }
         }
 
-        /* ---------- 기록 저장 ---------- */
-        function historyKey() {
-            return 'yuche_history_' + getCurrentUser();
-        }
+        /* ---------- 기록 저장 (서버 /api/history) ---------- */
+        // 화면은 서버에서 받아 둔 historyCache 를 그린다. 그래서 표 그리기·상세 보기는 지금처럼 동기로 둘 수 있다.
+        let historyCache = [];
+        let historyError = '';
+        const HISTORY_MAX = 50;   // 서버 MAX_RECORDS_LISTED
 
-        function loadHistory() {
-            const raw = localStorage.getItem(historyKey());
-            if (!raw) return [];
+        async function historyRequest(path, method = 'GET', body) {
+            const headers = { Authorization: 'Bearer ' + getToken() };
+            if (body !== undefined) headers['Content-Type'] = 'application/json';
+            const res = await fetch(ANALYZE_API + '/api/history' + path, {
+                method,
+                headers,
+                body: body !== undefined ? JSON.stringify(body) : undefined
+            });
+            if (res.status === 401) {
+                logout();
+                throw new Error('로그인이 만료되었습니다. 다시 로그인해 주세요.');
+            }
+            let data = null;
             try {
-                return JSON.parse(raw);
+                data = await res.json();
             } catch (e) {
-                return [];
+                // 아래에서 상태 코드로 처리
             }
+            if (!res.ok) {
+                throw new Error((data && typeof data.detail === 'string' && data.detail) || `서버 오류 (${res.status})`);
+            }
+            return data;
         }
 
-        function writeHistory(list) {
-            // 결과 그림(썸네일) 때문에 용량이 클 수 있다. 저장 공간이 모자라면 오래된 기록부터 뺀다.
-            while (true) {
-                try {
-                    localStorage.setItem(historyKey(), JSON.stringify(list));
-                    return;
-                } catch (e) {
-                    if (list.length <= 1) return;
-                    list = list.slice(0, list.length - 1);
-                }
+        async function loadHistory() {
+            if (!getCurrentUser()) return;
+            const token = getToken();
+            try {
+                const data = await historyRequest('');
+                if (token !== getToken()) return;   // 기다리는 사이에 로그아웃·계정 전환됨
+                historyCache = data.records || [];
+                historyError = '';
+            } catch (err) {
+                if (token !== getToken()) return;
+                console.error(err);
+                historyError = err instanceof TypeError ? '서버에 연결할 수 없습니다.' : err.message;
             }
-        }
-
-        function saveRecord(record) {
-            if (!getCurrentUser()) return;          // 비로그인이면 저장 안 함
-            const list = loadHistory();
-            list.unshift(record);
-            writeHistory(list.slice(0, 20));
             renderHistory();
+        }
+
+        // 저장 실패가 '예측 실패'로 보이면 안 되므로 여기서 처리하고 결과 안내에 한 줄 남긴다
+        async function saveRecord(record) {
+            if (!getCurrentUser()) return;          // 비로그인이면 저장 안 함
+            try {
+                const saved = await historyRequest('', 'POST', record);
+                historyCache = [saved, ...historyCache].slice(0, HISTORY_MAX);
+                historyError = '';
+                renderHistory();
+            } catch (err) {
+                console.error(err);
+                const li = document.createElement('li');
+                li.textContent = '분석 기록을 서버에 저장하지 못했습니다: ' +
+                    (err instanceof TypeError ? '서버에 연결할 수 없습니다.' : err.message);
+                document.getElementById('result-info').appendChild(li);
+            }
         }
 
         function describeParams(p) {
@@ -428,17 +461,25 @@
             return r.name || defaultName(recordDate(r));
         }
 
+        // 서버 drain_candidate.image: 그림 왼쪽 위 (0, 0) ~ 오른쪽 아래 (1, 1) 비율
+        function drainPositionText(pos) {
+            return `가로 ${Math.round(pos.x * 100)}% · 세로 ${Math.round(pos.y * 100)}%`;
+        }
+
         function drainText(r) {
-            return r.drain ? `(${r.drain.x}, ${r.drain.y})` : '—';
+            return r.drain ? drainPositionText(r.drain) : '—';
         }
 
         function renderHistory() {
-            const list = loadHistory();
+            const list = historyCache;
             const tbody = document.getElementById('history-list');
             document.getElementById('history-count').textContent = list.length ? list.length : '';
+            const errorRow = historyError
+                ? `<tr><td colspan="6" class="history-empty">기록을 불러오지 못했습니다: ${escapeHtml(historyError)}</td></tr>`
+                : '';
 
             if (list.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="history-empty">아직 저장된 기록이 없습니다. 예측을 실행하면 여기에 쌓여요.</td></tr>';
+                tbody.innerHTML = errorRow || '<tr><td colspan="6" class="history-empty">아직 저장된 기록이 없습니다. 예측을 실행하면 여기에 쌓여요.</td></tr>';
                 return;
             }
 
@@ -455,7 +496,7 @@
                 g.rows.push(r);
             });
 
-            tbody.innerHTML = groups.map(g => `
+            tbody.innerHTML = errorRow + groups.map(g => `
                 <tr class="date-row"><td colspan="6">${g.label}<span>${g.rows.length}건</span></td></tr>
                 ${g.rows.map(r => `
                     <tr class="history-row" data-id="${escapeHtml(r.id)}" title="더블클릭하면 상세 정보">
@@ -495,12 +536,14 @@
             showDetail(row.dataset.id);
         });
 
-        function updateRecord(id, changes) {
-            const list = loadHistory();
-            const r = list.find(x => x.id === id);
-            if (!r) return;
-            Object.assign(r, changes);
-            writeHistory(list);
+        async function updateRecord(id, changes) {
+            try {
+                const saved = await historyRequest('/' + encodeURIComponent(id), 'PATCH', changes);
+                historyCache = historyCache.map(r => r.id === id ? saved : r);
+            } catch (err) {
+                console.error(err);
+                alert('이름 변경 실패: ' + (err instanceof TypeError ? '서버에 연결할 수 없습니다.' : err.message));
+            }
         }
 
         // 이름 칸을 입력창으로 바꿔서 수정. Enter/포커스 이탈 = 저장, Esc = 취소. 비우면 기본 이름(날짜 시간)으로
@@ -508,7 +551,7 @@
             const cell = row.querySelector('.name-cell');
             if (cell.querySelector('input')) return;
             const id = row.dataset.id;
-            const record = loadHistory().find(r => r.id === id);
+            const record = historyCache.find(r => r.id === id);
             if (!record) return;
 
             const input = document.createElement('input');
@@ -522,12 +565,12 @@
             input.select();
 
             let done = false;
-            const finish = (save) => {
+            const finish = async (save) => {
                 if (done) return;
                 done = true;
-                if (save) {
-                    const name = input.value.trim();
-                    updateRecord(id, { name: name || null });
+                const name = input.value.trim();
+                if (save && name !== recordName(record)) {   // 그대로면 서버에 보내지 않는다
+                    await updateRecord(id, { name: name || null });
                 }
                 renderHistory();
             };
@@ -539,11 +582,11 @@
         }
 
         function showRecord(id) {
-            const record = loadHistory().find(r => r.id === id);
+            const record = historyCache.find(r => r.id === id);
             if (!record) return;
 
             if (!record.thumbnail) {
-                alert('이전 분석 서버에서 만든 기록이라 결과 그림을 다시 불러올 수 없습니다.');
+                alert('저장된 결과 그림이 없는 기록입니다.');
                 return;
             }
             showResult(
@@ -565,6 +608,7 @@
             document.getElementById('view-predict').style.display = view === 'predict' ? 'flex' : 'none';
             document.getElementById('history-panel').style.display = view === 'history' ? 'block' : 'none';
             document.getElementById('history-head').style.display = view === 'history' ? 'block' : 'none';
+            if (view === 'history') loadHistory();   // 다른 PC·브라우저에서 추가된 기록도 보이도록
             document.querySelectorAll('.view-tab').forEach(tab => {
                 const active = tab.dataset.view === view;
                 tab.classList.toggle('active', active);
@@ -592,7 +636,7 @@
 
         /* ---------- 기록 상세 (더블클릭) ---------- */
         function showDetail(id) {
-            const r = loadHistory().find(x => x.id === id);
+            const r = historyCache.find(x => x.id === id);
             if (!r) return;
             const d = recordDate(r);
             const p = r.params || {};
@@ -642,20 +686,32 @@
             }
         });
 
-        function deleteRecord(id) {
-            const list = loadHistory().filter(r => r.id !== id);
-            writeHistory(list);
-            renderHistory();
+        async function deleteRecord(id) {
+            try {
+                await historyRequest('/' + encodeURIComponent(id), 'DELETE');
+                historyCache = historyCache.filter(r => r.id !== id);
+                renderHistory();
+            } catch (err) {
+                console.error(err);
+                alert('삭제 실패: ' + (err instanceof TypeError ? '서버에 연결할 수 없습니다.' : err.message));
+            }
         }
 
-        function clearHistory() {
+        async function clearHistory() {
             if (!confirm('기록을 전부 삭제할까요?')) return;
-            localStorage.removeItem(historyKey());
-            renderHistory();
+            try {
+                await historyRequest('', 'DELETE');
+                historyCache = [];
+                renderHistory();
+            } catch (err) {
+                console.error(err);
+                alert('삭제 실패: ' + (err instanceof TypeError ? '서버에 연결할 수 없습니다.' : err.message));
+            }
         }
 
         // 기록용 썸네일: 원본 base64 PNG 는 수백 KB 라서 긴 변 360px JPEG 로 줄여 저장한다
-        function makeThumbnail(dataUrl, maxSide = 360) {
+        // marker 를 주면 배수구 후보 자리에 빨간 원을 그려 넣는다 (분석 지도에는 별표가 이미 있어서 안 줌)
+        function makeThumbnail(dataUrl, marker = null, maxSide = 360) {
             return new Promise(resolve => {
                 const img = new Image();
                 img.onload = () => {
@@ -667,6 +723,13 @@
                     ctx.fillStyle = '#fff';
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
                     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    if (marker) {
+                        ctx.lineWidth = 3;
+                        ctx.strokeStyle = '#e5534b';
+                        ctx.beginPath();
+                        ctx.arc(marker.x * canvas.width, marker.y * canvas.height, 10, 0, Math.PI * 2);
+                        ctx.stroke();
+                    }
                     resolve(canvas.toDataURL('image/jpeg', 0.8));
                 };
                 img.onerror = () => resolve(null);
@@ -685,7 +748,7 @@
             },
             terrain: {
                 short: '등고선 데이터',
-                hint: '고도값 격자 파일. 서버가 학습 때와 같은 방식으로 등고선을 그려 예측하므로 가장 정확하고, 배수구 후보 위치도 함께 나옵니다.',
+                hint: '고도값 격자 파일. 서버가 학습 때와 같은 방식으로 등고선을 그려 예측하므로 가장 정확하고, 실제 등고선 위에 배수구 후보를 표시한 분석 지도도 함께 나옵니다.',
                 accept: '.npy,.csv,.txt,.dat,.asc,.grd,.tif,.tiff,.png,.jpg,.jpeg',
                 fileHint: '.npy · .csv · .txt · .dat · .asc · .grd · .tif · 회색조 높이맵 .png/.jpg',
                 exts: ['npy', 'csv', 'txt', 'dat', 'asc', 'grd', 'tif', 'tiff', 'png', 'jpg', 'jpeg']
@@ -1112,12 +1175,15 @@
         });
 
         /* ---------- 결과 표시 ---------- */
-        // images: [{ key, label, src }] - 카드로 나란히 보인다. info: 문자열 배열, meta: 서버 meta (선택)
+        // images: [{ key, label, src, marker? }] - 카드로 나란히 보인다. marker = 그림 위 배수구 후보 위치 {x, y} (0~1). info: 문자열 배열, meta: 서버 meta (선택)
         function showResult(images, info, meta) {
             document.getElementById('result-grid').innerHTML = images.map(im => `
                 <figure class="result-card">
                     <figcaption>${escapeHtml(im.label)}</figcaption>
-                    <img src="${im.src}" alt="${escapeHtml(im.label)}">
+                    <div class="result-image">
+                        <img src="${im.src}" alt="${escapeHtml(im.label)}">
+                        ${im.marker ? `<span class="drain-marker" style="left: ${im.marker.x * 100}%; top: ${im.marker.y * 100}%" title="배수구 설치 후보"></span>` : ''}
+                    </div>
                     <a href="${im.src}" download="yuche_${escapeHtml(im.key)}.png">PNG 저장</a>
                 </figure>
             `).join('');
@@ -1189,22 +1255,20 @@
 
                 const png = b64 => 'data:image/png;base64,' + b64;
                 // 참고 화면 순서: 입력 → 예측 → 오버레이. terrain 모드는 배수구 후보가 그려진 분석 지도를 맨 앞에
+                const drainPos = data.drain_candidate ? data.drain_candidate.image : null;
                 const images = [];
                 if (data.analysis_png_base64) images.push({ key: 'analysis', label: '분석 지도 (배수구 후보)', src: png(data.analysis_png_base64) });
                 images.push({ key: 'contour', label: '입력 등고선 (모델에 들어간 이미지)', src: png(data.contour_png_base64) });
-                images.push({ key: 'prediction', label: '예측 배수맵', src: png(data.prediction_png_base64) });
-                images.push({ key: 'overlay', label: '오버레이 (등고선 + 예측)', src: png(data.overlay_png_base64) });
+                images.push({ key: 'prediction', label: '예측 배수맵', src: png(data.prediction_png_base64), marker: drainPos });
+                images.push({ key: 'overlay', label: '오버레이 (등고선 + 예측)', src: png(data.overlay_png_base64), marker: drainPos });
 
                 // 서버 meta 에 들어간 값이 아니라 모델이 실제로 쓴 값을 보여준다 (강우는 학습 범위로 잘림)
                 const usedRain = Math.min(Math.max(rainMm, modelInfo.rainRange[0]), modelInfo.rainRange[1]);
                 const meta = data.meta || {};
                 const info = [];
-                if (data.drain_candidate) {
-                    const p = data.drain_candidate.pixel;
-                    const n = data.drain_candidate.normalized;
-                    info.push(`배수구 설치 후보(예측 유출 최대점): 격자 (${p.x}, ${p.y}) · 가로 ${Math.round(n.x * 100)}% / 세로 ${Math.round(n.y * 100)}% 지점`);
-                } else if (mode === 'image') {
-                    info.push('배수구 후보 좌표는 "등고선 데이터" 모드에서만 계산됩니다.');
+                if (drainPos) {
+                    const where = data.analysis_png_base64 ? '분석 지도의 ★, 예측·오버레이의 빨간 원' : '예측·오버레이의 빨간 원';
+                    info.push(`배수구 설치 후보(예측 유출이 가장 많이 모이는 점): ${drainPositionText(drainPos)} 지점 (그림 왼쪽 위 기준) · ${where}`);
                 }
                 const cond = [];
                 if (meta.rain_conditioned) cond.push(`강우 ${usedRain}mm`);
@@ -1218,12 +1282,8 @@
 
                 // 기록 썸네일은 가장 유용한 그림 하나 (분석 지도가 있으면 그것, 없으면 오버레이)
                 const main = images.find(im => im.key === 'analysis') || images.find(im => im.key === 'overlay');
-                const now = new Date();
-                saveRecord({
-                    id: now.getTime().toString(),
-                    createdAt: now.toISOString(),
+                await saveRecord({   // id·저장 시각은 서버가 정한다
                     name: null,                      // null 이면 화면에 '날짜 시간'이 기본 이름으로 보인다
-                    savedAt: now.toLocaleString('ko-KR'),
                     meta: { checkpoint: data.checkpoint, ...meta },
                     fileName: mapFile.name,
                     params: {
@@ -1232,10 +1292,10 @@
                         time_s: meta.time_conditioned ? meta.time_s : null,
                         dx: meta.dx_m ?? null
                     },
-                    drain: data.drain_candidate ? data.drain_candidate.pixel : null,
+                    drain: drainPos,
                     checkpoint: data.checkpoint,
                     imageLabel: main.label,
-                    thumbnail: getCurrentUser() ? await makeThumbnail(main.src) : null,
+                    thumbnail: getCurrentUser() ? await makeThumbnail(main.src, main.marker) : null,
                     info
                 });
 
