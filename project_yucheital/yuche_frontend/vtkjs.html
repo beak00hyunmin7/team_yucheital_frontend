@@ -989,16 +989,32 @@
 
             authBusy = true;
             try {
-                const response = await fetch(AUTH_API + endpoint, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: email, password: password })
-                });
+                let response;
+                try {
+                    response = await fetch(AUTH_API + endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: email, password: password })
+                    });
+                } catch (err) {
+                    // 요청 자체가 실패. 서버가 꺼졌을 수도 있고, 서버가 오류(500)를 내면서
+                    // CORS 헤더 없이 응답해 브라우저가 막았을 수도 있다 -> /api/health 로 구분한다
+                    console.error(err);
+                    const alive = await fetch(AUTH_API + '/api/health').then(r => r.ok).catch(() => false);
+                    setAuthMessage(alive
+                        ? '서버는 켜져 있지만 요청을 처리하다 오류가 났습니다. 서버 검은 창의 빨간 오류 메시지를 확인하세요.'
+                        : `서버에 연결할 수 없습니다. AI 서버(run_windows.bat)가 켜져 있는지 확인하세요. (${AUTH_API})`, 'error');
+                    return;
+                }
 
-                const data = await response.json();
+                // 오류 응답은 JSON 이 아닐 수 있다(예: 500 Internal Server Error)
+                const data = await response.json().catch(() => ({}));
 
                 if (!response.ok) {
-                    setAuthMessage((typeof data.detail === 'string' ? data.detail : '') || '오류가 발생했습니다.', 'error');
+                    const detail = typeof data.detail === 'string' ? data.detail : '';
+                    setAuthMessage(detail || (response.status >= 500
+                        ? `서버 오류가 발생했습니다 (HTTP ${response.status}). 서버 검은 창의 오류 메시지를 확인하세요.`
+                        : `요청이 거부되었습니다 (HTTP ${response.status}).`), 'error');
                     return;
                 }
 
@@ -1009,9 +1025,6 @@
                     : `회원가입 성공! (${data.email}) 바로 로그인되었습니다.`, 'success');
                 setTimeout(closeAuthModal, 800);
 
-            } catch (err) {
-                setAuthMessage(`서버에 연결할 수 없습니다. 서버(run_test_server.bat)가 켜져 있는지 확인하세요. (${AUTH_API})`, 'error');
-                console.error(err);
             } finally {
                 authBusy = false;
             }
