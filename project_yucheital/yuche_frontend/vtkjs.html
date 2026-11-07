@@ -51,7 +51,6 @@
         <div id="view-predict" class="stack">
         <div class="view-head">
             <h1>배수 예측</h1>
-            <p>등고선을 올리고 강우 조건을 정해 침수 수심맵과 배수 취약 지점을 예측합니다.</p>
         </div>
         <form id="uploadForm" enctype="multipart/form-data" novalidate>
             <div class="stack">
@@ -96,13 +95,6 @@
                         <button type="button" class="dropzone-remove" id="dropzone-remove" style="display: none;" aria-label="파일 빼기" title="파일 빼기">&times;</button>
                     </div>
                     <p class="field-error" id="err-fileInput"></p>
-
-                    <!-- 서버 /api/samples 의 학습 스타일 등고선. 이미지 모드에서만 보인다 -->
-                    <div class="samples" id="samples-block">
-                        <span class="field-label">또는 샘플 등고선으로 바로 테스트</span>
-                        <div class="sample-grid" id="sample-grid"></div>
-                        <p class="sample-empty" id="sample-empty">샘플을 불러오는 중…</p>
-                    </div>
                 </section>
 
                 <!-- 2. 조건 -->
@@ -126,7 +118,7 @@
                                 <span class="num-input"><input type="number" id="timeS" value="18" min="0" max="120" step="1"> 초</span>
                             </div>
                             <p class="field-error" id="err-timeS"></p>
-                            <p class="form-hint" id="time-hint">비가 초반에 내리고 빠지는 시뮬레이션이라 시간이 짧을수록 물이 많습니다. 가장 심한 상태는 20초 부근이에요.</p>
+                            <p class="form-hint" id="time-hint"></p>
                         </div>
                     </div>
 
@@ -161,18 +153,17 @@
                     </div>
                     <div class="timelapse-stage">
                         <canvas id="timelapse-canvas"></canvas>
-                        <span class="timelapse-star" id="timelapse-star" style="display: none;">★</span>
+                        <span class="drain-marker" id="timelapse-star" style="display: none;" title="배수구 후보"></span>
                     </div>
                     <div class="timelapse-controls">
                         <button type="button" class="btn" id="timelapse-play" disabled>재생</button>
                         <input type="range" id="timelapse-range" min="18" max="120" step="0.1" value="18" disabled aria-label="재생 시점">
                         <span class="timelapse-time" id="timelapse-time"></span>
                     </div>
-                    <p class="form-hint">6개 시점의 예측 사이를 이미지 혼합으로 이은 화면으로, 물리 계산 결과가 아닙니다. ★는 이번 분석의 배수구 후보로 위치가 고정됩니다.</p>
+                    <p class="form-hint">18~120초 예측 6장 사이를 부드럽게 이어 붙인 화면입니다.</p>
                 </div>
 
                 <ul class="result-info" id="result-info"></ul>
-                <pre class="result-meta" id="result-meta"></pre>
             </div>
             <div id="viewer-placeholder" class="viewer-empty">
                 <svg class="viewer-empty-icon" viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -272,7 +263,6 @@
         /* ================================================================
            AI 모델 서버 (team_yucheital_ai_model / terrainFlowSim/webapp)
            - 예측 : POST /api/predict   (mode, file, rain_mm, time_s, dx)
-           - 샘플 : GET  /api/samples  -> { samples: [파일명] },  GET /api/sample/{name} -> PNG
            - 로그인: POST /api/auth/login, /api/auth/signup  -> { email, token }
            - 상태 : GET  /api/health
            - 기록 : GET/POST/DELETE /api/history, PATCH/DELETE /api/history/{id}  (로그인 토큰 필요)
@@ -784,7 +774,6 @@
             document.getElementById('fileInput').setAttribute('accept', t.accept);
             document.getElementById('dropzone-hint').textContent = t.fileHint;
             document.getElementById('dx-block').style.display = (getMode() === 'terrain') ? 'block' : 'none';
-            document.getElementById('samples-block').style.display = (getMode() === 'image') ? 'block' : 'none';
             clearFieldError('fileInput');
             updateRunSummary();
         }
@@ -860,56 +849,17 @@
                 syncSliderBounds('timeRange', 'timeS');
                 document.getElementById('time-row').style.display = modelInfo.timeConditioned ? 'block' : 'none';
 
+                // 화면에는 짧게, 모델·장치·로그인 여부 같은 세부 정보는 마우스를 올리면 보이게
                 const auth = modelInfo.authEnabled ? '로그인 필요' : '로그인 없이 사용 가능';
-                status.textContent = `${h.checkpoint} · ${String(h.device).toUpperCase()} · ${auth}`;
+                status.textContent = '서버 연결됨';
+                status.title = `${h.checkpoint} · ${String(h.device).toUpperCase()} · ${auth}`;
                 status.classList.add('ok');
                 updateRunSummary();
             } catch (err) {
                 console.error(err);
-                status.textContent = '모델 서버 연결 안 됨';
+                status.textContent = '서버 연결 안 됨';
                 status.title = ANALYZE_API;
                 status.classList.add('down');
-            }
-        }
-
-        /* ---------- 샘플 등고선 갤러리 (/api/samples) ---------- */
-        async function initSamples() {
-            const grid = document.getElementById('sample-grid');
-            const empty = document.getElementById('sample-empty');
-            try {
-                const { samples = [] } = await (await fetch(ANALYZE_API + '/api/samples?limit=24')).json();
-                if (samples.length === 0) {
-                    empty.textContent = '서버에 샘플이 없습니다.';
-                    return;
-                }
-                empty.style.display = 'none';
-                samples.forEach(name => {
-                    const b = document.createElement('button');
-                    b.type = 'button';
-                    b.title = name;
-                    b.innerHTML = `<img src="${ANALYZE_API}/api/sample/${encodeURIComponent(name)}" alt="${escapeHtml(name)}" loading="lazy">`;
-                    b.onclick = () => pickSample(name, b);
-                    grid.appendChild(b);
-                });
-            } catch (err) {
-                empty.textContent = '모델 서버에 연결되면 샘플 등고선이 표시됩니다.';
-            }
-        }
-
-        // 샘플 PNG 를 받아 업로드한 파일처럼 fileInput 에 넣는다
-        async function pickSample(name, button) {
-            try {
-                const blob = await (await fetch(`${ANALYZE_API}/api/sample/${encodeURIComponent(name)}`)).blob();
-                const dataTransfer = new DataTransfer();
-                dataTransfer.items.add(new File([blob], name, { type: 'image/png' }));
-                fileInputEl.files = dataTransfer.files;
-
-                document.querySelectorAll('#sample-grid button').forEach(x => x.classList.remove('selected'));
-                button.classList.add('selected');
-                clearFieldError('fileInput');
-                updateDropzonePreview();
-            } catch (err) {
-                alert('샘플을 불러오지 못했습니다.');
             }
         }
 
@@ -1081,7 +1031,7 @@
             const file = document.getElementById('fileInput').files[0];
             const t = MODE_TEXT[getMode()];
             if (!file) {
-                showFieldError('fileInput', '파일을 업로드하거나 샘플을 선택해주세요.');
+                showFieldError('fileInput', '파일을 업로드해주세요.');
                 valid = false;
             } else if (!t.exts.includes(fileExt(file.name))) {
                 showFieldError('fileInput', `${t.short} 모드에서는 ${t.fileHint} 파일만 올릴 수 있습니다.`);
@@ -1159,7 +1109,6 @@
 
         function clearSelectedFile() {
             fileInputEl.value = '';
-            document.querySelectorAll('#sample-grid button').forEach(x => x.classList.remove('selected'));
             clearFieldError('fileInput');
             updateDropzonePreview();
         }
@@ -1168,7 +1117,6 @@
 
         fileInputEl.addEventListener('change', () => {
             clearFieldError('fileInput');
-            document.querySelectorAll('#sample-grid button').forEach(x => x.classList.remove('selected'));
             updateDropzonePreview();
         });
 
@@ -1201,7 +1149,6 @@
             fileInputEl.files = dataTransfer.files;
 
             clearFieldError('fileInput');
-            document.querySelectorAll('#sample-grid button').forEach(x => x.classList.remove('selected'));
             updateDropzonePreview();
         });
 
@@ -1222,7 +1169,6 @@
 
             document.getElementById('result-info').innerHTML =
                 info.map(line => `<li>${escapeHtml(line)}</li>`).join('');
-            document.getElementById('result-meta').textContent = meta ? JSON.stringify(meta, null, 2) : '';
 
             document.getElementById('result-box').style.display = 'block';
             document.getElementById('viewer-placeholder').style.display = 'none';
@@ -1240,6 +1186,9 @@
         /* ---------- 시간 경과 재생 ---------- */
         // 학습 데이터의 6개 시점(18~120초)을 키프레임으로 예측하고, 그 사이는 이미지를 섞어 잇는다
         const TIMELAPSE_TIMES = [18, 38, 59, 79, 100, 120];
+        // 배수구 후보 위치를 정하는 기준 시점. 시간이 짧을수록 물이 많으므로 가장 이른 18초(물이 가장 많이
+        // 고인 순간)의 예측에서 찾는다. 사용자가 고른 경과 시간과 상관없이 같은 지형·강우면 같은 위치가 나온다.
+        const DRAIN_REF_TIME_S = TIMELAPSE_TIMES[0];
         const TIMELAPSE_SECONDS_PER_REAL_SECOND = 8.5;  // 재생 속도: 전체 약 12초
         const TIMELAPSE_HOLD_MS = 800;                  // 끝에서 잠깐 멈춤
         const TIMELAPSE_WRAP_FADE_MS = 700;             // 처음으로 돌아갈 때 부드럽게 전환
@@ -1329,7 +1278,6 @@
             range.min = f[0].time;
             range.max = time;
             range.disabled = f.length < 2;
-            document.getElementById('timelapse-play').disabled = f.length < 2;
             if (f.length === 1) {
                 const canvas = document.getElementById('timelapse-canvas');
                 canvas.width = img.naturalWidth;
@@ -1338,9 +1286,9 @@
             }
         }
 
-        // 이미 받은 응답(firstData)은 재사용하고 나머지 시점만 순서대로 요청한다.
+        // 이미 받은 응답(preloaded: { 시점: 응답 })은 재사용하고 나머지 시점만 순서대로 요청한다.
         // 배수구 후보(fixedPeak)는 시설 위치이므로 재생 내내 한 곳에 고정한다.
-        async function runTimelapse(file, mode, rainMm, dx, firstTime, firstData, fixedPeak) {
+        async function runTimelapse(file, mode, rainMm, dx, preloaded, fixedPeak, startTime) {
             const controller = new AbortController();
             timelapse.controller = controller;
             document.getElementById('timelapse').style.display = 'block';
@@ -1359,7 +1307,7 @@
                 for (let i = 0; i < total; i++) {
                     const time = TIMELAPSE_TIMES[i];
                     status.textContent = `시점별 예측 중... (${i + 1}/${total})`;
-                    let data = time === firstTime ? firstData : null;
+                    let data = preloaded[time] || null;
                     if (!data) {
                         const form = new FormData();
                         form.append('mode', mode);
@@ -1380,12 +1328,19 @@
                     await addTimelapseFrame(time, png(data.overlay_png_base64));
                 }
                 status.textContent = '';
-                if (!matchMedia('(prefers-reduced-motion: reduce)').matches) startTimelapsePlayback();
             } catch (err) {
                 if (err.name === 'AbortError') return;
                 console.error(err);
                 status.textContent = `일부 시점을 불러오지 못했습니다: ${err.message}`;
-                startTimelapsePlayback();
+            }
+            // 자동으로 재생하지 않는다. 다 받으면 재생 버튼을 켜고, 사용자가 누를 때 시작한다
+            const f = timelapse.frames;
+            document.getElementById('timelapse-play').disabled = f.length < 2;
+            // 처음 화면은 사용자가 고른 경과 시간 (재생 범위 18~120초 밖이면 가까운 끝)
+            if (f.length >= 2 && startTime != null) {
+                const t = Math.min(Math.max(startTime, f[0].time), f[f.length - 1].time);
+                timelapse.elapsed = (t - f[0].time) / TIMELAPSE_SECONDS_PER_REAL_SECOND * 1000;
+                drawTimelapseAt(t);
             }
         }
 
@@ -1428,6 +1383,21 @@
 
             const headers = getToken() ? { Authorization: 'Bearer ' + getToken() } : {};
 
+            // 배수구 위치는 DRAIN_REF_TIME_S(18초) 예측에서 찾는다. 사용자가 다른 시간을 골랐으면
+            // 기준 시점 예측을 같이(병렬로) 요청한다. 실패하면 null -> 아래에서 사용자 시점으로 대신한다.
+            let refPromise = null;
+            if (modelInfo.timeConditioned && timeS !== DRAIN_REF_TIME_S) {
+                const refForm = new FormData();
+                refForm.append('mode', mode);
+                refForm.append('file', mapFile);
+                refForm.append('rain_mm', rainMm);
+                refForm.append('time_s', DRAIN_REF_TIME_S);
+                refForm.append('dx', dx);
+                refPromise = fetch(ANALYZE_API + '/api/predict', { method: 'POST', body: refForm, headers })
+                    .then(r => (r.ok ? r.json() : null))
+                    .catch(() => null);
+            }
+
             btn.disabled = true; //버튼 비활성화
             btn.textContent = '예측 중...'; //버튼 글자 바꾸기
 
@@ -1458,33 +1428,51 @@
                 console.log('서버 응답:', data);
 
                 const png = b64 => 'data:image/png;base64,' + b64;
+                const meta = data.meta || {};
+
+                // 배수구 후보: 기준 시점(18초) 예측에서 찾은 위치. 기준 시점 예측을 못 받았으면 사용자 시점 것을 쓴다
+                let refData = null;
+                if (meta.time_conditioned) {
+                    refData = meta.time_s === DRAIN_REF_TIME_S ? data : await refPromise;
+                }
+                const drainSource = refData || data;
+                const drainTime = refData ? DRAIN_REF_TIME_S : (meta.time_conditioned ? meta.time_s : null);
+                const drainPos = drainSource.drain_candidate ? drainSource.drain_candidate.image : null;
+
                 // 참고 화면 순서: 입력 → 예측 → 오버레이. terrain 모드는 배수구 후보가 그려진 분석 지도를 맨 앞에
-                const drainPos = data.drain_candidate ? data.drain_candidate.image : null;
+                // (분석 지도의 ★도 빨간 원과 같은 위치가 되도록 배수구 기준 시점의 지도를 쓴다)
                 const images = [];
-                if (data.analysis_png_base64) images.push({ key: 'analysis', label: '분석 지도 (배수구 후보)', src: png(data.analysis_png_base64) });
+                if (drainSource.analysis_png_base64) {
+                    const label = drainTime != null ? `분석 지도 (배수구 후보 · ${drainTime}초 기준)` : '분석 지도 (배수구 후보)';
+                    images.push({ key: 'analysis', label, src: png(drainSource.analysis_png_base64) });
+                }
                 images.push({ key: 'contour', label: '입력 등고선 (모델에 들어간 이미지)', src: png(data.contour_png_base64) });
                 images.push({ key: 'prediction', label: '예측 배수맵', src: png(data.prediction_png_base64), marker: drainPos });
                 images.push({ key: 'overlay', label: '오버레이 (등고선 + 예측)', src: png(data.overlay_png_base64), marker: drainPos });
 
                 // 서버 meta 에 들어간 값이 아니라 모델이 실제로 쓴 값을 보여준다 (강우는 학습 범위로 잘림)
                 const usedRain = Math.min(Math.max(rainMm, modelInfo.rainRange[0]), modelInfo.rainRange[1]);
-                const meta = data.meta || {};
+                // 결과 아래 설명은 짧게: 배수구 위치, 조건, 색 읽는 법
                 const info = [];
                 if (drainPos) {
-                    const where = data.analysis_png_base64 ? '분석 지도의 ★, 예측·오버레이의 빨간 원' : '예측·오버레이의 빨간 원';
-                    info.push(`배수구 설치 후보(예측 유출이 가장 많이 모이는 점): ${drainPositionText(drainPos)} 지점 (그림 왼쪽 위 기준) · ${where}`);
+                    // 배수구는 경과 시간과 상관없이 물이 가장 많은 18초 예측에서 찾는다 -> 그 이유를 짧게 붙인다
+                    const basis = drainTime === DRAIN_REF_TIME_S ? `물이 가장 많은 ${drainTime}초 기준`
+                        : (drainTime != null ? `${drainTime}초 기준` : '');
+                    info.push(`배수구 후보: ${drainPositionText(drainPos)} 지점 (빨간 원${basis ? ', ' + basis : ''})`);
                 }
                 const cond = [];
                 if (meta.rain_conditioned) cond.push(`강우 ${usedRain}mm`);
                 if (meta.time_conditioned) cond.push(`경과 ${meta.time_s}초`);
                 if (meta.dx_m) cond.push(`셀 ${Number(meta.dx_m).toFixed(2)}m`);
-                info.push(`조건: ${cond.join(' · ') || '없음'} · 모델 ${data.checkpoint}`);
-                (data.notes || []).forEach(n => info.push(n));
+                if (cond.length) info.push(`조건: ${cond.join(' · ')}`);
+                info.push('파란색이 진할수록 물이 많이 모이는 곳입니다.');
 
                 showResult(images, info, { checkpoint: data.checkpoint, ...meta });
                 if (meta.time_conditioned) {
                     // 기다리지 않는다: 결과는 먼저 보여주고 재생용 프레임은 뒤에서 채운다
-                    runTimelapse(mapFile, mode, rainMm, dx, meta.time_s, data, drainPos);
+                    const preloaded = { [meta.time_s]: data };
+                    if (refData) preloaded[DRAIN_REF_TIME_S] = refData;   // 기준 시점 응답도 재사용 (중복 요청 방지)
+                    runTimelapse(mapFile, mode, rainMm, dx, preloaded, drainPos, meta.time_s);
                 }
                 document.getElementById('result-section').scrollIntoView({ behavior: 'smooth' });
 
@@ -1498,7 +1486,8 @@
                         mode,
                         rain_mm: usedRain,
                         time_s: meta.time_conditioned ? meta.time_s : null,
-                        dx: meta.dx_m ?? null
+                        dx: meta.dx_m ?? null,
+                        drain_time_s: drainTime   // 배수구 위치를 찾은 시점 (보통 18초)
                     },
                     drain: drainPos,
                     checkpoint: data.checkpoint,
@@ -1522,7 +1511,6 @@
         applyAuthState();
         applyMode();
         initHealth();
-        initSamples();
         verifySavedToken();
     </script>
 
