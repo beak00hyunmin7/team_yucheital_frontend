@@ -1917,3 +1917,56 @@ body.xmas .step-num::before {
   .splash-drop, .splash-line { stroke-dashoffset: 0; }
   .splash-name, .splash-tag, .splash-hint { opacity: 1; }
 }
+
+/* ===== 3D 지형 보기 ===== */
+.stage-3d {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  cursor: grab;
+  touch-action: none;
+}
+.stage-3d canvas { display: block; width: 100%; height: 100%; outline: none; }
+.stage-3d canvas.dragging { cursor: grabbing; }
+/* 3D 보기에서는 2D 지도와 그 확대 도구를 숨기고, 같은 그림을 흐리게 깔아 배경으로 쓴다 */
+.stage-map.view-3d .stage-square,
+.stage-map.view-3d .stage-fit,
+.stage-map.view-3d .stage-zoom { display: none !important; }
+.stage-map.view-3d .stage-bg { opacity: 1; }
+.stage-map.view-3d .stage-scrim { display: block; opacity: 0.5; }
+
+.v3d-tools {
+  position: absolute;
+  z-index: 4;
+  right: 16px;
+  bottom: 118px;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px 4px 10px;
+  color: var(--text);
+  font-size: 13px;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+}
+.v3d-exag { display: flex; align-items: center; gap: 8px; margin: 0 6px; color: var(--muted); }
+.v3d-exag input { width: 110px; margin: 0; accent-color: var(--accent); cursor: pointer; }
+.v3d-tools button {
+  min-height: 36px;
+  padding: 0 12px;
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.v3d-tools button:hover { background-color: var(--accent-soft); }
+.v3d-tools button[aria-pressed="true"] { color: var(--accent); }
+.v3d-tools button[aria-pressed="false"] { color: var(--muted); text-decoration: line-through; }
+
+@media (max-width: 1000px) {
+  .v3d-tools { top: 12px; right: 12px; bottom: auto; }
+  .v3d-exag input { width: 72px; }
+}
