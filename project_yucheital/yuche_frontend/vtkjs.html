@@ -9,6 +9,25 @@
     <link rel="stylesheet" href="./style.css">
 </head>
 <body>
+    <!-- 첫 화면: 프로젝트 로고. 잠깐 보여 준 뒤(또는 누르면 바로) 본 화면으로 넘어간다 -->
+    <div id="splash" class="splash" role="img" aria-label="유체이탈 — 등고선으로 예측하는 배수 지도">
+        <div class="splash-inner">
+            <!-- 프로젝트 로고: 이 폴더에 logo.png 를 넣으면 그 그림이 나온다. 없으면 아래 기본 그림(물방울)이 나온다 -->
+            <img class="splash-img" id="splash-img" src="./logo.png" alt="" style="display: none;"
+                 onload="this.style.display='block'; document.getElementById('splash-fallback').style.display='none';"
+                 onerror="this.remove();">
+            <svg class="splash-logo" id="splash-fallback" viewBox="0 0 120 120" width="132" height="132" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <!-- 물방울 안에 등고선: 지형(등고선)에서 물길을 읽는다는 뜻 -->
+                <path class="splash-drop" d="M60 10 C60 10 96 50 96 76 A36 36 0 0 1 24 76 C24 50 60 10 60 10 Z" stroke="#4cc3ff" stroke-width="5"/>
+                <path class="splash-line l1" d="M36 78 C44 68 54 86 62 76 S78 66 86 76" stroke="#4cc3ff" stroke-width="3.5" opacity="0.95"/>
+                <path class="splash-line l2" d="M40 92 C47 84 55 98 62 90 S75 82 82 90" stroke="#4cc3ff" stroke-width="3.5" opacity="0.7"/>
+                <path class="splash-line l3" d="M44 62 C50 55 57 67 63 60 S72 54 78 60" stroke="#4cc3ff" stroke-width="3.5" opacity="0.45"/>
+            </svg>
+            <p class="splash-name">유체이탈</p>
+            <p class="splash-tag">등고선으로 예측하는 배수 지도</p>
+            <p class="splash-hint">화면을 누르면 바로 시작합니다</p>
+        </div>
+    </div>
     <!-- 왼쪽 아이콘 레일: 화면 전환(예측 · 기록) · 서버 상태 · 테마 · 계정 -->
     <nav id="rail" aria-label="주 메뉴">
         <span class="brand-wrap" title="유체이탈">
@@ -105,7 +124,7 @@
             <div class="stage-zoom" id="stage-zoom" style="display: none;" role="group" aria-label="지도 확대·이동">
                 <button type="button" id="zoom-in" aria-label="확대" title="확대 (마우스 휠)">+</button>
                 <button type="button" id="zoom-reset" aria-label="원래 크기로" title="원래 크기로 (더블클릭)">100%</button>
-                <button type="button" id="zoom-out" aria-label="축소" title="축소 (마우스 휠)" disabled>&minus;</button>
+                <button type="button" id="zoom-out" aria-label="축소" title="축소 (마우스 휠, 50% 까지)">&minus;</button>
             </div>
         </div>
 
@@ -266,7 +285,13 @@
                     <span class="tl-time" id="timelapse-time"></span>
                 </div>
                 <input type="range" id="timelapse-range" min="18" max="120" step="0.1" value="18" disabled aria-label="재생 시점">
-                <div class="tl-scale"><span>18s</span><span class="timelapse-status" id="timelapse-status" role="status"></span><span>120s</span></div>
+                <div class="tl-scale"><span id="tl-min">18s</span><span id="tl-max">120s</span></div>
+                <!-- 시점별 예측 진행 상황 (다 받으면 사라진다) -->
+                <div class="tl-progress" id="tl-progress" style="display: none;" role="status" aria-live="polite">
+                    <span class="spinner" aria-hidden="true"></span>
+                    <span class="timelapse-status" id="timelapse-status"></span>
+                    <span class="tl-progress-bar" aria-hidden="true"><i id="tl-progress-fill"></i></span>
+                </div>
             </div>
             <div class="tl-legend" aria-hidden="true">
                 <div class="tl-legend-bar"></div>
@@ -450,15 +475,21 @@
            - 로그인: POST /api/auth/login, /api/auth/signup  -> { email, token }
            - 상태 : GET  /api/health
            - 기록 : GET/POST/DELETE /api/history, PATCH/DELETE /api/history/{id}  (로그인 토큰 필요)
-           서버 주소는 '이 페이지를 연 호스트의 8000번 포트'가 기본이다. 그래서 서버 PC 가 이 화면을
-           http://서버IP:8080 으로 열어 주면(예: python -m http.server 8080 --bind 0.0.0.0) 다른 PC·폰에서도
-           주소만 치면 된다. 파일을 더블클릭해 열었을 때(file://)는 127.0.0.1:8000.
+           서버 주소 기본값은 이 화면을 어떻게 열었느냐로 정한다.
+             - http://호스트:8080  (화면만 여는 정적 서버, 예: python -m http.server 8080 --bind 0.0.0.0)
+                                   -> 같은 호스트의 8000번 포트. 같은 공유기의 다른 PC·폰은 주소만 치면 된다
+             - 그 밖의 http(s) 주소 (공개 링크·테스트 서버처럼 화면과 /api 를 한 주소에서 내줄 때)
+                                   -> 이 화면과 같은 주소(origin)
+             - 파일을 더블클릭해 열었을 때(file://) -> 127.0.0.1:8000
            다른 주소를 쓰려면 주소 뒤에 ?api=http://IP:포트 를 붙인다.
            자세한 내용: 저장소 맨 위 README.md
            ================================================================ */
-        const DEFAULT_API = (/^https?:$/.test(location.protocol) && location.hostname)
-            ? `${location.protocol}//${location.hostname}:8000`
-            : 'http://127.0.0.1:8000';
+        const STATIC_PAGE_PORT = '8080';   // 화면만 여는 정적 서버의 관례 포트
+        const DEFAULT_API = !(/^https?:$/.test(location.protocol) && location.hostname)
+            ? 'http://127.0.0.1:8000'
+            : (location.port === STATIC_PAGE_PORT
+                ? `${location.protocol}//${location.hostname}:8000`
+                : location.origin);
         const ANALYZE_API = (new URLSearchParams(location.search).get('api') || DEFAULT_API).replace(/\/+$/, '');  // AI 모델 서버 (예측)
         const AUTH_API = ANALYZE_API;                  // 로그인도 같은 서버 (토큰을 받아야 예측 가능)
 
@@ -879,9 +910,10 @@
                 return;
             }
             showResult(
-                [{ key: 'saved', label: `${recordName(record)} · ${record.imageLabel || '저장된 결과'}`, src: record.thumbnail }],
+                [{ key: 'saved', label: `${recordName(record)} · ${record.imageLabel || '저장된 결과'}`, src: record.thumbnail, marker: record.drain || null }],
                 record.info || [],
-                record.meta
+                record.meta,
+                { src: record.thumbnail, marker: record.drain || null }   // 예측 화면과 같은 빨간 원 + 라벨
             );
             renderDrawer();
             goToView('predict');   // 기록 화면에서 눌렀으면 예측 화면으로 넘어가서 결과를 지도에 보여준다
@@ -1005,7 +1037,9 @@
 
         // 기록용 썸네일: 원본 base64 PNG 는 수백 KB 라서 긴 변 360px JPEG 로 줄여 저장한다
         // marker 를 주면 배수구 후보 자리에 빨간 원을 그려 넣는다 (분석 지도에는 별표가 이미 있어서 안 줌)
-        function makeThumbnail(dataUrl, marker = null, maxSide = 360) {
+        // 기록에 남기는 그림은 예측 화면에서 본 것과 같은 해상도로 둔다 (예전엔 긴 변 360px 로 줄여서,
+        // 기록에서 다시 열면 지도가 뭉개져 보였다). 너무 큰 그림만 1024px 로 줄인다. 서버 한도는 2MB.
+        function makeThumbnail(dataUrl, marker = null, maxSide = 1024) {
             return new Promise(resolve => {
                 const img = new Image();
                 img.onload = () => {
@@ -1024,7 +1058,7 @@
                         ctx.arc(marker.x * canvas.width, marker.y * canvas.height, 10, 0, Math.PI * 2);
                         ctx.stroke();
                     }
-                    resolve(canvas.toDataURL('image/jpeg', 0.8));
+                    resolve(canvas.toDataURL('image/jpeg', 0.92));
                 };
                 img.onerror = () => resolve(null);
                 img.src = dataUrl;
@@ -1525,6 +1559,7 @@
            있게 하고, 지도 가장자리가 화면 밖으로 빠져 빈 공간이 생기지 않게 가둔다(전체 보기에서는
            지도가 화면 안에 머물게). 배수구 표시는 확대해도 같은 크기로 같은 지점에 붙는다(style.css --zoom). */
         const MAP_ZOOM_MAX = 8;
+        const MAP_ZOOM_MIN = 0.5;       // 50% 까지 축소 (지도 전체와 주변을 한눈에)
         let mapGeom = { W: 0, H: 0, side: 0, bx: 0, by: 0 };
         const mapView = { s: 1, tx: 0, ty: 0 };
 
@@ -1552,11 +1587,12 @@
             sq.style.setProperty('--zoom', mapView.s);
             sq.style.setProperty('--tx', mapView.tx + 'px');
             sq.style.setProperty('--ty', mapView.ty + 'px');
-            const zoomed = mapView.s > 1.001;
+            const zoomed = Math.abs(mapView.s - 1) > 0.001;          // 확대든 축소든 100% 가 아니면 손가락 이동 = 지도 이동
+            byId('stage-map').classList.toggle('zoomed-out', mapView.s < 0.999);   // 지도 밖이 비어 보이지 않게 흐린 배경을 깐다
             const map = byId('stage-map');
             map.classList.toggle('zoomed', zoomed);
             byId('zoom-reset').textContent = Math.round(mapView.s * 100) + '%';
-            byId('zoom-out').disabled = mapView.s <= 1.001;
+            byId('zoom-out').disabled = mapView.s <= MAP_ZOOM_MIN + 0.001;
             byId('zoom-in').disabled = mapView.s >= MAP_ZOOM_MAX - 0.001;
         }
 
@@ -1567,7 +1603,7 @@
 
         // 화면 좌표 (px, py) 아래 점을 고정한 채 배율을 factor 배로
         function zoomMapAt(px, py, factor) {
-            const next = Math.min(MAP_ZOOM_MAX, Math.max(1, mapView.s * factor));
+            const next = Math.min(MAP_ZOOM_MAX, Math.max(MAP_ZOOM_MIN, mapView.s * factor));
             const k = next / mapView.s;
             if (k === 1) return;
             const r = byId('stage-square').getBoundingClientRect();   // 확대는 지도 중심 기준이라 중심은 이동량(tx)만 반영
@@ -1633,7 +1669,7 @@
         // 더블클릭: 그 지점을 2.5배로, 이미 확대돼 있으면 원래대로
         mapEl.addEventListener('dblclick', (e) => {
             if (!mapHasImage() || isMapControl(e.target)) return;
-            if (mapView.s > 1.001) resetMapView();
+            if (Math.abs(mapView.s - 1) > 0.001) resetMapView();
             else zoomMapAt(e.clientX, e.clientY, 2.5);
             clampMapView();
             applyMapView();
@@ -2031,7 +2067,7 @@
         }
 
         /* ---------- 시간 경과 재생 ---------- */
-        // 학습 데이터의 6개 시점(18~120초)을 키프레임으로 예측하고, 그 사이는 이미지를 섞어 잇는다
+        // 학습 데이터의 6개 시점(18~120초) + 사용자가 입력한 시점을 키프레임으로 예측하고, 그 사이는 이미지를 섞어 잇는다
         const TIMELAPSE_TIMES = [18, 38, 59, 79, 100, 120];
         // 배수구 후보 위치를 정하는 기준 시점. 시간이 짧을수록 물이 많으므로 가장 이른 18초(물이 가장 많이
         // 고인 순간)의 예측에서 찾는다. 사용자가 고른 경과 시간과 상관없이 같은 지형·강우면 같은 위치가 나온다.
@@ -2120,39 +2156,58 @@
             document.getElementById('stage-toggle').style.display = 'none';
             timelapse.star = false;
             setStageView('map');
-            document.getElementById('timelapse-status').textContent = '';
+            setTimelapseStatus('');
             document.getElementById('timelapse-play').disabled = true;
             document.getElementById('timelapse-range').disabled = true;
             document.getElementById('timelapse-time').textContent = '';
         }
 
+        // 시점별 예측 진행 표시. done/total 을 주면 진행 막대도 채운다. text 가 비면 숨긴다
+        function setTimelapseStatus(text, done, total, isError = false) {
+            const row = document.getElementById('tl-progress');
+            document.getElementById('timelapse-status').textContent = text;
+            row.style.display = text ? 'flex' : 'none';
+            row.classList.toggle('error', isError);
+            document.getElementById('tl-progress-fill').style.width = total ? `${Math.round(done / total * 100)}%` : '0%';
+        }
+
+        // 프레임은 시간 순서로 끼워 넣는다 (사용자가 고른 시점을 먼저 받기 때문에 도착 순서 != 시간 순서)
         async function addTimelapseFrame(time, src) {
             const img = await loadImage(src);
-            timelapse.frames.push({ time, img });
             const f = timelapse.frames;
-            const range = document.getElementById('timelapse-range');
-            range.min = f[0].time;
-            range.max = time;
-            range.disabled = f.length < 2;
-            if (f.length === 1) {
+            if (!f.length) {
                 const canvas = document.getElementById('timelapse-canvas');
                 canvas.width = img.naturalWidth;
                 canvas.height = img.naturalHeight;
-                drawTimelapseAt(time);
             }
+            f.push({ time, img });
+            f.sort((p, q) => p.time - q.time);
         }
 
-        // 이미 받은 응답(preloaded: { 시점: 응답 })은 재사용하고 나머지 시점만 순서대로 요청한다.
+        // 이미 받은 응답(preloaded: { 시점: 응답 })은 재사용하고 나머지 시점만 요청한다.
         // 배수구 후보(fixedPeak)는 시설 위치이므로 재생 내내 한 곳에 고정한다.
+        // startTime: 사용자가 예측할 때 입력한 경과 시간. 슬라이더는 처음부터 이 시간을 가리키고,
+        //   이 시점도 키프레임에 넣는다 (예전엔 18초부터 시작해서 입력한 시간과 달라 보였고, 18초보다 이른 시간은 못 갔다).
         // color: 예측에 쓴 이미지 색 해석 { scheme, reverse } (이미지 모드). 시점별 요청도 같은 해석을 써야 그림이 일관된다
         async function runTimelapse(file, mode, rainMm, dx, preloaded, fixedPeak, startTime, color) {
             const controller = new AbortController();
             timelapse.controller = controller;
             document.getElementById('timelapse').style.display = 'flex';
             document.getElementById('stage-toggle').style.display = 'flex';
-            const status = document.getElementById('timelapse-status');
-            const total = TIMELAPSE_TIMES.length;
             const png = b64 => 'data:image/png;base64,' + b64;
+            const range = document.getElementById('timelapse-range');
+
+            const userTime = startTime != null ? Number(startTime) : TIMELAPSE_TIMES[0];
+            const times = [...new Set([...TIMELAPSE_TIMES, userTime])].sort((p, q) => p - q);
+            const total = times.length;
+            const secText = v => `${Number.isInteger(v) ? v : v.toFixed(1)}`;
+            range.min = times[0];
+            range.max = times[total - 1];
+            range.value = userTime;
+            range.disabled = true;   // 다 받을 때까지는 움직일 수 없다
+            document.getElementById('tl-min').textContent = `${secText(times[0])}s`;
+            document.getElementById('tl-max').textContent = `${secText(times[total - 1])}s`;
+            document.getElementById('timelapse-time').textContent = `${secText(userTime)}초`;
 
             if (fixedPeak) {
                 const star = document.getElementById('timelapse-star');
@@ -2163,30 +2218,35 @@
             }
 
             try {
+                // 사용자가 고른 시점을 가장 먼저 (이미 받은 응답이라 바로 그려진다), 나머지는 시간 순서로
+                const order = [userTime, ...times.filter(v => v !== userTime)];
                 for (let i = 0; i < total; i++) {
-                    const time = TIMELAPSE_TIMES[i];
-                    status.textContent = `시점별 예측 중... (${i + 1}/${total})`;
+                    const time = order[i];
+                    setTimelapseStatus(`시점별 예측 중 ${i + 1} / ${total}`, i, total);
                     let data = preloaded[time] || null;
                     if (!data) {
                         data = await requestPredict({ mode, file, rainMm, timeS: time, dx, color }, controller.signal);
                     }
                     if (controller.signal.aborted) return;
                     await addTimelapseFrame(time, png(data.overlay_png_base64));
+                    if (i === 0) drawTimelapseAt(userTime);
                 }
-                status.textContent = '';
+                setTimelapseStatus('');
             } catch (err) {
                 if (err.name === 'AbortError') return;
                 console.error(err);
-                status.textContent = `일부 시점을 불러오지 못했습니다: ${err.message}`;
+                setTimelapseStatus(`일부 시점을 불러오지 못했습니다: ${err.message}`, 0, 0, true);
             }
-            // 자동으로 재생하지 않는다. 다 받으면 재생 버튼을 켜고, 사용자가 누를 때 시작한다
+            // 자동으로 재생하지 않는다. 다 받으면 재생 버튼·슬라이더를 켜고, 사용자가 누를 때 시작한다
             const f = timelapse.frames;
             document.getElementById('timelapse-play').disabled = f.length < 2;
-            // 처음 화면은 사용자가 고른 경과 시간 (재생 범위 18~120초 밖이면 가까운 끝)
-            if (f.length >= 2 && startTime != null) {
-                const t = Math.min(Math.max(startTime, f[0].time), f[f.length - 1].time);
-                timelapse.elapsed = (t - f[0].time) / TIMELAPSE_SECONDS_PER_REAL_SECOND * 1000;
-                drawTimelapseAt(t);
+            range.disabled = f.length < 2;
+            if (f.length >= 1) {
+                range.min = f[0].time;                // 일부 시점을 못 받았으면 받은 범위까지만
+                range.max = f[f.length - 1].time;
+                const tNow = Math.min(Math.max(userTime, f[0].time), f[f.length - 1].time);
+                timelapse.elapsed = (tNow - f[0].time) / TIMELAPSE_SECONDS_PER_REAL_SECOND * 1000;
+                drawTimelapseAt(tNow);
             }
         }
 
@@ -2303,6 +2363,7 @@
                 const recordMeta = { checkpoint: data.checkpoint, ...meta, stats: data.stats };
                 stageState.recordId = null;   // 저장되면(saveRecord) 그 기록이 서랍에서 강조된다
                 showResult(images, info, recordMeta, stage);
+                byId('stage-loading').style.display = 'none';   // 지도가 떴으니 '예측 중' 표시는 내린다 (시점별 진행은 시간 슬라이더에 나온다)
                 submitLabel = '다시 예측';
                 if (mode === 'image' && data.color_info) {
                     const ci = data.color_info;
@@ -2335,7 +2396,8 @@
                     drain: drainPos,
                     checkpoint: data.checkpoint,
                     imageLabel: stage.label,
-                    thumbnail: getCurrentUser() ? await makeThumbnail(stage.src, stage.marker) : null,
+                    // 배수구 원은 그림에 굽지 않는다: 기록을 다시 열 때 저장된 좌표(drain)로 예측 화면과 똑같이 얹는다
+                    thumbnail: getCurrentUser() ? await makeThumbnail(stage.src) : null,
                     info
                 });
 
@@ -2546,6 +2608,20 @@
         fetch(ANALYZE_API + '/api/samples?limit=1').then(r => r.json()).then(d => {
             if (d.samples && d.samples.length) byId('empty-sample').style.display = 'inline-flex';
         }).catch(() => {});
+
+        /* ---------- 첫 화면(로고) ---------- */
+        // 접속하면 로고를 먼저 보여 주고 잠시 뒤 본 화면으로 넘어간다. 화면을 누르거나 키를 누르면 바로 넘어간다.
+        const SPLASH_MS = 2200;
+        function closeSplash() {
+            const s = byId('splash');
+            if (!s || s.classList.contains('hide')) return;
+            s.classList.add('hide');
+            setTimeout(() => s.remove(), 500);   // 사라지는 효과가 끝난 뒤 지운다
+            document.removeEventListener('keydown', closeSplash);
+        }
+        byId('splash').addEventListener('click', closeSplash);
+        document.addEventListener('keydown', closeSplash);
+        setTimeout(closeSplash, SPLASH_MS);
 
         initTheme();
         initXmas();
