@@ -57,137 +57,200 @@
     <!-- 크리스마스 장식: 배경에만 눈이 내린다 (카드 뒤에 깔려서 결과 그림은 가리지 않음) -->
     <canvas id="snow-canvas" aria-hidden="true"></canvas>
 
-    <main class="page">
-        <!-- 화면 1: 예측 (기본) -->
-        <div id="view-predict" class="stack">
-        <div class="view-head">
-            <h1>배수 예측</h1>
-        </div>
-        <form id="uploadForm" enctype="multipart/form-data" novalidate>
-            <div class="stack">
-                <!-- 1. 입력 방식 -->
-                <section class="card">
-                    <h2 class="card-title"><span class="step-num" data-xmas="🎄">1</span>입력 방식</h2>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-                    <span class="field-label">데이터 종류</span>
-                    <div class="segmented" role="radiogroup" aria-label="입력 종류">
-                        <label><input type="radio" name="mode" value="image" checked><span>등고선 이미지</span></label>
-                        <label><input type="radio" name="mode" value="terrain"><span>등고선 데이터 (고도 격자)</span></label>
-                    </div>
-                    <p class="form-hint" id="mode-hint"></p>
-
-                    <div class="dropzone" id="dropzone">
-                        <input type="file" id="fileInput" name="file" hidden />
-                        <label for="fileInput" class="dropzone-label">
-                            <!-- 파일 없을 때: 안내 -->
-                            <span class="dropzone-empty" id="dropzone-empty">
-                                <svg class="dropzone-icon" viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5">
-                                    <path d="M12 15V4M12 4l-4 4M12 4l4 4" stroke-linecap="round" stroke-linejoin="round"/>
-                                    <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                                <span class="dropzone-text">클릭하거나 파일을 끌어다 놓으세요</span>
-                                <span class="dropzone-hint" id="dropzone-hint"></span>
-                            </span>
-                            <!-- 파일 있을 때: 미리보기 (그림이 아닌 고도 격자 파일은 파일 아이콘) -->
-                            <span class="dropzone-preview" id="dropzone-preview" style="display: none;">
-                                <img id="dropzone-img" alt="올린 파일 미리보기">
-                                <span class="dropzone-fileicon" id="dropzone-fileicon">
-                                    <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5">
-                                        <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" stroke-linejoin="round"/>
-                                        <path d="M14 3v5h5M8 13h8M8 17h5" stroke-linecap="round" stroke-linejoin="round"/>
-                                    </svg>
-                                </span>
-                                <span class="dropzone-info">
-                                    <span id="dropzone-filename"></span>
-                                    <span class="dropzone-change">클릭하거나 끌어다 놓아 다른 파일로 바꾸기</span>
-                                </span>
-                            </span>
-                        </label>
-                        <button type="button" class="dropzone-remove" id="dropzone-remove" style="display: none;" aria-label="파일 빼기" title="파일 빼기">&times;</button>
-                    </div>
-                    <p class="field-error" id="err-fileInput"></p>
-                </section>
-
-                <!-- 2. 조건 -->
-                <section class="card">
-                    <h2 class="card-title"><span class="step-num" data-xmas="🎁">2</span>강우 조건</h2>
-                    <div class="cond-grid">
-                        <div id="rain-block">
-                            <label class="field-label" for="rainMm">강우량</label>
-                            <div class="slider-row">
-                                <input type="range" id="rainRange" min="20" max="80" step="1" value="50" aria-label="강우량 슬라이더">
-                                <span class="num-input"><input type="number" id="rainMm" value="50" min="20" max="80" step="1"> mm</span>
-                            </div>
-                            <p class="field-error" id="err-rainMm"></p>
-                            <p class="form-hint" id="rain-hint"></p>
-                        </div>
-
-                        <div id="time-row">
-                            <label class="field-label" for="timeS">강우 시작 후 경과 시간</label>
-                            <div class="slider-row">
-                                <input type="range" id="timeRange" min="0" max="120" step="1" value="18" aria-label="경과 시간 슬라이더">
-                                <span class="num-input"><input type="number" id="timeS" value="18" min="0" max="120" step="1"> 초</span>
-                            </div>
-                            <p class="field-error" id="err-timeS"></p>
-                            <p class="form-hint" id="time-hint"></p>
-                        </div>
-                    </div>
-
-                    <!-- dx: terrain 모드에서, 파일에 셀 크기 정보가 없을 때만 쓰인다 -->
-                    <div id="dx-block" style="display: none;">
-                        <label class="field-label" for="dx">격자 셀 크기</label>
-                        <span class="num-input"><input type="number" id="dx" class="wide" value="10.4166667" min="0.01" max="10000" step="any"> m</span>
-                        <p class="field-error" id="err-dx"></p>
-                        <p class="form-hint">.asc/.grd 파일은 헤더의 cellsize 를 자동으로 씁니다.</p>
-                    </div>
-                </section>
-
-                <!-- 실행 -->
-                <section class="card run-bar">
-                    <button type="submit" id="submit-btn" class="btn btn-primary">배수 예측 실행</button>
-                    <span class="run-summary" id="run-summary"></span>
-                </section>
+    <!-- 화면 1: 예측 (기본) — 지도 우선(C안): 지도가 화면을 채우고, 조건·기록·시간 슬라이더는 떠 있는 패널 -->
+    <div id="view-predict" class="stage">
+        <!-- 지도 영역 -->
+        <div class="stage-map" id="stage-map">
+            <img id="stage-bg" class="stage-bg" alt="" aria-hidden="true" style="display: none;">
+            <div class="stage-square" id="stage-square" style="display: none;">
+                <img id="stage-img" alt="예측 배수맵">
+                <canvas id="timelapse-canvas" style="display: none;"></canvas>
+                <span class="drain-marker" id="stage-marker" style="display: none;"></span>
+                <span class="marker-label" id="stage-marker-label" style="display: none;">배수구 설치 후보</span>
+                <span class="drain-marker" id="timelapse-star" style="display: none;" title="배수구 후보"></span>
             </div>
-        </form>
-
-        <!-- 3. 결과 -->
-        <section class="card" id="result-section">
-            <h2 class="card-title"><span class="step-num" data-xmas="🔔">3</span>결과</h2>
-            <div id="result-box" style="display: none;">
-                <div class="result-grid" id="result-grid"></div>
-
-                <!-- 시간 경과 재생: 같은 지형을 시점별로 예측한 결과를 이어서 보여준다 -->
-                <div class="timelapse" id="timelapse" style="display: none;">
-                    <div class="timelapse-head">
-                        <h3>시간 경과에 따른 침수 변화</h3>
-                        <span class="timelapse-status" id="timelapse-status" role="status"></span>
-                    </div>
-                    <div class="timelapse-stage">
-                        <canvas id="timelapse-canvas"></canvas>
-                        <span class="drain-marker" id="timelapse-star" style="display: none;" title="배수구 후보"></span>
-                    </div>
-                    <div class="timelapse-controls">
-                        <button type="button" class="btn" id="timelapse-play" disabled>재생</button>
-                        <input type="range" id="timelapse-range" min="18" max="120" step="0.1" value="18" disabled aria-label="재생 시점">
-                        <span class="timelapse-time" id="timelapse-time"></span>
-                    </div>
-                    <p class="form-hint">18~120초 예측 6장 사이를 부드럽게 이어 붙인 화면입니다.</p>
-                </div>
-
-                <ul class="result-info" id="result-info"></ul>
-            </div>
-            <div id="viewer-placeholder" class="viewer-empty">
+            <div class="stage-empty" id="viewer-placeholder">
                 <svg class="viewer-empty-icon" viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.5">
                     <rect x="3" y="4" width="18" height="16" rx="2" stroke-linecap="round" stroke-linejoin="round"/>
                     <circle cx="8.5" cy="9" r="1.5" fill="currentColor" stroke="none"/>
                     <path d="M4.5 17l4.5-5.5 3 3.5 2.5-3 4.5 5" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                <p class="viewer-empty-title">예측을 실행하면 결과가 여기에 표시됩니다</p>
-                <p class="viewer-empty-sub">입력 등고선 · 예측 배수맵 · 오버레이를 나란히 보여드려요</p>
+                <p class="viewer-empty-title">예측을 실행하면 지도가 여기에 크게 표시됩니다</p>
+                <p class="viewer-empty-sub">조건 패널에서 파일을 올리고 강우량을 고른 뒤 '배수 예측 실행'을 누르세요</p>
             </div>
-        </section>
+            <!-- 지도 / 시간 변화 전환 (시점별 예측 프레임이 도착하면 나타남) -->
+            <div class="stage-toggle" id="stage-toggle" role="group" aria-label="지도 보기 방식" style="display: none;">
+                <button type="button" id="stage-btn-map" class="on" aria-pressed="true">지도</button>
+                <button type="button" id="stage-btn-time" aria-pressed="false">시간 변화</button>
+            </div>
         </div>
 
+        <!-- 조건 패널 (펼침) -->
+        <aside class="panel" id="cond-panel" aria-label="예측 조건">
+            <div class="panel-head">
+                <h1>배수 예측</h1>
+                <button type="button" class="panel-fold" id="panel-fold" aria-expanded="true" aria-controls="panel-body" aria-label="조건 패널 접기">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 15l-6-6-6 6"/></svg>
+                </button>
+            </div>
+            <form id="uploadForm" enctype="multipart/form-data" novalidate>
+                <div id="panel-body">
+                    <!-- 1. 입력 방식 -->
+                    <section class="panel-sec">
+                        <h2 class="card-title"><span class="step-num" data-xmas="🎄">1</span>입력 방식</h2>
+
+                        <div class="segmented" role="radiogroup" aria-label="입력 종류">
+                            <label><input type="radio" name="mode" value="image" checked><span>등고선 이미지</span></label>
+                            <label><input type="radio" name="mode" value="terrain"><span>고도 격자 데이터</span></label>
+                        </div>
+                        <p class="form-hint" id="mode-hint"></p>
+
+                        <div class="dropzone" id="dropzone">
+                            <input type="file" id="fileInput" name="file" hidden />
+                            <label for="fileInput" class="dropzone-label">
+                                <!-- 파일 없을 때: 안내 -->
+                                <span class="dropzone-empty" id="dropzone-empty">
+                                    <svg class="dropzone-icon" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5">
+                                        <path d="M12 15V4M12 4l-4 4M12 4l4 4" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                    <span class="dropzone-text">클릭하거나 파일을 끌어다 놓으세요</span>
+                                    <span class="dropzone-hint" id="dropzone-hint"></span>
+                                </span>
+                                <!-- 파일 있을 때: 미리보기 (그림이 아닌 고도 격자 파일은 파일 아이콘) -->
+                                <span class="dropzone-preview" id="dropzone-preview" style="display: none;">
+                                    <img id="dropzone-img" alt="올린 파일 미리보기">
+                                    <span class="dropzone-fileicon" id="dropzone-fileicon">
+                                        <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5">
+                                            <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" stroke-linejoin="round"/>
+                                            <path d="M14 3v5h5M8 13h8M8 17h5" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                    </span>
+                                    <span class="dropzone-info">
+                                        <span id="dropzone-filename"></span>
+                                        <span class="dropzone-change">클릭하거나 끌어다 놓아 바꾸기</span>
+                                    </span>
+                                </span>
+                            </label>
+                            <button type="button" class="dropzone-remove" id="dropzone-remove" style="display: none;" aria-label="파일 빼기" title="파일 빼기">&times;</button>
+                        </div>
+                        <p class="field-error" id="err-fileInput"></p>
+                    </section>
+
+                    <!-- 2. 조건 -->
+                    <section class="panel-sec">
+                        <h2 class="card-title"><span class="step-num" data-xmas="🎁">2</span>강우 조건</h2>
+                        <div class="cond-grid">
+                            <div id="rain-block">
+                                <label class="field-label" for="rainMm">강우량</label>
+                                <div class="slider-row">
+                                    <input type="range" id="rainRange" min="20" max="80" step="1" value="50" aria-label="강우량 슬라이더">
+                                    <span class="num-input"><input type="number" id="rainMm" value="50" min="20" max="80" step="1"> mm</span>
+                                </div>
+                                <div class="rain-presets" role="group" aria-label="강우량 빠른 선택">
+                                    <button type="button" data-rain="30">30</button>
+                                    <button type="button" data-rain="50">50</button>
+                                    <button type="button" data-rain="80">80</button>
+                                </div>
+                                <p class="field-error" id="err-rainMm"></p>
+                                <p class="form-hint" id="rain-hint"></p>
+                            </div>
+
+                            <div id="time-row">
+                                <label class="field-label" for="timeS">강우 시작 후 경과 시간</label>
+                                <div class="slider-row">
+                                    <input type="range" id="timeRange" min="0" max="120" step="1" value="18" aria-label="경과 시간 슬라이더">
+                                    <span class="num-input"><input type="number" id="timeS" value="18" min="0" max="120" step="1"> 초</span>
+                                </div>
+                                <p class="field-error" id="err-timeS"></p>
+                                <p class="form-hint" id="time-hint"></p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 고급 설정: 이미지 색 체계(이미지 모드) · 격자 셀 크기(데이터 모드) -->
+                    <details class="panel-adv" id="panel-adv">
+                        <summary>고급 설정 <span>색 체계 · 격자 크기</span></summary>
+                        <div class="adv-body">
+                            <div id="color-block">
+                                <label class="field-label" for="colorScheme">이미지 색 체계</label>
+                                <select id="colorScheme"><option value="auto">자동 감지 (권장)</option></select>
+                                <label class="check-row"><input type="checkbox" id="colorReverse"> 높낮이 반대로 해석</label>
+                                <p class="form-hint">모델은 색을 곧 높이로 읽습니다. 학습 형식(파랑=낮음 → 흰색=높음)이 아닌 이미지는 서버가 높이로 복원해 다시 그린 뒤 예측하고, 예측 후 읽은 결과를 확인할 수 있어요.</p>
+                            </div>
+                            <!-- dx: terrain 모드에서, 파일에 셀 크기 정보가 없을 때만 쓰인다 -->
+                            <div id="dx-block" style="display: none;">
+                                <label class="field-label" for="dx">격자 셀 크기</label>
+                                <span class="num-input"><input type="number" id="dx" class="wide" value="10.4166667" min="0.01" max="10000" step="any"> m</span>
+                                <p class="field-error" id="err-dx"></p>
+                                <p class="form-hint">.asc/.grd 파일은 헤더의 cellsize 를 자동으로 씁니다.</p>
+                            </div>
+                        </div>
+                    </details>
+
+                    <!-- 실행 -->
+                    <div class="run-bar">
+                        <button type="submit" id="submit-btn" class="btn btn-primary">배수 예측 실행</button>
+                        <span class="run-summary" id="run-summary"></span>
+                    </div>
+                </div>
+            </form>
+        </aside>
+
+        <!-- 조건 패널 (접힘): 현재 조건을 한 줄로 보여주고 누르면 펼친다 -->
+        <button type="button" class="panel-pill" id="panel-pill" style="display: none;" aria-label="조건 패널 펼치기">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+            <b>조건</b><span id="panel-pill-text"></span>
+        </button>
+
+        <!-- 지도 위 요약 칩 + 도구 버튼 -->
+        <div class="chips" id="chips">
+            <div class="chip" id="chip-depth" style="display: none;">
+                <span class="chip-label">최대 침수 (예측)</span>
+                <span class="chip-value"><b id="chip-depth-val"></b> cm</span>
+            </div>
+            <div class="chip" id="chip-area" style="display: none;">
+                <span class="chip-label" id="chip-area-label">5cm 이상 면적</span>
+                <span class="chip-value"><b id="chip-area-val"></b> %</span>
+            </div>
+            <button type="button" class="chip-btn" id="btn-gallery" style="display: none;">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="8" height="7" rx="1"/><rect x="13" y="4" width="8" height="7" rx="1"/><rect x="3" y="13" width="8" height="7" rx="1"/><rect x="13" y="13" width="8" height="7" rx="1"/></svg>결과 이미지
+            </button>
+            <button type="button" class="chip-btn" id="btn-drawer" aria-pressed="false" aria-controls="drawer">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>기록
+            </button>
+        </div>
+
+        <!-- 최근 분석 기록 서랍 -->
+        <aside class="drawer" id="drawer" style="display: none;" aria-label="최근 분석 기록">
+            <div class="drawer-head">
+                <h2>분석 기록</h2>
+                <a href="#history" id="drawer-all">전체 보기</a>
+            </div>
+            <ul class="drawer-list" id="drawer-list"></ul>
+        </aside>
+
+        <!-- 시간 슬라이더: 같은 지형을 시점별로 예측한 결과를 이어서 보여준다 -->
+        <section class="timeline" id="timelapse" style="display: none;" aria-label="시간 경과에 따른 침수 변화">
+            <button type="button" class="tl-play" id="timelapse-play" disabled>재생</button>
+            <div class="tl-main">
+                <div class="tl-row">
+                    <span class="tl-label">강우 시작 후 경과 시간</span>
+                    <span class="tl-time" id="timelapse-time"></span>
+                </div>
+                <input type="range" id="timelapse-range" min="18" max="120" step="0.1" value="18" disabled aria-label="재생 시점">
+                <div class="tl-scale"><span>18초</span><span class="timelapse-status" id="timelapse-status" role="status"></span><span>120초</span></div>
+            </div>
+            <div class="tl-legend" aria-hidden="true">
+                <div class="tl-legend-bar"></div>
+                <div class="tl-legend-labels"><span>위험</span><span>안전</span></div>
+            </div>
+        </section>
+    </div>
+
+    <main class="page" id="page-history" style="display: none;">
         <!-- 화면 2: 분석 기록 (상단 '분석 기록' 탭 = #history). 로그인 전에는 안내만 -->
         <div class="view-head" id="history-head" style="display: none;">
             <h1>분석 기록</h1>
@@ -246,6 +309,93 @@
             <div class="auth-modal-actions">
                 <button class="btn-cancel" onclick="closeDetail()">닫기</button>
                 <button class="btn-confirm" id="detail-open-btn">결과 화면에 열기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 결과 이미지 모아보기: 입력 등고선 · 예측 배수맵 · 오버레이 · (데이터 모드) 분석 지도 -->
+    <div id="gallery-modal" class="auth-modal-backdrop" style="display: none;">
+        <div class="gallery-card" role="dialog" aria-labelledby="gallery-title">
+            <div class="detail-head">
+                <h3 id="gallery-title">결과 이미지</h3>
+                <button class="notice-close" id="gallery-close" aria-label="닫기">&times;</button>
+            </div>
+            <div class="result-grid" id="result-grid"></div>
+            <ul class="result-info" id="result-info"></ul>
+        </div>
+    </div>
+
+    <!-- 입력 확인: 색 체계가 학습 형식이 아니라 서버가 높이로 읽어 변환했을 때, 맞게 읽었는지 확인 -->
+    <div id="check-modal" class="auth-modal-backdrop" style="display: none;">
+        <div class="check-card" role="dialog" aria-modal="true" aria-labelledby="chk-title">
+            <h3 id="chk-title">이렇게 읽었어요. 산이 제대로 보이나요?</h3>
+            <p class="chk-sub">가운데 그림에서 <b>높은 곳은 흰색·갈색, 낮은 곳은 파랑</b>이면 맞게 읽은 거예요. 회색조·거꾸로 칠한 이미지는 방향을 컴퓨터가 알 수 없어서 확인이 필요해요.</p>
+
+            <div class="chk-flow">
+                <figure>
+                    <img id="chk-orig" alt="올린 이미지 원본">
+                    <figcaption><b>올린 이미지</b><span id="chk-orig-label"></span></figcaption>
+                </figure>
+                <svg class="chk-arrow" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                <figure>
+                    <img id="chk-conv" class="chk-hl" alt="높이로 읽어 학습 형식으로 변환한 결과">
+                    <figcaption><b>높이로 읽은 결과</b><span id="chk-reading"></span></figcaption>
+                </figure>
+                <svg class="chk-arrow" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                <figure>
+                    <img id="chk-pred" alt="예측 배수맵 미리보기">
+                    <figcaption><b>예측 미리보기</b><span id="chk-cond"></span></figcaption>
+                </figure>
+            </div>
+
+            <div class="chk-legend-row">
+                <span>읽은 방식</span><div class="chk-legend" id="chk-legend"></div><span>낮음 → 높음</span>
+            </div>
+
+            <fieldset class="chk-dir">
+                <legend>높은 곳을 맞게 읽었나요?</legend>
+                <label class="chk-opt"><input type="radio" name="chk-dir" id="chk-dir-normal" value="normal"><span><b>맞아요</b><small>지금 읽은 방향 그대로</small></span></label>
+                <label class="chk-opt"><input type="radio" name="chk-dir" id="chk-dir-rev" value="rev"><span><b>반대예요</b><small>높낮이를 뒤집어서 다시 읽어요</small></span></label>
+            </fieldset>
+
+            <div class="chk-scheme">
+                <label for="chk-scheme">색 체계 직접 고르기</label>
+                <select id="chk-scheme"></select>
+            </div>
+            <ul class="chk-warn" id="chk-warn"></ul>
+            <p class="field-error" id="chk-msg" role="alert"></p>
+
+            <div class="auth-modal-actions">
+                <button type="button" class="btn-cancel" id="chk-cancel">취소</button>
+                <button type="button" class="btn-confirm" id="chk-accept">이대로 사용</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 읽을 수 없는 이미지: 지형도·스캔 도면처럼 색이 높이를 뜻하지 않을 때 -->
+    <div id="unreadable-modal" class="auth-modal-backdrop" style="display: none;">
+        <div class="unr-card" role="alertdialog" aria-modal="true" aria-labelledby="unr-title" aria-describedby="unr-msg">
+            <div class="unr-top">
+                <img id="unr-img" alt="올린 이미지">
+                <div>
+                    <span class="unr-badge">예측할 수 없는 이미지</span>
+                    <h3 id="unr-title">이 이미지에서는 높이를 읽을 수 없어요</h3>
+                    <ul class="unr-why">
+                        <li>색이 숲·시가지·물 같은 <b>지물</b>을 나타내요. 높이는 얇은 갈색 선에만 있어요.</li>
+                        <li>이대로 예측하면 그럴듯해 보여도 <b>의미 없는 결과</b>가 나와요.</li>
+                    </ul>
+                    <p class="unr-msg" id="unr-msg"></p>
+                </div>
+            </div>
+            <h4>이렇게 해보세요</h4>
+            <div class="unr-options">
+                <button type="button" class="unr-opt primary" id="unr-dem"><b>고도 격자(DEM) 올리기</b><span>.asc · .tif · .npy · .csv 파일을 올리면 가장 정확해요.</span></button>
+                <button type="button" class="unr-opt" id="unr-colored"><b>높이를 색으로 칠한 이미지</b><span>회색조 높이맵, 무지개색 수심도처럼 색이 곧 높이인 그림이면 돼요.</span></button>
+                <button type="button" class="unr-opt" id="unr-sample"><b>샘플로 먼저 해보기</b><span>서버의 샘플 지형으로 결과 화면을 볼 수 있어요.</span></button>
+            </div>
+            <div class="unr-foot">
+                <span>팔레트를 정확히 안다면 <a href="#" id="unr-manual">색 체계를 직접 골라 계속하기</a> (결과가 틀릴 수 있어요)</span>
+                <button type="button" class="btn-cancel" id="unr-close">닫기</button>
             </div>
         </div>
     </div>
@@ -401,14 +551,24 @@
         }
 
         /* ---------- 알림 바 ---------- */
+        // 지도 화면 높이 = 화면 - 상단바 - (열려 있는) 안내 배너. 배너 높이를 CSS 변수로 알려준다
+        function syncNoticeHeight() {
+            const bar = document.getElementById('notice-bar');
+            const h = bar.style.display === 'none' ? 0 : bar.offsetHeight;
+            document.documentElement.style.setProperty('--notice-h', h + 'px');
+        }
+        window.addEventListener('resize', syncNoticeHeight);
+
         function initNotice() {
             if (localStorage.getItem(NOTICE_KEY) === 'true') return;
             document.getElementById('notice-bar').style.display = 'flex';
+            syncNoticeHeight();
         }
 
         function closeNotice() {
             document.getElementById('notice-bar').style.display = 'none';
             localStorage.setItem(NOTICE_KEY, 'true');
+            syncNoticeHeight();
         }
 
         /* ---------- 로그인 상태 ---------- */
@@ -450,6 +610,8 @@
                 document.getElementById('user-email').textContent = user;
                 renderHistory();
                 loadHistory();
+            } else {
+                renderDrawer();   // 로그아웃 상태의 서랍은 로그인 안내
             }
         }
 
@@ -512,7 +674,8 @@
                 const li = document.createElement('li');
                 li.textContent = '분석 기록을 서버에 저장하지 못했습니다: ' +
                     (err instanceof TypeError ? '서버에 연결할 수 없습니다.' : err.message);
-                document.getElementById('result-info').appendChild(li);
+                document.getElementById('result-info').appendChild(li);   // '결과 이미지' 창 안내에도 남기고
+                showToast(li.textContent);                                 // 지도 화면에서도 바로 보이게 알림
             }
         }
 
@@ -560,7 +723,13 @@
             return r.drain ? drainPositionText(r.drain) : '—';
         }
 
+        // 기록이 바뀌면 표(분석 기록 화면)와 서랍(예측 화면)을 함께 갱신한다
         function renderHistory() {
+            renderHistoryTable();
+            renderDrawer();
+        }
+
+        function renderHistoryTable() {
             const list = historyCache;
             const tbody = document.getElementById('history-list');
             document.getElementById('history-count').textContent = list.length ? list.length : '';
@@ -684,8 +853,7 @@
                 record.info || [],
                 record.meta
             );
-            goToView('predict');   // 기록 화면에서 눌렀으면 예측 화면으로 넘어가서 결과를 보여준다
-            document.getElementById('result-section').scrollIntoView({ behavior: 'smooth' });
+            goToView('predict');   // 기록 화면에서 눌렀으면 예측 화면으로 넘어가서 결과를 지도에 보여준다
         }
 
         /* ---------- 화면 전환: 예측 / 분석 기록 (주소 #history) ---------- */
@@ -695,7 +863,8 @@
 
         function applyView() {
             const view = currentView();
-            document.getElementById('view-predict').style.display = view === 'predict' ? 'flex' : 'none';
+            document.getElementById('view-predict').style.display = view === 'predict' ? 'block' : 'none';
+            document.getElementById('page-history').style.display = view === 'history' ? 'flex' : 'none';
             document.getElementById('history-panel').style.display = view === 'history' ? 'block' : 'none';
             document.getElementById('history-head').style.display = view === 'history' ? 'block' : 'none';
             if (view === 'history') loadHistory();   // 다른 PC·브라우저에서 추가된 기록도 보이도록
@@ -773,6 +942,8 @@
             if (e.key === 'Escape') {
                 closeDetail();
                 closeAuthModal();
+                closeGallery();
+                closeUnreadable();
             }
         });
 
@@ -856,6 +1027,7 @@
             document.getElementById('fileInput').setAttribute('accept', t.accept);
             document.getElementById('dropzone-hint').textContent = t.fileHint;
             document.getElementById('dx-block').style.display = (getMode() === 'terrain') ? 'block' : 'none';
+            document.getElementById('color-block').style.display = (getMode() === 'image') ? 'block' : 'none';
             clearFieldError('fileInput');
             updateRunSummary();
         }
@@ -898,6 +1070,13 @@
             const file = document.getElementById('fileInput').files[0];
             parts.push(file ? file.name : '파일 미선택');
             document.getElementById('run-summary').textContent = parts.join(' · ');
+
+            // 접힌 조건 패널(알약)에는 핵심 조건만 짧게
+            const pill = [];
+            if (modelInfo.rainConditioned) pill.push(`${document.getElementById('rainMm').value}mm`);
+            if (modelInfo.timeConditioned) pill.push(`${document.getElementById('timeS').value}초`);
+            document.getElementById('panel-pill-text').textContent = pill.join(' · ');
+            markRainPreset();
         }
 
         /* ---------- 모델 서버 상태 (/api/health) ---------- */
@@ -1234,9 +1413,354 @@
             updateDropzonePreview();
         });
 
+        /* ================================================================
+           지도 우선 화면 (C안)
+           - 지도(#stage-img)가 화면을 채우고, 조건 패널·요약 칩·기록 서랍·시간 슬라이더가 위에 떠 있다
+           - 결과의 나머지 그림(입력 등고선·예측 배수맵·오버레이·분석 지도)은 '결과 이미지' 창에 모인다
+           ================================================================ */
+        const byId = id => document.getElementById(id);
+        const toDataUrl = (b64, mime = 'image/png') => `data:${mime};base64,${b64}`;
+        const stageState = { view: 'map', marker: null };
+        const MOBILE_QUERY = '(max-width: 1000px)';   // style.css 의 세로 쌓기 기준과 같게
+
+        let toastTimer = null;
+        function showToast(text) {
+            const t = byId('toast');
+            t.textContent = text;
+            t.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => t.classList.remove('show'), 5000);
+        }
+
+        /* ---------- 지도 / 시간 변화 전환 ---------- */
+        function setStageView(view) {
+            stageState.view = view;
+            const time = view === 'time' && timelapse.frames.length > 0;
+            const marker = stageState.marker;
+            byId('stage-img').style.display = time ? 'none' : 'block';
+            byId('timelapse-canvas').style.display = time ? 'block' : 'none';
+            byId('stage-marker').style.display = (!time && marker) ? 'block' : 'none';
+            byId('stage-marker-label').style.display = (!time && marker) ? 'block' : 'none';
+            byId('timelapse-star').style.display = (time && timelapse.star) ? 'block' : 'none';
+            byId('stage-btn-map').classList.toggle('on', !time);
+            byId('stage-btn-map').setAttribute('aria-pressed', String(!time));
+            byId('stage-btn-time').classList.toggle('on', time);
+            byId('stage-btn-time').setAttribute('aria-pressed', String(time));
+        }
+        byId('stage-btn-map').addEventListener('click', () => { stopTimelapsePlayback(); setStageView('map'); });
+        byId('stage-btn-time').addEventListener('click', () => setStageView('time'));
+
+        // 지도 한 장을 화면에 올린다. marker = 배수구 후보 {x, y} (0~1, 그림 왼쪽 위 기준)
+        function showStageImage(stage) {
+            byId('stage-img').src = stage.src;
+            byId('stage-bg').src = stage.src;
+            byId('stage-bg').style.display = 'block';
+            byId('stage-square').style.display = 'block';
+            byId('viewer-placeholder').style.display = 'none';
+            stageState.marker = stage.marker || null;
+            if (stage.marker) {
+                const m = stage.marker;
+                for (const id of ['stage-marker', 'stage-marker-label']) {
+                    byId(id).style.left = `${m.x * 100}%`;
+                    byId(id).style.top = `${m.y * 100}%`;
+                }
+                // 가장자리에서 라벨이 잘리지 않게: 오른쪽이면 왼쪽으로, 위쪽이면 아래로
+                byId('stage-marker-label').className = 'marker-label' + (m.x > 0.6 ? ' left' : '') + (m.y < 0.15 ? ' below' : '');
+            }
+            setStageView('map');
+        }
+
+        /* ---------- 요약 칩 ---------- */
+        function updateChips(stats) {
+            const has = !!(stats && stats.max_depth_cm != null);
+            byId('chip-depth').style.display = has ? 'flex' : 'none';
+            byId('chip-area').style.display = has ? 'flex' : 'none';
+            if (!has) return;
+            byId('chip-depth-val').textContent = Number(stats.max_depth_cm).toFixed(1);
+            byId('chip-area-val').textContent = Number(stats.wet_area_pct).toFixed(1);
+            byId('chip-area-label').textContent = `${stats.wet_threshold_cm ?? 5}cm 이상 면적`;
+        }
+
+        /* ---------- 조건 패널 접기/펼치기 ---------- */
+        function setPanelFolded(folded) {
+            byId('cond-panel').style.display = folded ? 'none' : '';
+            byId('panel-pill').style.display = folded ? 'flex' : 'none';
+            byId('panel-fold').setAttribute('aria-expanded', String(!folded));
+        }
+        byId('panel-fold').addEventListener('click', () => setPanelFolded(true));
+        byId('panel-pill').addEventListener('click', () => setPanelFolded(false));
+
+        /* ---------- 강우량 빠른 선택 ---------- */
+        function markRainPreset() {
+            const v = Number(byId('rainMm').value);
+            document.querySelectorAll('.rain-presets button').forEach(b => {
+                const on = Number(b.dataset.rain) === v;
+                b.classList.toggle('on', on);
+                b.setAttribute('aria-pressed', String(on));
+            });
+        }
+        document.querySelectorAll('.rain-presets button').forEach(b => {
+            b.addEventListener('click', () => {
+                byId('rainMm').value = b.dataset.rain;
+                byId('rainRange').value = b.dataset.rain;
+                clearFieldError('rainMm');
+                updateRunSummary();
+            });
+        });
+
+        /* ---------- 기록 서랍 (최근 6건, 누르면 그 결과를 지도에 연다) ---------- */
+        const DRAWER_COUNT = 6;
+        function setDrawerOpen(open) {
+            byId('drawer').style.display = open ? 'block' : 'none';
+            byId('btn-drawer').setAttribute('aria-pressed', String(open));
+        }
+        byId('btn-drawer').addEventListener('click', () => setDrawerOpen(byId('drawer').style.display === 'none'));
+        byId('drawer-all').addEventListener('click', (e) => { e.preventDefault(); goToView('history'); });
+
+        function renderDrawer() {
+            const ul = byId('drawer-list');
+            if (!getCurrentUser()) {
+                ul.innerHTML = '<li class="drawer-empty">로그인하면 분석 기록이 여기에 쌓여요.<br><button type="button" class="btn btn-primary" data-login>로그인</button></li>';
+                return;
+            }
+            const list = historyCache.slice(0, DRAWER_COUNT);
+            if (!list.length) {
+                ul.innerHTML = `<li class="drawer-empty">${historyError ? '기록을 불러오지 못했습니다.' : '아직 저장된 기록이 없어요. 예측하면 여기에 쌓여요.'}</li>`;
+                return;
+            }
+            ul.innerHTML = list.map(r => `
+                <li><button type="button" class="drawer-item" data-id="${escapeHtml(r.id)}">
+                    ${r.thumbnail ? `<img src="${r.thumbnail}" alt="">` : '<span class="drawer-noimg"></span>'}
+                    <span class="drawer-text">
+                        <span class="drawer-name">${escapeHtml(recordName(r))}</span>
+                        <span class="drawer-sub">${describeParams(r.params)}</span>
+                    </span>
+                </button></li>`).join('');
+        }
+        byId('drawer-list').addEventListener('click', (e) => {
+            if (e.target.closest('[data-login]')) { openAuthModal('login'); return; }
+            const item = e.target.closest('.drawer-item');
+            if (item) showRecord(item.dataset.id);
+        });
+
+        /* ---------- 결과 이미지 모아보기 ---------- */
+        function closeGallery() { byId('gallery-modal').style.display = 'none'; }
+        byId('btn-gallery').addEventListener('click', () => { byId('gallery-modal').style.display = 'flex'; });
+        byId('gallery-close').addEventListener('click', closeGallery);
+        byId('gallery-modal').addEventListener('click', (e) => { if (e.target.id === 'gallery-modal') closeGallery(); });
+
+        /* ---------- 이미지 색 체계 (서버 contour_color.py) ---------- */
+        // 선택지는 서버 GET /api/color-schemes 에서 받는다. 못 받으면 '자동 감지'만 남는다.
+        async function initColorSchemes() {
+            try {
+                const d = await (await fetch(ANALYZE_API + '/api/color-schemes')).json();
+                for (const id of ['colorScheme', 'chk-scheme']) {
+                    const sel = byId(id);
+                    sel.innerHTML = '<option value="auto">자동 감지 (권장)</option>' +
+                        d.schemes.map(s => `<option value="${escapeHtml(s.key)}">${escapeHtml(s.label)}</option>`).join('');
+                }
+            } catch (e) {
+                byId('chk-scheme').innerHTML = '<option value="auto">자동 감지 (권장)</option>';   // 구버전 서버
+            }
+        }
+
+        function currentColorOpts() {
+            return { scheme: byId('colorScheme').value || 'auto', reverse: byId('colorReverse').checked };
+        }
+        function setColorOpts(opts) {
+            byId('colorScheme').value = opts.scheme;
+            byId('colorReverse').checked = !!opts.reverse;
+        }
+
+        /* ---------- 예측 요청 1회 ---------- */
+        // p = { mode, file, rainMm, timeS, dx, color: { scheme, reverse } }
+        // 실패하면 Error 를 던진다: .status(HTTP), .code(서버가 준 오류 종류), .detail(서버 메시지), .handled(이미 화면 처리함)
+        async function requestPredict(p, signal) {
+            const form = new FormData();
+            form.append('mode', p.mode);                 // 'image' | 'terrain'
+            form.append('file', p.file);
+            form.append('rain_mm', p.rainMm);            // 강우량 [mm]
+            form.append('time_s', p.timeS);              // 경과 시간 [초]
+            form.append('dx', p.dx);                     // 셀 크기 [m] (terrain 모드만 의미 있음)
+            if (p.mode === 'image') {                    // 이미지 색 체계: 서버가 높이로 읽어 학습 형식으로 다시 그림
+                form.append('color_scheme', p.color.scheme);
+                form.append('reverse', p.color.reverse ? 'true' : 'false');
+            }
+            const res = await fetch(ANALYZE_API + '/api/predict', {
+                method: 'POST',
+                body: form,
+                headers: getToken() ? { Authorization: 'Bearer ' + getToken() } : {},
+                signal
+            });
+            if (res.status === 401) {
+                logout();
+                openAuthModal('login', '로그인이 필요하거나 세션이 만료되었습니다. 다시 로그인해 주세요.');
+                const err = new Error('로그인이 필요합니다.');
+                err.handled = true;
+                throw err;
+            }
+            let data;
+            try {
+                data = await res.json();                 // 서버에서 json 형식으로 응답받기
+            } catch {
+                const err = new Error(`서버 오류 (${res.status})`);
+                err.status = res.status;
+                throw err;
+            }
+            if (!res.ok) {
+                // FastAPI 검증 오류는 detail 이 배열일 수 있다
+                const detail = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
+                const err = new Error(`[${res.status}] ${detail}`);
+                err.status = res.status;
+                err.code = data.code;
+                err.detail = detail;
+                throw err;
+            }
+            return data;
+        }
+
+        /* ---------- 입력 확인: 서버가 색을 높이로 읽어 변환했을 때 맞게 읽었는지 묻는다 ---------- */
+        // data = 첫 예측 응답. requestAgain(opts) = 같은 파일을 다른 색 해석으로 다시 예측 (Promise<응답>)
+        // 반환: 사용할 응답, 취소하면 null
+        function confirmColorReading(data, requestAgain) {
+            return new Promise(resolve => {
+                const modal = byId('check-modal');
+                const accept = byId('chk-accept'), cancel = byId('chk-cancel');
+                const radios = [byId('chk-dir-normal'), byId('chk-dir-rev')];
+                const sel = byId('chk-scheme');
+                let current = data;
+                let busy = false;
+
+                const readingText = (ci) => ci.scheme === 'gray'
+                    ? (ci.reversed ? '어두울수록 높다고 읽음' : '밝을수록 높다고 읽음')
+                    : (ci.reversed ? `${ci.label}, 범례를 뒤집어 읽음` : `${ci.label}, 범례대로 읽음`);
+
+                function render(d) {
+                    const ci = d.color_info;
+                    const meta = d.meta || {};
+                    byId('chk-orig').src = toDataUrl(d.original_png_base64 || d.contour_png_base64);
+                    byId('chk-conv').src = toDataUrl(d.contour_png_base64);
+                    byId('chk-pred').src = toDataUrl(d.prediction_png_base64);
+                    byId('chk-orig-label').textContent = ci.label + (ci.auto ? ' (자동 감지)' : '');
+                    byId('chk-reading').textContent = readingText(ci);
+                    byId('chk-cond').textContent = [meta.rain_mm != null ? `강우 ${meta.rain_mm}mm` : '',
+                        meta.time_s != null ? `${meta.time_s}초` : ''].filter(Boolean).join(' · ');
+                    byId('chk-legend').style.background = `linear-gradient(to right, ${(ci.legend || []).join(',')})`;
+                    radios[0].checked = !ci.reversed;
+                    radios[1].checked = !!ci.reversed;
+                    sel.value = ci.auto ? 'auto' : ci.scheme;
+                    byId('chk-warn').innerHTML = (ci.warnings || []).map(w => `<li>${escapeHtml(w)}</li>`).join('');
+                    byId('chk-msg').textContent = '';
+                    byId('chk-msg').classList.remove('visible');
+                }
+
+                async function redo() {
+                    if (busy) return;
+                    busy = true;
+                    modal.classList.add('busy');
+                    accept.disabled = true;
+                    try {
+                        current = await requestAgain({ scheme: sel.value, reverse: radios[1].checked });
+                        render(current);
+                    } catch (err) {
+                        if (err.handled) { finish(null); return; }
+                        render(current);                        // 컨트롤을 마지막으로 성공한 해석으로 되돌린다
+                        const m = byId('chk-msg');
+                        m.textContent = err.code === 'unreadable_image'
+                            ? '선택한 방식으로는 이 이미지를 높이로 읽을 수 없어요. 다른 방식을 고르거나 취소하세요.'
+                            : '다시 읽지 못했습니다: ' + (err.detail || err.message);
+                        m.classList.add('visible');
+                    } finally {
+                        busy = false;
+                        modal.classList.remove('busy');
+                        accept.disabled = false;
+                    }
+                }
+
+                function onKey(e) { if (e.key === 'Escape') finish(null); }
+                function finish(result) {
+                    modal.style.display = 'none';
+                    document.removeEventListener('keydown', onKey);
+                    radios.forEach(r => { r.onchange = null; });
+                    sel.onchange = null;
+                    accept.onclick = cancel.onclick = null;
+                    resolve(result);
+                }
+
+                radios.forEach(r => { r.onchange = redo; });
+                sel.onchange = redo;
+                accept.onclick = () => finish(current);
+                cancel.onclick = () => finish(null);
+                document.addEventListener('keydown', onKey);
+                render(data);
+                modal.style.display = 'flex';
+                accept.focus();
+            });
+        }
+
+        /* ---------- 읽을 수 없는 이미지 안내 ---------- */
+        let unreadableUrl = null;
+        function closeUnreadable() {
+            byId('unreadable-modal').style.display = 'none';
+            if (unreadableUrl) { URL.revokeObjectURL(unreadableUrl); unreadableUrl = null; }
+        }
+
+        function openUnreadableDialog(detail, file) {
+            if (unreadableUrl) URL.revokeObjectURL(unreadableUrl);
+            unreadableUrl = null;
+            const img = byId('unr-img');
+            if (file && PREVIEW_EXTS.includes(fileExt(file.name))) {
+                unreadableUrl = URL.createObjectURL(file);
+                img.src = unreadableUrl;
+                img.style.display = 'block';
+            } else {
+                img.style.display = 'none';
+            }
+            byId('unr-msg').textContent = detail || '';
+            byId('unreadable-modal').style.display = 'flex';
+            byId('unr-dem').focus();
+        }
+
+        function chooseMode(mode) {
+            document.querySelector(`input[name="mode"][value="${mode}"]`).checked = true;
+            applyMode();
+            clearSelectedFile();
+        }
+
+        byId('unr-close').addEventListener('click', closeUnreadable);
+        byId('unreadable-modal').addEventListener('click', (e) => { if (e.target.id === 'unreadable-modal') closeUnreadable(); });
+        byId('unr-dem').addEventListener('click', () => { closeUnreadable(); chooseMode('terrain'); fileInputEl.click(); });
+        byId('unr-colored').addEventListener('click', () => { closeUnreadable(); chooseMode('image'); fileInputEl.click(); });
+        byId('unr-manual').addEventListener('click', (e) => {
+            e.preventDefault();
+            closeUnreadable();
+            setPanelFolded(false);
+            byId('panel-adv').open = true;
+            byId('colorScheme').focus();
+        });
+        byId('unr-sample').addEventListener('click', async () => {
+            try {
+                const { samples } = await (await fetch(ANALYZE_API + '/api/samples?limit=1')).json();
+                if (!samples || !samples.length) throw new Error('샘플이 없습니다.');
+                const blob = await (await fetch(ANALYZE_API + '/api/sample/' + encodeURIComponent(samples[0]))).blob();
+                closeUnreadable();
+                chooseMode('image');
+                const dt = new DataTransfer();
+                dt.items.add(new File([blob], samples[0], { type: 'image/png' }));
+                fileInputEl.files = dt.files;
+                updateDropzonePreview();
+                byId('uploadForm').requestSubmit();
+            } catch (err) {
+                console.error(err);
+                showToast('샘플을 불러오지 못했습니다: ' + err.message);
+            }
+        });
+
         /* ---------- 결과 표시 ---------- */
-        // images: [{ key, label, src, marker? }] - 카드로 나란히 보인다. marker = 그림 위 배수구 후보 위치 {x, y} (0~1). info: 문자열 배열, meta: 서버 meta (선택)
-        function showResult(images, info, meta) {
+        // images: [{ key, label, src, marker? }] - '결과 이미지' 창에 카드로 나란히 모인다. marker = 그림 위 배수구 후보 위치 {x, y} (0~1).
+        // info: 문자열 배열, meta: 서버 meta (선택, meta.stats 가 있으면 지도 위 요약 칩에 쓴다)
+        // stage: 지도 화면에 크게 보일 그림 { src, marker } (없으면 images[0])
+        function showResult(images, info, meta, stage) {
             cancelTimelapse();
             document.getElementById('result-grid').innerHTML = images.map(im => `
                 <figure class="result-card">
@@ -1252,8 +1776,9 @@
             document.getElementById('result-info').innerHTML =
                 info.map(line => `<li>${escapeHtml(line)}</li>`).join('');
 
-            document.getElementById('result-box').style.display = 'block';
-            document.getElementById('viewer-placeholder').style.display = 'none';
+            showStageImage(stage || { src: images[0].src, marker: images[0].marker });
+            updateChips(meta && meta.stats);
+            document.getElementById('btn-gallery').style.display = 'inline-flex';
         }
 
         function loadImage(src) {
@@ -1274,7 +1799,7 @@
         const TIMELAPSE_SECONDS_PER_REAL_SECOND = 8.5;  // 재생 속도: 전체 약 12초
         const TIMELAPSE_HOLD_MS = 800;                  // 끝에서 잠깐 멈춤
         const TIMELAPSE_WRAP_FADE_MS = 700;             // 처음으로 돌아갈 때 부드럽게 전환
-        const timelapse = { controller: null, frames: [], elapsed: 0, last: 0, raf: null };
+        const timelapse = { controller: null, frames: [], elapsed: 0, last: 0, raf: null, star: false };
 
         function timelapseSpanMs() {
             const f = timelapse.frames;
@@ -1345,7 +1870,9 @@
             timelapse.frames = [];
             timelapse.elapsed = 0;
             document.getElementById('timelapse').style.display = 'none';
-            document.getElementById('timelapse-star').style.display = 'none';
+            document.getElementById('stage-toggle').style.display = 'none';
+            timelapse.star = false;
+            setStageView('map');
             document.getElementById('timelapse-status').textContent = '';
             document.getElementById('timelapse-play').disabled = true;
             document.getElementById('timelapse-range').disabled = true;
@@ -1370,10 +1897,12 @@
 
         // 이미 받은 응답(preloaded: { 시점: 응답 })은 재사용하고 나머지 시점만 순서대로 요청한다.
         // 배수구 후보(fixedPeak)는 시설 위치이므로 재생 내내 한 곳에 고정한다.
-        async function runTimelapse(file, mode, rainMm, dx, preloaded, fixedPeak, startTime) {
+        // color: 예측에 쓴 이미지 색 해석 { scheme, reverse } (이미지 모드). 시점별 요청도 같은 해석을 써야 그림이 일관된다
+        async function runTimelapse(file, mode, rainMm, dx, preloaded, fixedPeak, startTime, color) {
             const controller = new AbortController();
             timelapse.controller = controller;
-            document.getElementById('timelapse').style.display = 'block';
+            document.getElementById('timelapse').style.display = 'flex';
+            document.getElementById('stage-toggle').style.display = 'flex';
             const status = document.getElementById('timelapse-status');
             const total = TIMELAPSE_TIMES.length;
             const png = b64 => 'data:image/png;base64,' + b64;
@@ -1382,7 +1911,8 @@
                 const star = document.getElementById('timelapse-star');
                 star.style.left = `${fixedPeak.x * 100}%`;
                 star.style.top = `${fixedPeak.y * 100}%`;
-                star.style.display = 'block';
+                timelapse.star = true;   // 실제 표시는 '시간 변화' 보기일 때 setStageView 가 한다
+                setStageView(stageState.view);
             }
 
             try {
@@ -1391,20 +1921,7 @@
                     status.textContent = `시점별 예측 중... (${i + 1}/${total})`;
                     let data = preloaded[time] || null;
                     if (!data) {
-                        const form = new FormData();
-                        form.append('mode', mode);
-                        form.append('file', file);
-                        form.append('rain_mm', rainMm);
-                        form.append('time_s', time);
-                        form.append('dx', dx);
-                        const res = await fetch(ANALYZE_API + '/api/predict', {
-                            method: 'POST',
-                            body: form,
-                            headers: getToken() ? { Authorization: 'Bearer ' + getToken() } : {},
-                            signal: controller.signal
-                        });
-                        if (!res.ok) throw new Error(`서버 오류 (${res.status})`);
-                        data = await res.json();
+                        data = await requestPredict({ mode, file, rainMm, timeS: time, dx, color }, controller.signal);
                     }
                     if (controller.signal.aborted) return;
                     await addTimelapseFrame(time, png(data.overlay_png_base64));
@@ -1428,9 +1945,10 @@
 
         document.getElementById('timelapse-play').addEventListener('click', () => {
             if (timelapse.raf) stopTimelapsePlayback();
-            else startTimelapsePlayback();
+            else { setStageView('time'); startTimelapsePlayback(); }   // 재생·슬라이더를 만지면 지도가 '시간 변화' 보기로 바뀐다
         });
         document.getElementById('timelapse-range').addEventListener('input', (e) => {
+            setStageView('time');
             stopTimelapsePlayback();
             const time = Number(e.target.value);
             timelapse.elapsed = (time - timelapse.frames[0].time) / TIMELAPSE_SECONDS_PER_REAL_SECOND * 1000;
@@ -1454,58 +1972,31 @@
             const rainMm = Number(document.getElementById('rainMm').value);
             const timeS = Number(document.getElementById('timeS').value);
             const dx = Number(document.getElementById('dx').value);
-
-            // AI 모델 서버 /api/predict 가 받는 값 그대로
-            const formData = new FormData();
-            formData.append('mode', mode);                // 'image' | 'terrain'
-            formData.append('file', mapFile);
-            formData.append('rain_mm', rainMm);            // 강우량 [mm]
-            formData.append('time_s', timeS);              // 경과 시간 [초]
-            formData.append('dx', dx);                     // 셀 크기 [m] (terrain 모드만 의미 있음)
-
-            const headers = getToken() ? { Authorization: 'Bearer ' + getToken() } : {};
+            // 이미지 모드에서 서버가 색을 높이로 읽는 방식. 입력 확인 창에서 바뀌면 그 값으로 이어서 쓴다
+            const base = { mode, file: mapFile, rainMm, dx, color: currentColorOpts() };
 
             // 배수구 위치는 DRAIN_REF_TIME_S(18초) 예측에서 찾는다. 사용자가 다른 시간을 골랐으면
             // 기준 시점 예측을 같이(병렬로) 요청한다. 실패하면 null -> 아래에서 사용자 시점으로 대신한다.
-            let refPromise = null;
-            if (modelInfo.timeConditioned && timeS !== DRAIN_REF_TIME_S) {
-                const refForm = new FormData();
-                refForm.append('mode', mode);
-                refForm.append('file', mapFile);
-                refForm.append('rain_mm', rainMm);
-                refForm.append('time_s', DRAIN_REF_TIME_S);
-                refForm.append('dx', dx);
-                refPromise = fetch(ANALYZE_API + '/api/predict', { method: 'POST', body: refForm, headers })
-                    .then(r => (r.ok ? r.json() : null))
-                    .catch(() => null);
-            }
+            const startRef = () => (modelInfo.timeConditioned && timeS !== DRAIN_REF_TIME_S)
+                ? requestPredict({ ...base, timeS: DRAIN_REF_TIME_S }).catch(() => null)
+                : null;
+            let refPromise = startRef();
 
             btn.disabled = true; //버튼 비활성화
             btn.textContent = '예측 중...'; //버튼 글자 바꾸기
 
             try {
-                const res = await fetch(ANALYZE_API + '/api/predict', { // 서버 주소는 위의 ANALYZE_API 상수에서 변경
-                    method: 'POST',
-                    body: formData,
-                    headers
-                });
+                let data = await requestPredict({ ...base, timeS });   // AI 모델 서버 /api/predict (주소는 위의 ANALYZE_API)
 
-                if (res.status === 401) {
-                    logout();
-                    openAuthModal('login', '로그인이 필요하거나 세션이 만료되었습니다. 다시 로그인해 주세요.');
-                    return;
-                }
-
-                let data;
-                try {
-                    data = await res.json(); //서버에서 json형식으로 응답받기
-                } catch {
-                    throw new Error(`서버 오류 (${res.status})`);
-                }
-                if (!res.ok) {
-                    // FastAPI 검증 오류는 detail 이 배열일 수 있다
-                    const d = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
-                    throw new Error(`[${res.status}] ${d}`);
+                // 학습 형식이 아닌 색 체계라 서버가 높이로 읽어 변환했다면, 맞게 읽었는지(높낮이가 안 뒤집혔는지) 확인받는다
+                if (mode === 'image' && data.color_info && data.color_info.converted) {
+                    data = await confirmColorReading(data, (color) => {
+                        base.color = color;
+                        return requestPredict({ ...base, timeS });
+                    });
+                    if (!data) return;             // 취소
+                    setColorOpts(base.color);      // 고른 해석은 다음 예측에도 이어서 쓴다
+                    refPromise = startRef();       // 확인하는 동안 해석이 바뀌었을 수 있어 기준 시점 예측도 다시 받는다
                 }
                 console.log('서버 응답:', data);
 
@@ -1521,16 +2012,25 @@
                 const drainTime = refData ? DRAIN_REF_TIME_S : (meta.time_conditioned ? meta.time_s : null);
                 const drainPos = drainSource.drain_candidate ? drainSource.drain_candidate.image : null;
 
-                // 참고 화면 순서: 입력 → 예측 → 오버레이. terrain 모드는 배수구 후보가 그려진 분석 지도를 맨 앞에
+                // '결과 이미지' 창: 데이터 모드는 배수구 후보가 그려진 분석 지도를 맨 앞에
                 // (분석 지도의 ★도 빨간 원과 같은 위치가 되도록 배수구 기준 시점의 지도를 쓴다)
                 const images = [];
                 if (drainSource.analysis_png_base64) {
                     const label = drainTime != null ? `분석 지도 (배수구 후보 · ${drainTime}초 기준)` : '분석 지도 (배수구 후보)';
                     images.push({ key: 'analysis', label, src: png(drainSource.analysis_png_base64) });
                 }
+                if (data.original_png_base64) {   // 서버가 색 체계를 변환했을 때: 올린 원본도 함께
+                    images.push({ key: 'original', label: '올린 원본 이미지', src: png(data.original_png_base64) });
+                }
                 images.push({ key: 'contour', label: '입력 등고선 (모델에 들어간 이미지)', src: png(data.contour_png_base64) });
                 images.push({ key: 'prediction', label: '예측 배수맵', src: png(data.prediction_png_base64), marker: drainPos });
                 images.push({ key: 'overlay', label: '오버레이 (등고선 + 예측)', src: png(data.overlay_png_base64), marker: drainPos });
+
+                // 지도 화면에 크게 보일 그림: 데이터 모드는 제목·컬러바 없는 지도(JPEG), 이미지 모드는 오버레이.
+                // 배수구 후보는 그림에 굽지 않고 화면의 빨간 원(비율 좌표)으로 얹는다
+                const stage = data.map_jpg_base64
+                    ? { src: 'data:image/jpeg;base64,' + data.map_jpg_base64, marker: drainPos, label: '예측 배수맵 (지도)' }
+                    : { src: png(data.overlay_png_base64), marker: drainPos, label: '오버레이 (등고선 + 예측)' };
 
                 // 서버 meta 에 들어간 값이 아니라 모델이 실제로 쓴 값을 보여준다 (강우는 학습 범위로 잘림)
                 const usedRain = Math.min(Math.max(rainMm, modelInfo.rainRange[0]), modelInfo.rainRange[1]);
@@ -1547,22 +2047,27 @@
                 if (meta.time_conditioned) cond.push(`경과 ${meta.time_s}초`);
                 if (meta.dx_m) cond.push(`셀 ${Number(meta.dx_m).toFixed(2)}m`);
                 if (cond.length) info.push(`조건: ${cond.join(' · ')}`);
+                if (data.color_info && data.color_info.converted) {
+                    info.push(`색 해석: ${data.color_info.label}${data.color_info.reversed ? ' · 높낮이 반전' : ''} (학습 형식으로 변환해 예측)`);
+                }
                 info.push('파란색이 진할수록 물이 많이 모이는 곳입니다.');
 
-                showResult(images, info, { checkpoint: data.checkpoint, ...meta });
+                const recordMeta = { checkpoint: data.checkpoint, ...meta, stats: data.stats };
+                showResult(images, info, recordMeta, stage);
                 if (meta.time_conditioned) {
                     // 기다리지 않는다: 결과는 먼저 보여주고 재생용 프레임은 뒤에서 채운다
                     const preloaded = { [meta.time_s]: data };
                     if (refData) preloaded[DRAIN_REF_TIME_S] = refData;   // 기준 시점 응답도 재사용 (중복 요청 방지)
-                    runTimelapse(mapFile, mode, rainMm, dx, preloaded, drainPos, meta.time_s);
+                    runTimelapse(mapFile, mode, rainMm, dx, preloaded, drainPos, meta.time_s, base.color);
                 }
-                document.getElementById('result-section').scrollIntoView({ behavior: 'smooth' });
+                if (matchMedia(MOBILE_QUERY).matches) {   // 좁은 화면: 패널을 접고 지도를 맨 위로
+                    setPanelFolded(true);
+                    document.getElementById('stage-map').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
 
-                // 기록 썸네일은 가장 유용한 그림 하나 (분석 지도가 있으면 그것, 없으면 오버레이)
-                const main = images.find(im => im.key === 'analysis') || images.find(im => im.key === 'overlay');
                 await saveRecord({   // id·저장 시각은 서버가 정한다
                     name: null,                      // null 이면 화면에 '날짜 시간'이 기본 이름으로 보인다
-                    meta: { checkpoint: data.checkpoint, ...meta },
+                    meta: recordMeta,
                     fileName: mapFile.name,
                     params: {
                         mode,
@@ -1573,14 +2078,19 @@
                     },
                     drain: drainPos,
                     checkpoint: data.checkpoint,
-                    imageLabel: main.label,
-                    thumbnail: getCurrentUser() ? await makeThumbnail(main.src, main.marker) : null,
+                    imageLabel: stage.label,
+                    thumbnail: getCurrentUser() ? await makeThumbnail(stage.src, stage.marker) : null,
                     info
                 });
 
             } catch (err) { //접속이 안된다면?
+                if (err.handled) return;   // 로그인 창을 이미 띄웠다
                 console.error(err);
-                alert(err instanceof TypeError ? '서버 연결 불가' : '예측 실패: ' + err.message); //에러메시지 보내기
+                if (err.code === 'unreadable_image') {
+                    openUnreadableDialog(err.detail, mapFile);   // 지형도 등: 다음 행동을 안내
+                } else {
+                    alert(err instanceof TypeError ? '서버 연결 불가' : '예측 실패: ' + err.message); //에러메시지 보내기
+                }
             } finally {
                 btn.disabled = false; //버튼 활성화
                 btn.textContent = SUBMIT_LABEL; //버튼 글자 바꾸기
@@ -1594,6 +2104,8 @@
         applyAuthState();
         applyMode();
         initHealth();
+        initColorSchemes();
+        setDrawerOpen(innerWidth >= 1200);   // 넓은 화면에서는 기록 서랍을 열어 둔다
         verifySavedToken();
     </script>
 

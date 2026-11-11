@@ -143,13 +143,63 @@ def b64png(img: Image.Image) -> str:
     return base64.b64encode(buf.getvalue()).decode("ascii")
 
 
-def predict(mode: str, raw: bytes, filename: str, rain_mm: float, time_s: float, dx: float) -> dict:
+class UnreadableImage(Exception):
+    """색에서 높이를 읽을 수 없는 이미지 (진짜 서버의 contour_color.ColorSchemeError 흉내)."""
+
+
+# 진짜 서버 GET /api/color-schemes 의 일부 (낮음 -> 높음 범례색)
+COLOR_SCHEMES = {
+    "terrain": ("학습 형식 (파랑·초록·갈색·흰색)", ["#333399", "#00a0e8", "#55dd77", "#fdff99", "#aa926b", "#a9918c", "#ffffff"]),
+    "gray": ("회색조", ["#000000", "#2a2a2a", "#555555", "#7f7f7f", "#aaaaaa", "#d4d4d4", "#ffffff"]),
+    "jet": ("jet 무지개 (파랑→빨강)", ["#00007f", "#0000ff", "#00ffff", "#7fff7f", "#ffff00", "#ff0000", "#7f0000"]),
+    "hue": ("무지개 색상 (음영·어두운 부분이 섞여도, 파랑→빨강)", ["#0000ff", "#0080ff", "#00ffff", "#00ff80", "#ffff00", "#ff8000", "#ff0000"]),
+}
+
+
+def predict(mode: str, raw: bytes, filename: str, rain_mm: float, time_s: float, dx: float,
+            color_scheme: str = "auto", reverse: bool = False) -> dict:
     meta: dict = {"mode": mode, "filename": filename}
     terrain = None
+    color_info = None
+    original = None
     if mode == "image":
-        contour = Image.open(io.BytesIO(raw)).convert("RGB").resize((256, 256))
+        src = Image.open(io.BytesIO(raw)).convert("RGB").resize((256, 256))
         meta["source_format"] = "contour_image"
-        elev = elevation_from_contour_image(contour)
+        rgb = np.asarray(src, dtype=np.float32)
+        is_gray = float((rgb.max(axis=2) - rgb.min(axis=2)).mean()) < 6.0
+        # 테스트용 규칙: 파일명에 'topo' 가 들어 있으면 지형도로 보고 거부한다 (진짜 서버는 색 분석으로 판정)
+        if "topo" in filename.lower() and color_scheme == "auto":
+            raise UnreadableImage(
+                "이 이미지는 색이 높이를 나타내는 등고선 이미지가 아니라 일반 지형도·토지피복도로 보입니다. "
+                "색이 숲·시가지·물 같은 지물을 뜻해서 색에서 높이를 읽을 수 없고, 이대로는 예측이 의미 없습니다. "
+                "(테스트 서버: 파일명에 'topo' 가 있으면 이 오류를 냅니다)")
+        if is_gray or color_scheme == "gray":
+            # 회색조: 밝기를 높이로 읽어 학습 형식(terrain 색)으로 다시 그린다 (reverse 면 어두울수록 높음)
+            elev_img = rgb.mean(axis=2) / 255.0
+            if reverse:
+                elev_img = 1.0 - elev_img
+            lo, hi = np.percentile(elev_img, [0.5, 99.5])
+            elev_img = np.clip((elev_img - lo) / max(hi - lo, 1e-6), 0, 1)
+            contour = render_contour(np.flipud(elev_img))
+            original = src
+            scheme = "gray"
+            elev = elevation_from_contour_image(contour)
+        else:
+            contour = src
+            scheme = "terrain" if color_scheme == "auto" else (color_scheme if color_scheme in COLOR_SCHEMES else "terrain")
+            elev = elevation_from_contour_image(contour)
+        label, legend = COLOR_SCHEMES[scheme]
+        color_info = {
+            "scheme": scheme, "label": label, "auto": color_scheme == "auto",
+            "reversed": bool(reverse and scheme == "gray"), "converted": scheme != "terrain",
+            "match_frac": 1.0 if scheme == "gray" else None,
+            "legend": legend[::-1] if (reverse and scheme == "gray") else legend,
+            "warnings": (["회색조 이미지는 밝은 쪽이 높은지 낮은지 자동으로 알 수 없어 '밝을수록 높음'으로 가정했습니다. "
+                          "결과의 높낮이가 반대로 보이면 '높낮이 반전'을 켜세요."]
+                         if scheme == "gray" and color_scheme == "auto" else []),
+        }
+        meta["color_scheme"] = scheme
+        meta["color_reversed"] = color_info["reversed"]
     else:
         terrain, tmeta = load_terrain(raw, filename)
         meta.update(tmeta)
@@ -169,11 +219,20 @@ def predict(mode: str, raw: bytes, filename: str, rain_mm: float, time_s: float,
     overlay = contour.copy()
     overlay.paste(pred, (0, 0), alpha)
 
+    depth_m = depth * 0.6   # 가짜 수심[m]: 진짜 서버의 stats 와 같은 형식만 흉내 (값은 의미 없음)
     result = {
         "contour_png_base64": b64png(contour),
+        "original_png_base64": b64png(original) if original is not None else None,
+        "color_info": color_info,
         "prediction_png_base64": b64png(pred),
         "overlay_png_base64": b64png(overlay),
         "analysis_png_base64": None,
+        "map_jpg_base64": None,
+        "stats": {
+            "max_depth_cm": round(float(depth_m.max()) * 100.0, 1),
+            "wet_area_pct": round(float((depth_m > 0.05).mean()) * 100.0, 1),
+            "wet_threshold_cm": 5.0,
+        },
         "drain_candidate": None,
         "checkpoint": CHECKPOINT,
         "meta": meta,
@@ -195,6 +254,9 @@ def predict(mode: str, raw: bytes, filename: str, rain_mm: float, time_s: float,
         draw.text((10, 6), f"배수구 후보 ({c}, {r}) · 강우 {rain_used:.0f}mm · 경과 {time_used:.0f}초 · 테스트 서버",
                   fill=(20, 20, 20), font=FONT)
         result["analysis_png_base64"] = b64png(analysis)
+        buf = io.BytesIO()
+        overlay.resize((720, 720), Image.BICUBIC).save(buf, "JPEG", quality=85)   # 진짜 서버: 제목·컬러바 없는 지도
+        result["map_jpg_base64"] = base64.b64encode(buf.getvalue()).decode("ascii")
         result["drain_candidate"] = {
             "pixel": {"x": int(c), "y": int(r)},
             "normalized": {"x": round(c / max(w - 1, 1), 4), "y": round(r / max(h - 1, 1), 4)},
@@ -337,6 +399,9 @@ class Handler(BaseHTTPRequestHandler):
                 "default_time_s": DEFAULT_TIME_S, "image_size": 128, "device": "mock",
                 "auth_enabled": REQUIRE_LOGIN, "db": "ok" if REQUIRE_LOGIN else "down",
             })
+        elif path == "/api/color-schemes":
+            self._json({"default": "auto", "schemes": [
+                {"key": k, "label": v[0], "legend": v[1]} for k, v in COLOR_SCHEMES.items()]})
         elif path == "/api/samples":
             limit = int(parse_qs(url.query).get("limit", ["30"])[0])
             names = sorted(p.name for p in SAMPLES_DIR.glob("*.png")) if SAMPLES_DIR.is_dir() else []
@@ -444,7 +509,11 @@ class Handler(BaseHTTPRequestHandler):
                 time.sleep(0.4)   # 실제 추론처럼 잠깐 기다림 (버튼 '예측 중...' 확인용)
                 result = predict(mode, file_raw, filename,
                                  float(fields.get("rain_mm", 50)), float(fields.get("time_s", DEFAULT_TIME_S)),
-                                 float(fields.get("dx", DEFAULT_DX_M)))
+                                 float(fields.get("dx", DEFAULT_DX_M)),
+                                 fields.get("color_scheme", "auto"),
+                                 fields.get("reverse", "false").lower() == "true")
+            except UnreadableImage as exc:
+                return self._json({"detail": str(exc), "code": "unreadable_image"}, 422)
             except Exception as exc:  # noqa: BLE001
                 return self._error(422, f"처리할 수 없는 입력입니다: {exc}")
             return self._json(result)
