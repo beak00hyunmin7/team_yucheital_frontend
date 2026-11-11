@@ -85,6 +85,12 @@
             </div>
             <!-- 채우기 / 전체 보기 (정사각 지도를 화면 비율로 채우면 위아래가 잘리므로 고를 수 있게) -->
             <button type="button" class="stage-fit" id="stage-fit" style="display: none;" aria-pressed="false" title="지도를 화면에 맞춰 전체 보기">전체 보기</button>
+            <!-- 확대 · 축소 · 원래대로 (휠·핀치·더블클릭·드래그로도 가능) -->
+            <div class="stage-zoom" id="stage-zoom" style="display: none;" role="group" aria-label="지도 확대·이동">
+                <button type="button" id="zoom-in" aria-label="확대" title="확대 (마우스 휠)">+</button>
+                <button type="button" id="zoom-reset" aria-label="원래 크기로" title="원래 크기로 (더블클릭)">100%</button>
+                <button type="button" id="zoom-out" aria-label="축소" title="축소 (마우스 휠)" disabled>&minus;</button>
+            </div>
             <!-- 지도 / 시간 변화 전환 (시점별 예측 프레임이 도착하면 나타남) -->
             <div class="stage-toggle" id="stage-toggle" role="group" aria-label="지도 보기 방식" style="display: none;">
                 <button type="button" id="stage-btn-map" class="on" aria-pressed="true">지도</button>
@@ -1473,16 +1479,146 @@
             }
             sq.style.setProperty('--cx', cx);
             sq.style.setProperty('--cy', cy);
+            // 이동·확대 계산에 쓰는 기하: 지도 한 변, 마커 쪽으로 미리 옮겨 둔 거리(CSS 의 --cx/--cy 와 같은 값)
+            const side = fit ? Math.min(W, H) : Math.max(W, H);
+            mapGeom = { W, H, side, bx: fit ? 0 : (0.5 - cx) * side, by: fit ? 0 : (0.5 - cy) * side };
             const btn = byId('stage-fit');
             btn.textContent = fit ? '채우기' : '전체 보기';
             btn.setAttribute('aria-pressed', String(fit));
             btn.style.display = shown && !squareish ? 'inline-flex' : 'none';
+            byId('stage-zoom').style.display = shown ? 'flex' : 'none';
+            clampMapView();
+            applyMapView();
         }
         window.addEventListener('resize', updateStageFit);
         byId('stage-fit').addEventListener('click', () => {
             fitState.manual = !fitState.manual;
+            resetMapView();
             updateStageFit();
         });
+
+        /* ---------- 지도 이동(드래그) · 확대(휠·핀치·버튼·더블클릭) ----------
+           지도 한 장(.stage-square)에 translate + scale 을 씌운다. 확대는 커서(손가락) 아래 점이 그대로
+           있게 하고, 지도 가장자리가 화면 밖으로 빠져 빈 공간이 생기지 않게 가둔다(전체 보기에서는
+           지도가 화면 안에 머물게). 배수구 표시는 확대해도 같은 크기로 같은 지점에 붙는다(style.css --zoom). */
+        const MAP_ZOOM_MAX = 8;
+        let mapGeom = { W: 0, H: 0, side: 0, bx: 0, by: 0 };
+        const mapView = { s: 1, tx: 0, ty: 0 };
+
+        function mapHasImage() { return byId('stage-square').style.display !== 'none'; }
+
+        // 한 축을 가둔다. size = 화면 크기, b = 마커 쪽으로 미리 옮긴 거리, scaled = 확대된 지도 한 변
+        function clampAxis(t, size, b, scaled) {
+            if (scaled >= size) {            // 지도가 화면보다 크면 가장자리가 화면 안으로 들어오지 못하게
+                const half = scaled / 2;
+                return Math.min(half - size / 2 - b, Math.max(size / 2 - half - b, t));
+            }
+            const room = (size - scaled) / 2;   // 작으면(전체 보기) 지도 전체가 화면 안에 머물게
+            return Math.min(room - b, Math.max(-room - b, t));
+        }
+
+        function clampMapView() {
+            const { W, H, side, bx, by } = mapGeom;
+            if (!side) return;
+            mapView.tx = clampAxis(mapView.tx, W, bx, side * mapView.s);
+            mapView.ty = clampAxis(mapView.ty, H, by, side * mapView.s);
+        }
+
+        function applyMapView() {
+            const sq = byId('stage-square');
+            sq.style.setProperty('--zoom', mapView.s);
+            sq.style.setProperty('--tx', mapView.tx + 'px');
+            sq.style.setProperty('--ty', mapView.ty + 'px');
+            const zoomed = mapView.s > 1.001;
+            const map = byId('stage-map');
+            map.classList.toggle('zoomed', zoomed);
+            byId('zoom-reset').textContent = Math.round(mapView.s * 100) + '%';
+            byId('zoom-out').disabled = mapView.s <= 1.001;
+            byId('zoom-in').disabled = mapView.s >= MAP_ZOOM_MAX - 0.001;
+        }
+
+        function resetMapView() {
+            mapView.s = 1; mapView.tx = 0; mapView.ty = 0;
+            applyMapView();
+        }
+
+        // 화면 좌표 (px, py) 아래 점을 고정한 채 배율을 factor 배로
+        function zoomMapAt(px, py, factor) {
+            const next = Math.min(MAP_ZOOM_MAX, Math.max(1, mapView.s * factor));
+            const k = next / mapView.s;
+            if (k === 1) return;
+            const r = byId('stage-square').getBoundingClientRect();   // 확대는 지도 중심 기준이라 중심은 이동량(tx)만 반영
+            mapView.tx += (px - (r.left + r.width / 2)) * (1 - k);
+            mapView.ty += (py - (r.top + r.height / 2)) * (1 - k);
+            mapView.s = next;
+            clampMapView();
+            applyMapView();
+        }
+
+        function mapCenterPoint() {
+            const r = byId('stage-map').getBoundingClientRect();
+            return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+        }
+
+        const mapEl = byId('stage-map');
+        const mapPointers = new Map();   // pointerId -> {x, y}
+        const isMapControl = (el) => !!el.closest('button, .stage-toggle, .stage-zoom, .stage-fit');
+
+        mapEl.addEventListener('wheel', (e) => {
+            if (!mapHasImage() || isMapControl(e.target)) return;
+            e.preventDefault();   // 페이지 스크롤 대신 확대
+            zoomMapAt(e.clientX, e.clientY, Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015)));
+        }, { passive: false });
+
+        mapEl.addEventListener('pointerdown', (e) => {
+            if (!mapHasImage() || isMapControl(e.target)) return;
+            if (e.pointerType === 'mouse' && e.button !== 0) return;
+            mapEl.setPointerCapture(e.pointerId);
+            mapPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+            mapEl.classList.add('dragging');
+        });
+
+        mapEl.addEventListener('pointermove', (e) => {
+            const p = mapPointers.get(e.pointerId);
+            if (!p) return;
+            if (mapPointers.size === 1) {                       // 한 손가락/마우스: 이동
+                mapView.tx += e.clientX - p.x;
+                mapView.ty += e.clientY - p.y;
+                clampMapView();
+                applyMapView();
+            } else if (mapPointers.size === 2) {                // 두 손가락: 확대 + 이동
+                const other = [...mapPointers.entries()].find(([id]) => id !== e.pointerId)[1];
+                const before = { cx: (p.x + other.x) / 2, cy: (p.y + other.y) / 2, d: Math.hypot(p.x - other.x, p.y - other.y) };
+                const now = { cx: (e.clientX + other.x) / 2, cy: (e.clientY + other.y) / 2, d: Math.hypot(e.clientX - other.x, e.clientY - other.y) };
+                if (before.d > 0) zoomMapAt(now.cx, now.cy, now.d / before.d);
+                mapView.tx += now.cx - before.cx;
+                mapView.ty += now.cy - before.cy;
+                clampMapView();
+                applyMapView();
+            }
+            p.x = e.clientX;
+            p.y = e.clientY;
+        });
+
+        function endMapPointer(e) {
+            mapPointers.delete(e.pointerId);
+            if (!mapPointers.size) mapEl.classList.remove('dragging');
+        }
+        mapEl.addEventListener('pointerup', endMapPointer);
+        mapEl.addEventListener('pointercancel', endMapPointer);
+
+        // 더블클릭: 그 지점을 2.5배로, 이미 확대돼 있으면 원래대로
+        mapEl.addEventListener('dblclick', (e) => {
+            if (!mapHasImage() || isMapControl(e.target)) return;
+            if (mapView.s > 1.001) resetMapView();
+            else zoomMapAt(e.clientX, e.clientY, 2.5);
+            clampMapView();
+            applyMapView();
+        });
+
+        byId('zoom-in').addEventListener('click', () => { const c = mapCenterPoint(); zoomMapAt(c.x, c.y, 1.5); });
+        byId('zoom-out').addEventListener('click', () => { const c = mapCenterPoint(); zoomMapAt(c.x, c.y, 1 / 1.5); });
+        byId('zoom-reset').addEventListener('click', resetMapView);
 
         /* ---------- 지도 / 시간 변화 전환 ---------- */
         function setStageView(view) {
@@ -1519,6 +1655,7 @@
                 // 가장자리에서 라벨이 잘리지 않게: 오른쪽이면 왼쪽으로, 위쪽이면 아래로
                 byId('stage-marker-label').className = 'marker-label' + (m.x > 0.6 ? ' left' : '') + (m.y < 0.15 ? ' below' : '');
             }
+            resetMapView();   // 새 결과는 확대·이동을 처음 상태로
             updateStageFit();
             setStageView('map');
         }

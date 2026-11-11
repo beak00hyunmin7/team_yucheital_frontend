@@ -1102,7 +1102,13 @@ body.dark {
   justify-content: center;
   overflow: hidden;
   container-type: size;
+  cursor: grab;
+  user-select: none;
+  touch-action: pan-y;   /* 세로 스크롤은 페이지에 넘기고, 가로 드래그·핀치는 지도가 받는다 */
 }
+.stage-map.zoomed { touch-action: none; }   /* 확대한 뒤에는 손가락 이동이 곧 지도 이동 */
+.stage-map.dragging { cursor: grabbing; }
+.stage-map .stage-empty { cursor: default; }
 
 /* 지도(정사각)를 화면의 긴 변에 맞춰 꽉 채운다. 짧은 변 쪽은 가운데를 기준으로 잘린다 */
 .stage-square {
@@ -1113,12 +1119,13 @@ body.dark {
   height: var(--side);
   background: #fff;
   /* 보이는 창을 --cx/--cy(0~1, 지도 좌표)가 가운데 오도록 옮긴다. JS 가 배수구 후보에 맞춰 정한다 */
-  transform: translate(calc((0.5 - var(--cx, 0.5)) * var(--side)), calc((0.5 - var(--cy, 0.5)) * var(--side)));
+  transform: translate(calc((0.5 - var(--cx, 0.5)) * var(--side)), calc((0.5 - var(--cy, 0.5)) * var(--side)))
+             translate(var(--tx, 0px), var(--ty, 0px)) scale(var(--zoom, 1));
 }
 /* 전체 보기: 잘리지 않게 짧은 변에 맞추고, 뒤는 같은 그림을 흐리게 깐다 */
 .stage-map.fit .stage-square {
   --side: min(100cqw, 100cqh);
-  transform: none;
+  transform: translate(var(--tx, 0px), var(--ty, 0px)) scale(var(--zoom, 1));
   border-radius: 14px;
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.35);
 }
@@ -1182,10 +1189,13 @@ body:not(.dark) .stage-bg { filter: blur(26px) brightness(0.9); }
   border: 3px solid #ff5a5f;
   background: transparent;
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.9), 0 0 24px rgba(255, 90, 95, 0.6);
+  transform: translate(-50%, -50%) scale(calc(1 / var(--zoom, 1)));
 }
 .marker-label {
+  --inv: calc(1 / var(--zoom, 1));   /* 지도가 --zoom 배 커져도 라벨은 같은 크기로 */
   position: absolute;
-  transform: translate(26px, -30px);
+  transform-origin: 0 0;
+  transform: translate(calc(26px * var(--inv)), calc(-30px * var(--inv))) scale(var(--inv));
   display: flex;
   flex-direction: column;
   padding: 8px 12px;
@@ -1198,9 +1208,9 @@ body:not(.dark) .stage-bg { filter: blur(26px) brightness(0.9); }
 .marker-label b { font-size: 13px; color: #ff8a8e; }
 body:not(.dark) .marker-label b { color: #b42328; }
 .marker-label span { font-size: 12px; color: var(--muted); }
-.marker-label.left { transform: translate(calc(-100% - 26px), -30px); }
-.marker-label.below { transform: translate(26px, -4px); }
-.marker-label.left.below { transform: translate(calc(-100% - 26px), -4px); }
+.marker-label.left { transform: translate(calc((-100% - 26px) * var(--inv)), calc(-30px * var(--inv))) scale(var(--inv)); }
+.marker-label.below { transform: translate(calc(26px * var(--inv)), calc(-4px * var(--inv))) scale(var(--inv)); }
+.marker-label.left.below { transform: translate(calc((-100% - 26px) * var(--inv)), calc(-4px * var(--inv))) scale(var(--inv)); }
 
 .stage-fit,
 .stage-toggle {
@@ -1234,6 +1244,33 @@ body:not(.dark) .marker-label b { color: #b42328; }
   cursor: pointer;
 }
 .stage-fit:hover { background-color: var(--accent-soft); }
+.stage-zoom {
+  position: absolute;
+  z-index: 4;
+  right: 16px;
+  bottom: 170px;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+}
+.stage-zoom button {
+  width: 52px;
+  height: 44px;
+  padding: 0;
+  color: var(--text);
+  font: inherit;
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+.stage-zoom button + button { border-top: 1px solid var(--glass-border); }
+.stage-zoom button:hover:not(:disabled) { background-color: var(--accent-soft); }
+.stage-zoom button:disabled { opacity: 0.35; cursor: default; }
+.stage-zoom #zoom-reset { font-size: 12px; font-weight: 700; }
 
 /* --- 조건 패널 (목업: 왼쪽 96px, 위 16px, 폭 340px) --- */
 .panel {
@@ -1632,6 +1669,7 @@ body:not(.dark) .unr-badge { color: #8a5200; }
   .stage-empty { margin: 16px; }
   .stage-toggle { top: 12px; bottom: auto; left: 12px; }
   .stage-fit { display: none !important; }   /* 정사각이라 채우기와 전체 보기가 같다 */
+  .stage-zoom { right: 12px; bottom: 12px; }
   .chips { position: static; order: 2; justify-content: flex-start; max-width: none; padding: 10px 12px 0; }
   .timeline { position: static; order: 3; max-width: none; margin: 10px 12px 0; }
   .tl-legend { display: none; }
