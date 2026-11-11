@@ -4,55 +4,55 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>유체이탈 · 배수 예측</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap">
     <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-    <header id="top-bar">
-        <div class="top-bar-brand">
-            <span class="brand-wrap">
-                <svg class="xmas-hat" viewBox="0 0 32 24" width="22" height="17" aria-hidden="true">
-                    <path d="M4 18 C8 6 16 1 25 5 C22 8 21 12 22 18 Z" fill="#d23c3c"/>
-                    <rect x="2" y="16" width="22" height="6" rx="3" fill="#f4f4f4" stroke="#c9ced6" stroke-width="0.8"/>
-                    <circle cx="26" cy="6" r="3.2" fill="#f4f4f4" stroke="#c9ced6" stroke-width="0.8"/>
-                </svg>
-                <span class="brand-name">유체이탈</span>
-            </span>
-            <nav class="view-tabs" aria-label="화면 전환">
-                <a href="#" class="view-tab" data-view="predict">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                        <path d="M12 3c3.5 4.2 6 7.6 6 10.5a6 6 0 0 1-12 0C6 10.6 8.5 7.2 12 3z" stroke-linejoin="round"/>
-                    </svg>예측
-                </a>
-                <a href="#history" class="view-tab" data-view="history">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                        <rect x="4" y="4" width="16" height="16" rx="2"/>
-                        <path d="M4 10h16M10 10v10" stroke-linecap="round"/>
-                    </svg>분석 기록<span class="tab-count" id="history-count"></span>
-                </a>
-            </nav>
-        </div>
-        <div class="top-bar-actions">
-            <span class="model-status" id="model-status">모델 서버 확인 중…</span>
-            <button class="btn-theme" id="theme-btn" onclick="toggleTheme()" aria-label="테마 전환">🌙</button>
-            <button class="btn-theme btn-xmas" id="xmas-btn" onclick="toggleXmas()" aria-label="크리스마스 장식" aria-pressed="false" title="크리스마스 장식 켜기">🎄</button>
-            <div id="guest-actions" class="action-group">
-                <button class="btn btn-ghost" onclick="openAuthModal('login')">로그인</button>
-                <button class="btn btn-primary" onclick="openAuthModal('signup')">회원가입</button>
-            </div>
-            <div id="user-actions" class="action-group" style="display: none;">
-                <span id="user-email"></span>
-                <button class="btn btn-ghost" onclick="logout()">로그아웃</button>
-            </div>
-        </div>
-    </header>
-
-    <!-- 안내 배너 -->
-    <div id="notice-bar" style="display: none;">
-        <span class="notice-text">
-            등고선 지도를 올리면 침수 수심맵과 배수구 후보 위치를 바로 예측해 드립니다.
+    <!-- 왼쪽 아이콘 레일: 화면 전환(예측 · 기록) · 서버 상태 · 테마 · 계정 -->
+    <nav id="rail" aria-label="주 메뉴">
+        <span class="brand-wrap" title="유체이탈">
+            <svg class="xmas-hat" viewBox="0 0 32 24" width="22" height="17" aria-hidden="true">
+                <path d="M4 18 C8 6 16 1 25 5 C22 8 21 12 22 18 Z" fill="#d23c3c"/>
+                <rect x="2" y="16" width="22" height="6" rx="3" fill="#f4f4f4" stroke="#c9ced6" stroke-width="0.8"/>
+                <circle cx="26" cy="6" r="3.2" fill="#f4f4f4" stroke="#c9ced6" stroke-width="0.8"/>
+            </svg>
+            <svg class="rail-logo" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="유체이탈">
+                <path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>
+            </svg>
         </span>
-        <button class="notice-close" onclick="closeNotice()" aria-label="배너 닫기">&times;</button>
-    </div>
+        <a href="#" class="view-tab" data-view="predict">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4l-6 2v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></svg>
+            <span>예측</span>
+        </a>
+        <a href="#history" class="view-tab" data-view="history">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            <span>기록</span><span class="tab-count" id="history-count"></span>
+        </a>
+        <div class="rail-spacer"></div>
+        <span class="model-status" id="model-status" role="status" aria-live="polite">모델 서버 확인 중…</span>
+        <button class="btn-theme" id="theme-btn" onclick="toggleTheme()" aria-label="테마 전환" aria-pressed="true">
+            <svg class="icon-moon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+            <svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        </button>
+        <button class="btn-theme btn-xmas" id="xmas-btn" onclick="toggleXmas()" aria-label="크리스마스 장식" aria-pressed="false" title="크리스마스 장식 켜기">🎄</button>
+        <div class="account">
+            <button type="button" class="account-btn" id="account-btn" aria-haspopup="true" aria-expanded="false" aria-controls="account-pop" aria-label="계정">
+                <svg class="acc-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>
+                <span class="acc-initial" id="account-initial" style="display: none;"></span>
+            </button>
+            <div class="account-pop" id="account-pop" style="display: none;">
+                <div id="guest-actions" class="action-group">
+                    <button class="btn btn-ghost" onclick="openAuthModal('login')">로그인</button>
+                    <button class="btn btn-primary" onclick="openAuthModal('signup')">회원가입</button>
+                </div>
+                <div id="user-actions" class="action-group" style="display: none;">
+                    <span id="user-email"></span>
+                    <button class="btn btn-ghost" onclick="logout()">로그아웃</button>
+                </div>
+            </div>
+        </div>
+    </nav>
 
     <!-- 크리스마스 장식: 배경에만 눈이 내린다 (카드 뒤에 깔려서 결과 그림은 가리지 않음) -->
     <canvas id="snow-canvas" aria-hidden="true"></canvas>
@@ -61,25 +61,30 @@
 
     <!-- 화면 1: 예측 (기본) — 지도 우선(C안): 지도가 화면을 채우고, 조건·기록·시간 슬라이더는 떠 있는 패널 -->
     <div id="view-predict" class="stage">
-        <!-- 지도 영역 -->
+        <!-- 지도 영역: 그림이 화면을 꽉 채우고(cover) 왼쪽·아래에 어두운 그라데이션을 깔아 패널 글씨를 살린다 -->
         <div class="stage-map" id="stage-map">
             <img id="stage-bg" class="stage-bg" alt="" aria-hidden="true" style="display: none;">
             <div class="stage-square" id="stage-square" style="display: none;">
                 <img id="stage-img" alt="예측 배수맵">
                 <canvas id="timelapse-canvas" style="display: none;"></canvas>
                 <span class="drain-marker" id="stage-marker" style="display: none;"></span>
-                <span class="marker-label" id="stage-marker-label" style="display: none;">배수구 설치 후보</span>
+                <div class="marker-label" id="stage-marker-label" style="display: none;">
+                    <b>배수구 설치 후보</b>
+                    <span>예측 유출이 가장 큰 지점</span>
+                </div>
                 <span class="drain-marker" id="timelapse-star" style="display: none;" title="배수구 후보"></span>
             </div>
+            <div class="stage-scrim" aria-hidden="true"></div>
             <div class="stage-empty" id="viewer-placeholder">
                 <svg class="viewer-empty-icon" viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <rect x="3" y="4" width="18" height="16" rx="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <circle cx="8.5" cy="9" r="1.5" fill="currentColor" stroke="none"/>
-                    <path d="M4.5 17l4.5-5.5 3 3.5 2.5-3 4.5 5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M9 4l-6 2v14l6-2 6 2 6-2V4l-6 2z" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M9 4v14M15 6v14" stroke-linecap="round"/>
                 </svg>
                 <p class="viewer-empty-title">예측을 실행하면 지도가 여기에 크게 표시됩니다</p>
                 <p class="viewer-empty-sub">조건 패널에서 파일을 올리고 강우량을 고른 뒤 '배수 예측 실행'을 누르세요</p>
             </div>
+            <!-- 채우기 / 전체 보기 (정사각 지도를 화면 비율로 채우면 위아래가 잘리므로 고를 수 있게) -->
+            <button type="button" class="stage-fit" id="stage-fit" style="display: none;" aria-pressed="false" title="지도를 화면에 맞춰 전체 보기">전체 보기</button>
             <!-- 지도 / 시간 변화 전환 (시점별 예측 프레임이 도착하면 나타남) -->
             <div class="stage-toggle" id="stage-toggle" role="group" aria-label="지도 보기 방식" style="display: none;">
                 <button type="button" id="stage-btn-map" class="on" aria-pressed="true">지도</button>
@@ -90,85 +95,77 @@
         <!-- 조건 패널 (펼침) -->
         <aside class="panel" id="cond-panel" aria-label="예측 조건">
             <div class="panel-head">
-                <h1>배수 예측</h1>
+                <h1>조건</h1>
                 <button type="button" class="panel-fold" id="panel-fold" aria-expanded="true" aria-controls="panel-body" aria-label="조건 패널 접기">
                     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 15l-6-6-6 6"/></svg>
                 </button>
             </div>
             <form id="uploadForm" enctype="multipart/form-data" novalidate>
                 <div id="panel-body">
-                    <!-- 1. 입력 방식 -->
-                    <section class="panel-sec">
-                        <h2 class="card-title"><span class="step-num" data-xmas="🎄">1</span>입력 방식</h2>
+                    <!-- 입력 방식 (작게) -->
+                    <div class="segmented" role="radiogroup" aria-label="입력 종류">
+                        <label><input type="radio" name="mode" value="image" checked><span>등고선 이미지</span></label>
+                        <label><input type="radio" name="mode" value="terrain"><span>고도 격자</span></label>
+                    </div>
+                    <p class="form-hint" id="mode-hint"></p>
 
-                        <div class="segmented" role="radiogroup" aria-label="입력 종류">
-                            <label><input type="radio" name="mode" value="image" checked><span>등고선 이미지</span></label>
-                            <label><input type="radio" name="mode" value="terrain"><span>고도 격자 데이터</span></label>
-                        </div>
-                        <p class="form-hint" id="mode-hint"></p>
-
-                        <div class="dropzone" id="dropzone">
-                            <input type="file" id="fileInput" name="file" hidden />
-                            <label for="fileInput" class="dropzone-label">
-                                <!-- 파일 없을 때: 안내 -->
-                                <span class="dropzone-empty" id="dropzone-empty">
-                                    <svg class="dropzone-icon" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5">
-                                        <path d="M12 15V4M12 4l-4 4M12 4l4 4" stroke-linecap="round" stroke-linejoin="round"/>
-                                        <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <!-- 파일: 없으면 올리기 영역, 있으면 목업의 '파일 칩'(썸네일 · 이름 · 상태 · 바꾸기) -->
+                    <div class="dropzone" id="dropzone">
+                        <input type="file" id="fileInput" name="file" hidden />
+                        <label for="fileInput" class="dropzone-label">
+                            <span class="dropzone-empty" id="dropzone-empty">
+                                <svg class="dropzone-icon" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5">
+                                    <path d="M12 15V4M12 4l-4 4M12 4l4 4" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                <span class="dropzone-text">클릭하거나 파일을 끌어다 놓으세요</span>
+                                <span class="dropzone-hint" id="dropzone-hint"></span>
+                            </span>
+                            <span class="dropzone-preview" id="dropzone-preview" style="display: none;">
+                                <img id="dropzone-img" alt="올린 파일 미리보기">
+                                <span class="dropzone-fileicon" id="dropzone-fileicon">
+                                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                        <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" stroke-linejoin="round"/>
+                                        <path d="M14 3v5h5M8 13h8M8 17h5" stroke-linecap="round" stroke-linejoin="round"/>
                                     </svg>
-                                    <span class="dropzone-text">클릭하거나 파일을 끌어다 놓으세요</span>
-                                    <span class="dropzone-hint" id="dropzone-hint"></span>
                                 </span>
-                                <!-- 파일 있을 때: 미리보기 (그림이 아닌 고도 격자 파일은 파일 아이콘) -->
-                                <span class="dropzone-preview" id="dropzone-preview" style="display: none;">
-                                    <img id="dropzone-img" alt="올린 파일 미리보기">
-                                    <span class="dropzone-fileicon" id="dropzone-fileicon">
-                                        <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5">
-                                            <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" stroke-linejoin="round"/>
-                                            <path d="M14 3v5h5M8 13h8M8 17h5" stroke-linecap="round" stroke-linejoin="round"/>
-                                        </svg>
-                                    </span>
-                                    <span class="dropzone-info">
-                                        <span id="dropzone-filename"></span>
-                                        <span class="dropzone-change">클릭하거나 끌어다 놓아 바꾸기</span>
-                                    </span>
+                                <span class="dropzone-info">
+                                    <span id="dropzone-filename"></span>
+                                    <span class="dropzone-status" id="dropzone-status"></span>
                                 </span>
-                            </label>
-                            <button type="button" class="dropzone-remove" id="dropzone-remove" style="display: none;" aria-label="파일 빼기" title="파일 빼기">&times;</button>
-                        </div>
-                        <p class="field-error" id="err-fileInput"></p>
-                    </section>
+                                <span class="dropzone-change">바꾸기</span>
+                            </span>
+                        </label>
+                        <button type="button" class="dropzone-remove" id="dropzone-remove" style="display: none;" aria-label="파일 빼기" title="파일 빼기">&times;</button>
+                    </div>
+                    <p class="field-error" id="err-fileInput"></p>
 
-                    <!-- 2. 조건 -->
-                    <section class="panel-sec">
-                        <h2 class="card-title"><span class="step-num" data-xmas="🎁">2</span>강우 조건</h2>
-                        <div class="cond-grid">
-                            <div id="rain-block">
-                                <label class="field-label" for="rainMm">강우량</label>
-                                <div class="slider-row">
-                                    <input type="range" id="rainRange" min="20" max="80" step="1" value="50" aria-label="강우량 슬라이더">
-                                    <span class="num-input"><input type="number" id="rainMm" value="50" min="20" max="80" step="1"> mm</span>
-                                </div>
-                                <div class="rain-presets" role="group" aria-label="강우량 빠른 선택">
-                                    <button type="button" data-rain="30">30</button>
-                                    <button type="button" data-rain="50">50</button>
-                                    <button type="button" data-rain="80">80</button>
-                                </div>
-                                <p class="field-error" id="err-rainMm"></p>
-                                <p class="form-hint" id="rain-hint"></p>
-                            </div>
-
-                            <div id="time-row">
-                                <label class="field-label" for="timeS">강우 시작 후 경과 시간</label>
-                                <div class="slider-row">
-                                    <input type="range" id="timeRange" min="0" max="120" step="1" value="18" aria-label="경과 시간 슬라이더">
-                                    <span class="num-input"><input type="number" id="timeS" value="18" min="0" max="120" step="1"> 초</span>
-                                </div>
-                                <p class="field-error" id="err-timeS"></p>
-                                <p class="form-hint" id="time-hint"></p>
-                            </div>
+                    <!-- 강우량 -->
+                    <div class="panel-row" id="rain-block">
+                        <div class="panel-row-head">
+                            <label class="field-label" for="rainMm">강우량</label>
+                            <span class="num-input"><input type="number" id="rainMm" value="50" min="20" max="80" step="1"> mm</span>
                         </div>
-                    </section>
+                        <input type="range" id="rainRange" min="20" max="80" step="1" value="50" aria-label="강우량 슬라이더">
+                        <div class="rain-presets" role="group" aria-label="강우량 빠른 선택">
+                            <button type="button" data-rain="30">30</button>
+                            <button type="button" data-rain="50">50</button>
+                            <button type="button" data-rain="80">80</button>
+                        </div>
+                        <p class="field-error" id="err-rainMm"></p>
+                        <p class="form-hint" id="rain-hint"></p>
+                    </div>
+
+                    <!-- 경과 시간 -->
+                    <div class="panel-row" id="time-row">
+                        <div class="panel-row-head">
+                            <label class="field-label" for="timeS">경과 시간</label>
+                            <span class="num-input"><input type="number" id="timeS" value="18" min="0" max="120" step="1"> 초</span>
+                        </div>
+                        <input type="range" id="timeRange" min="0" max="120" step="1" value="18" aria-label="경과 시간 슬라이더">
+                        <p class="field-error" id="err-timeS"></p>
+                        <p class="form-hint" id="time-hint"></p>
+                    </div>
 
                     <!-- 고급 설정: 이미지 색 체계(이미지 모드) · 격자 셀 크기(데이터 모드) -->
                     <details class="panel-adv" id="panel-adv">
@@ -201,14 +198,14 @@
 
         <!-- 조건 패널 (접힘): 현재 조건을 한 줄로 보여주고 누르면 펼친다 -->
         <button type="button" class="panel-pill" id="panel-pill" style="display: none;" aria-label="조건 패널 펼치기">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
             <b>조건</b><span id="panel-pill-text"></span>
         </button>
 
         <!-- 지도 위 요약 칩 + 도구 버튼 -->
         <div class="chips" id="chips">
             <div class="chip" id="chip-depth" style="display: none;">
-                <span class="chip-label">최대 침수 (예측)</span>
+                <span class="chip-label" id="chip-depth-label">최대 침수 (예측)</span>
                 <span class="chip-value"><b id="chip-depth-val"></b> cm</span>
             </div>
             <div class="chip" id="chip-area" style="display: none;">
@@ -216,10 +213,10 @@
                 <span class="chip-value"><b id="chip-area-val"></b> %</span>
             </div>
             <button type="button" class="chip-btn" id="btn-gallery" style="display: none;">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="8" height="7" rx="1"/><rect x="13" y="4" width="8" height="7" rx="1"/><rect x="3" y="13" width="8" height="7" rx="1"/><rect x="13" y="13" width="8" height="7" rx="1"/></svg>결과 이미지
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>결과 이미지
             </button>
             <button type="button" class="chip-btn" id="btn-drawer" aria-pressed="false" aria-controls="drawer">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>기록
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>기록
             </button>
         </div>
 
@@ -234,14 +231,17 @@
 
         <!-- 시간 슬라이더: 같은 지형을 시점별로 예측한 결과를 이어서 보여준다 -->
         <section class="timeline" id="timelapse" style="display: none;" aria-label="시간 경과에 따른 침수 변화">
-            <button type="button" class="tl-play" id="timelapse-play" disabled>재생</button>
+            <button type="button" class="tl-play" id="timelapse-play" disabled aria-label="재생">
+                <svg class="icon-play" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg>
+                <svg class="icon-pause" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true" style="display: none;"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>
+            </button>
             <div class="tl-main">
                 <div class="tl-row">
                     <span class="tl-label">강우 시작 후 경과 시간</span>
                     <span class="tl-time" id="timelapse-time"></span>
                 </div>
                 <input type="range" id="timelapse-range" min="18" max="120" step="0.1" value="18" disabled aria-label="재생 시점">
-                <div class="tl-scale"><span>18초</span><span class="timelapse-status" id="timelapse-status" role="status"></span><span>120초</span></div>
+                <div class="tl-scale"><span>18s</span><span class="timelapse-status" id="timelapse-status" role="status"></span><span>120s</span></div>
             </div>
             <div class="tl-legend" aria-hidden="true">
                 <div class="tl-legend-bar"></div>
@@ -434,11 +434,10 @@
         const ANALYZE_API = (new URLSearchParams(location.search).get('api') || DEFAULT_API).replace(/\/+$/, '');  // AI 모델 서버 (예측)
         const AUTH_API = ANALYZE_API;                  // 로그인도 같은 서버 (토큰을 받아야 예측 가능)
 
-        const NOTICE_KEY = 'yuche_notice_closed';
         const USER_KEY   = 'yuche_user';
         const TOKEN_KEY  = 'yuche_token';
         const THEME_KEY = 'yuche_theme';
-        const SUBMIT_LABEL = '배수 예측 실행';
+        let submitLabel = '배수 예측 실행';   // 한 번 예측에 성공하면 '다시 예측'
 
         // 서버 /api/health 로 갱신되는 모델 정보
         const modelInfo = {
@@ -458,7 +457,7 @@
         function applyTheme(theme) {
             const isDark = (theme === 'dark');
             document.body.classList.toggle('dark', isDark);
-            document.getElementById('theme-btn').textContent = isDark ? '☀️' : '🌙';
+            document.getElementById('theme-btn').setAttribute('aria-pressed', String(isDark));
             localStorage.setItem(THEME_KEY, theme);
         }
 
@@ -550,27 +549,6 @@
             applyTheme('dark');
         }
 
-        /* ---------- 알림 바 ---------- */
-        // 지도 화면 높이 = 화면 - 상단바 - (열려 있는) 안내 배너. 배너 높이를 CSS 변수로 알려준다
-        function syncNoticeHeight() {
-            const bar = document.getElementById('notice-bar');
-            const h = bar.style.display === 'none' ? 0 : bar.offsetHeight;
-            document.documentElement.style.setProperty('--notice-h', h + 'px');
-        }
-        window.addEventListener('resize', syncNoticeHeight);
-
-        function initNotice() {
-            if (localStorage.getItem(NOTICE_KEY) === 'true') return;
-            document.getElementById('notice-bar').style.display = 'flex';
-            syncNoticeHeight();
-        }
-
-        function closeNotice() {
-            document.getElementById('notice-bar').style.display = 'none';
-            localStorage.setItem(NOTICE_KEY, 'true');
-            syncNoticeHeight();
-        }
-
         /* ---------- 로그인 상태 ---------- */
         function getCurrentUser() {
             return localStorage.getItem(USER_KEY);
@@ -592,10 +570,32 @@
             applyAuthState();
         }
 
+        /* ---------- 계정 메뉴 (레일 아래 동그라미 버튼) ---------- */
+        function closeAccountMenu() {
+            document.getElementById('account-pop').style.display = 'none';
+            document.getElementById('account-btn').setAttribute('aria-expanded', 'false');
+        }
+        document.getElementById('account-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            const pop = document.getElementById('account-pop');
+            const open = pop.style.display === 'none';
+            pop.style.display = open ? 'flex' : 'none';
+            e.currentTarget.setAttribute('aria-expanded', String(open));
+        });
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.account')) closeAccountMenu();
+        });
+
         function applyAuthState() {
             const user = getCurrentUser();
             document.getElementById('guest-actions').style.display = user ? 'none' : 'flex';
             document.getElementById('user-actions').style.display  = user ? 'flex' : 'none';
+            const ini = document.getElementById('account-initial');
+            ini.textContent = user ? user.trim().charAt(0).toUpperCase() : '';
+            ini.style.display = user ? 'inline' : 'none';
+            document.querySelector('#account-btn .acc-icon').style.display = user ? 'none' : 'block';
+            document.getElementById('account-btn').setAttribute('aria-label', user ? `계정 (${user})` : '계정 · 로그인');
+            closeAccountMenu();
             // 기록 영역은 항상 보이고, 로그인 전에는 가운데 로그인 안내만 보인다
             document.getElementById('history-locked').style.display  = user ? 'none' : 'flex';
             document.getElementById('history-content').style.display = user ? 'block' : 'none';
@@ -666,6 +666,7 @@
             if (!getCurrentUser()) return;          // 비로그인이면 저장 안 함
             try {
                 const saved = await historyRequest('', 'POST', record);
+                stageState.recordId = saved.id;
                 historyCache = [saved, ...historyCache].slice(0, HISTORY_MAX);
                 historyError = '';
                 renderHistory();
@@ -843,6 +844,7 @@
         function showRecord(id) {
             const record = historyCache.find(r => r.id === id);
             if (!record) return;
+            stageState.recordId = id;
 
             if (!record.thumbnail) {
                 alert('저장된 결과 그림이 없는 기록입니다.');
@@ -853,6 +855,7 @@
                 record.info || [],
                 record.meta
             );
+            renderDrawer();
             goToView('predict');   // 기록 화면에서 눌렀으면 예측 화면으로 넘어가서 결과를 지도에 보여준다
         }
 
@@ -942,6 +945,7 @@
             if (e.key === 'Escape') {
                 closeDetail();
                 closeAuthModal();
+                closeAccountMenu();
                 closeGallery();
                 closeUnreadable();
             }
@@ -1334,6 +1338,13 @@
         const PREVIEW_EXTS = ['png', 'jpg', 'jpeg', 'webp'];   // 브라우저가 바로 그릴 수 있는 형식
         let previewUrl = null;
 
+        // 파일 칩의 상태 줄. kind: 'ok'(초록, 학습 형식으로 인식·변환됨) | 'warn' | ''(기본 회색)
+        function setFileStatus(text, kind) {
+            const el = document.getElementById('dropzone-status');
+            el.textContent = text;
+            el.className = 'dropzone-status' + (kind ? ' ' + kind : '');
+        }
+
         function formatSize(bytes) {
             return bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
         }
@@ -1363,7 +1374,8 @@
                 }
                 img.style.display = canPreview ? 'block' : 'none';
                 icon.style.display = canPreview ? 'none' : 'flex';
-                document.getElementById('dropzone-filename').textContent = `${file.name} · ${formatSize(file.size)}`;
+                document.getElementById('dropzone-filename').textContent = file.name;
+                setFileStatus(`${fileExt(file.name).toUpperCase()} · ${formatSize(file.size)}`, '');
             }
             updateRunSummary();
         }
@@ -1420,7 +1432,7 @@
            ================================================================ */
         const byId = id => document.getElementById(id);
         const toDataUrl = (b64, mime = 'image/png') => `data:${mime};base64,${b64}`;
-        const stageState = { view: 'map', marker: null };
+        const stageState = { view: 'map', marker: null, recordId: null };   // recordId = 지금 지도에 보이는 기록
         const MOBILE_QUERY = '(max-width: 1000px)';   // style.css 의 세로 쌓기 기준과 같게
 
         let toastTimer = null;
@@ -1432,6 +1444,46 @@
             toastTimer = setTimeout(() => t.classList.remove('show'), 5000);
         }
 
+        /* ---------- 채우기 / 전체 보기 ---------- */
+        // 목업처럼 정사각 지도를 화면 비율에 맞춰 꽉 채운다(cover). 이러면 긴 변 쪽이 잘리므로,
+        // 배수구 후보가 잘리는 가장자리에 있으면 보이는 창을 그쪽으로 옮겨(--cx/--cy) 후보가 보이게 한다.
+        // '전체 보기' 버튼을 누르면 잘리지 않게 줄여서 보여준다.
+        const fitState = { manual: false };
+        const FIT_MARGIN = 0.16;   // 후보가 창 가장자리에서 창 크기의 이만큼은 떨어지게
+        function windowCenter(v, half) {   // v: 후보 좌표(0~1), half: 보이는 창의 절반(0.5 = 안 잘림)
+            if (half >= 0.5) return 0.5;
+            const pad = FIT_MARGIN * 2 * half;
+            if (v >= 0.5 - half + pad && v <= 0.5 + half - pad) return 0.5;
+            const c = v < 0.5 ? v + half - pad : v - half + pad;
+            return Math.min(1 - half, Math.max(half, c));
+        }
+        function updateStageFit() {
+            const map = byId('stage-map');
+            const sq = byId('stage-square');
+            const shown = sq.style.display !== 'none';
+            const W = map.clientWidth, H = map.clientHeight;
+            const squareish = Math.abs(W - H) < 4;
+            const fit = fitState.manual;
+            map.classList.toggle('fit', fit);
+            let cx = 0.5, cy = 0.5;
+            if (!fit && stageState.marker && !squareish) {
+                const side = Math.max(W, H);
+                cx = windowCenter(stageState.marker.x, W / side / 2);
+                cy = windowCenter(stageState.marker.y, H / side / 2);
+            }
+            sq.style.setProperty('--cx', cx);
+            sq.style.setProperty('--cy', cy);
+            const btn = byId('stage-fit');
+            btn.textContent = fit ? '채우기' : '전체 보기';
+            btn.setAttribute('aria-pressed', String(fit));
+            btn.style.display = shown && !squareish ? 'inline-flex' : 'none';
+        }
+        window.addEventListener('resize', updateStageFit);
+        byId('stage-fit').addEventListener('click', () => {
+            fitState.manual = !fitState.manual;
+            updateStageFit();
+        });
+
         /* ---------- 지도 / 시간 변화 전환 ---------- */
         function setStageView(view) {
             stageState.view = view;
@@ -1440,7 +1492,7 @@
             byId('stage-img').style.display = time ? 'none' : 'block';
             byId('timelapse-canvas').style.display = time ? 'block' : 'none';
             byId('stage-marker').style.display = (!time && marker) ? 'block' : 'none';
-            byId('stage-marker-label').style.display = (!time && marker) ? 'block' : 'none';
+            byId('stage-marker-label').style.display = (!time && marker) ? 'flex' : 'none';
             byId('timelapse-star').style.display = (time && timelapse.star) ? 'block' : 'none';
             byId('stage-btn-map').classList.toggle('on', !time);
             byId('stage-btn-map').setAttribute('aria-pressed', String(!time));
@@ -1467,15 +1519,17 @@
                 // 가장자리에서 라벨이 잘리지 않게: 오른쪽이면 왼쪽으로, 위쪽이면 아래로
                 byId('stage-marker-label').className = 'marker-label' + (m.x > 0.6 ? ' left' : '') + (m.y < 0.15 ? ' below' : '');
             }
+            updateStageFit();
             setStageView('map');
         }
 
         /* ---------- 요약 칩 ---------- */
-        function updateChips(stats) {
+        function updateChips(stats, rainMm) {
             const has = !!(stats && stats.max_depth_cm != null);
             byId('chip-depth').style.display = has ? 'flex' : 'none';
             byId('chip-area').style.display = has ? 'flex' : 'none';
             if (!has) return;
+            byId('chip-depth-label').textContent = rainMm != null ? `최대 침수 (${rainMm}mm)` : '최대 침수 (예측)';
             byId('chip-depth-val').textContent = Number(stats.max_depth_cm).toFixed(1);
             byId('chip-area-val').textContent = Number(stats.wet_area_pct).toFixed(1);
             byId('chip-area-label').textContent = `${stats.wet_threshold_cm ?? 5}cm 이상 면적`;
@@ -1517,6 +1571,29 @@
         byId('btn-drawer').addEventListener('click', () => setDrawerOpen(byId('drawer').style.display === 'none'));
         byId('drawer-all').addEventListener('click', (e) => { e.preventDefault(); goToView('history'); });
 
+        function relativeTime(d) {
+            const s = (Date.now() - d.getTime()) / 1000;
+            if (s < 90) return '방금';
+            if (s < 3600) return `${Math.round(s / 60)}분 전`;
+            if (dateKey(d) === dateKey(new Date())) return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+            return `${d.getMonth() + 1}/${d.getDate()}`;
+        }
+
+        // 서랍 제목: 직접 붙인 이름 > 입력 파일 이름(확장자 뺀 것) > 날짜
+        function drawerTitle(r) {
+            return r.name || (r.fileName ? r.fileName.replace(/\.[^.]+$/, '') : defaultName(recordDate(r)));
+        }
+
+        // 서랍 한 줄 설명: '50mm · 18s · 방금'
+        function drawerSub(r) {
+            const p = r.params || {};
+            const parts = [];
+            if (p.rain_mm != null) parts.push(`${p.rain_mm}mm`);
+            if (p.time_s != null) parts.push(`${p.time_s}s`);
+            parts.push(relativeTime(recordDate(r)));
+            return parts.join(' · ');
+        }
+
         function renderDrawer() {
             const ul = byId('drawer-list');
             if (!getCurrentUser()) {
@@ -1529,11 +1606,11 @@
                 return;
             }
             ul.innerHTML = list.map(r => `
-                <li><button type="button" class="drawer-item" data-id="${escapeHtml(r.id)}">
+                <li><button type="button" class="drawer-item${r.id === stageState.recordId ? ' active' : ''}" data-id="${escapeHtml(r.id)}">
                     ${r.thumbnail ? `<img src="${r.thumbnail}" alt="">` : '<span class="drawer-noimg"></span>'}
                     <span class="drawer-text">
-                        <span class="drawer-name">${escapeHtml(recordName(r))}</span>
-                        <span class="drawer-sub">${describeParams(r.params)}</span>
+                        <span class="drawer-name">${escapeHtml(drawerTitle(r))}</span>
+                        <span class="drawer-sub">${escapeHtml(drawerSub(r))}</span>
                     </span>
                 </button></li>`).join('');
         }
@@ -1777,7 +1854,7 @@
                 info.map(line => `<li>${escapeHtml(line)}</li>`).join('');
 
             showStageImage(stage || { src: images[0].src, marker: images[0].marker });
-            updateChips(meta && meta.stats);
+            updateChips(meta && meta.stats, meta && meta.rain_mm);
             document.getElementById('btn-gallery').style.display = 'inline-flex';
         }
 
@@ -1850,15 +1927,22 @@
             timelapse.raf = requestAnimationFrame(timelapseTick);
         }
 
+        function setPlayButton(playing) {
+            const b = document.getElementById('timelapse-play');
+            b.querySelector('.icon-play').style.display = playing ? 'none' : 'block';
+            b.querySelector('.icon-pause').style.display = playing ? 'block' : 'none';
+            b.setAttribute('aria-label', playing ? '일시정지' : '재생');
+        }
+
         function stopTimelapsePlayback() {
             cancelAnimationFrame(timelapse.raf);
             timelapse.raf = null;
-            document.getElementById('timelapse-play').textContent = '재생';
+            setPlayButton(false);
         }
 
         function startTimelapsePlayback() {
             if (timelapse.frames.length < 2 || timelapse.raf) return;
-            document.getElementById('timelapse-play').textContent = '일시정지';
+            setPlayButton(true);
             timelapse.last = performance.now();
             timelapse.raf = requestAnimationFrame(timelapseTick);
         }
@@ -2053,7 +2137,15 @@
                 info.push('파란색이 진할수록 물이 많이 모이는 곳입니다.');
 
                 const recordMeta = { checkpoint: data.checkpoint, ...meta, stats: data.stats };
+                stageState.recordId = null;   // 저장되면(saveRecord) 그 기록이 서랍에서 강조된다
                 showResult(images, info, recordMeta, stage);
+                submitLabel = '다시 예측';
+                if (mode === 'image' && data.color_info) {
+                    const ci = data.color_info;
+                    setFileStatus(ci.converted ? `${ci.label} → 학습 형식으로 변환됨` : '학습 형식으로 인식됨', 'ok');
+                } else if (mode === 'terrain') {
+                    setFileStatus('고도 격자로 읽음', 'ok');
+                }
                 if (meta.time_conditioned) {
                     // 기다리지 않는다: 결과는 먼저 보여주고 재생용 프레임은 뒤에서 채운다
                     const preloaded = { [meta.time_s]: data };
@@ -2093,11 +2185,10 @@
                 }
             } finally {
                 btn.disabled = false; //버튼 활성화
-                btn.textContent = SUBMIT_LABEL; //버튼 글자 바꾸기
+                btn.textContent = submitLabel; //버튼 글자 바꾸기
             }
         });
 
-        initNotice();
         initTheme();
         initXmas();
         applyView();
