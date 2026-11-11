@@ -13,8 +13,21 @@ git clone https://github.com/beak00hyunmin7/team_yucheital_frontend.git
 3. 끌 때는 검은 창에서 `Ctrl+C`
 
 - 이건 **테스트용 가짜 서버**(`project_yucheital/dev_server/mock_server.py`)라서 예측 그림은 진짜 AI 결과가 아닙니다. 화면 기능 확인용입니다.
-- **진짜 AI 서버**를 쓰려면 AI 저장소의 `terrainFlowSim/webapp/run_windows.bat` 을 실행하고(체크포인트 `best.pt` 필요), 테스트 서버는 끈 채로 `yuche_frontend/vtkjs.html` 을 열면 됩니다.
-- 서버 주소는 `yuche_frontend/vtkjs.html` 의 `DEFAULT_API` 한 줄에서 바꿉니다. 파일을 고치지 않으려면 주소 뒤에 `?api=http://IP:포트` 를 붙여도 됩니다.
+- **진짜 AI 서버**를 쓰려면 서버 저장소([team_yucheital_backend](https://github.com/beak00hyunmin7/team_yucheital_backend))의 `prediction_server/run_windows.bat` 을 실행하고(체크포인트 `best.pt` 필요), 테스트 서버는 끈 채로 `yuche_frontend/vtkjs.html` 을 열면 됩니다. (서버 이전 PR 이 병합되기 전에는 AI 저장소의 `terrainFlowSim/webapp/run_windows.bat`)
+- 서버 주소는 **이 화면을 연 호스트의 8000번 포트**가 기본입니다(파일을 더블클릭해 열면 `127.0.0.1:8000`). 다른 주소는 주소 뒤에 `?api=http://IP:포트` 를 붙입니다.
+
+### 다른 PC·폰에서 쓰기 (같은 공유기)
+
+서버 PC 에서 AI 서버(8000, `run_windows.bat` 이 `0.0.0.0` 으로 엶)와 화면을 같이 열어 줍니다.
+
+```powershell
+cd project_yucheital\yuche_frontend
+python -m http.server 8080 --bind 0.0.0.0
+```
+
+다른 기기에서는 `http://서버PC의IP:8080/vtkjs.html` 만 열면 됩니다 (API 주소는 자동으로 `서버PC의IP:8000`).
+서버 PC 의 IP 는 `ipconfig` 의 IPv4 주소입니다. 접속이 안 되면 Windows 방화벽에서 8000·8080 포트(또는 python.exe)의 인바운드 허용을 확인하세요.
+HTTP 평문이라 같은 네트워크에서 로그인 비밀번호가 보일 수 있으니, 공용 Wi-Fi 에서는 쓰지 마세요.
 
 ## 화면 구성 (지도 우선)
 
@@ -28,6 +41,8 @@ git clone https://github.com/beak00hyunmin7/team_yucheital_frontend.git
 | 왼쪽 조건 패널 | 입력 방식 · 파일 · 강우량(슬라이더 + 30/50/80 빠른 선택) · 경과 시간 · 고급 설정(이미지 색 체계, 격자 크기) · 실행. 접으면 한 줄 알약(`50mm · 18초`) |
 | 오른쪽 위 칩 | 최대 침수(cm) · 5cm 이상 면적(%) = 서버 `stats`. `결과 이미지`(입력 등고선·예측·오버레이·분석 지도 모아보기), `기록` 서랍(최근 6건, 누르면 그 결과를 지도에 엶) |
 | 아래 시간 슬라이더 | 시점별 예측 6장(18~120초)을 이어 재생. 재생·슬라이더를 만지면 `지도` → `시간 변화` 보기로 바뀜 |
+| 패널 옮기기 | 조건 패널(제목 줄)·기록 서랍(제목 줄)·요약 칩과 시간 슬라이더(왼쪽 점 6개 손잡이)를 끌어 원하는 자리에 둘 수 있음. 접힌 '조건' 알약도 끌 수 있음. 위치는 브라우저에 저장되고 화면 밖·레일 밑으로는 못 나감. 손잡이 더블클릭 = 그 패널만, 레일의 초기화 버튼 = 전부 원래 자리. 모바일(세로 쌓기)에서는 끌 수 없음 |
+| 빈 화면 · 파일 놓기 | 처음 화면에 순서 안내와 `파일 고르기` / `샘플 지형으로 해보기`(서버에 샘플이 있을 때). 파일은 화면 아무 곳에나 끌어다 놓아도 되고, 확장자에 맞는 입력 방식으로 자동 전환. 예측 중에는 지도 가운데에 표시 |
 | 입력 확인 창 | 학습 형식이 아닌 색 체계(회색조·무지개 등)라 서버가 높이로 읽어 변환했을 때: 원본 / 읽은 결과 / 예측 미리보기와 "높은 곳을 맞게 읽었나요?"(맞아요·반대예요, 색 체계 직접 선택). 바꾸면 그 자리에서 다시 예측 |
 | 오류 안내 창 | 지형도·스캔 도면처럼 색이 높이가 아닌 이미지(서버 422 + `code: "unreadable_image"`): 이유와 다음 행동(DEM 올리기 · 높이를 색으로 칠한 이미지 · 샘플로 해보기) |
 

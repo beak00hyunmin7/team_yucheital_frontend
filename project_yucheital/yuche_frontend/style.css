@@ -1221,7 +1221,7 @@ body:not(.dark) .marker-label b { color: #b42328; }
   border: 1px solid var(--glass-border);
   border-radius: 12px;
 }
-.stage-toggle { left: 452px; display: flex; gap: 2px; padding: 4px; }
+.stage-toggle { left: 0; bottom: calc(100% + 10px); display: flex; gap: 2px; padding: 4px; }   /* 시간 슬라이더(.timeline) 기준 */
 .stage-toggle button {
   min-height: 36px;
   padding: 0 14px;
@@ -1637,6 +1637,107 @@ body:not(.dark) .unr-badge { color: #8a5200; }
 .page { max-width: none; padding: 24px 32px 40px 112px; }
 .page > * { width: 100%; max-width: 1120px; margin-left: auto; margin-right: auto; }
 
+/* --- 패널 드래그 이동: 원래 자리에서 옮긴 만큼(--dx/--dy)만 이동 --- */
+.movable { transform: translate(var(--dx, 0px), var(--dy, 0px)); }
+.stage img { -webkit-user-drag: none; }   /* 그림을 끌어도 파일 끌기가 시작되지 않게 */
+.movable.moving { z-index: 6; box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45); }
+.drag-handle { cursor: grab; touch-action: none; user-select: none; }
+.moving .drag-handle,
+.drag-handle.moving { cursor: grabbing; }
+.grip {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  width: 20px;
+  min-height: 44px;
+  color: var(--muted);
+  border-radius: 8px;
+  opacity: 0.55;
+}
+.grip:hover { opacity: 1; background-color: var(--subtle-bg); }
+.chips > .grip { background: var(--glass); border: 1px solid var(--glass-border); border-radius: 12px; opacity: 0.9; }
+.timeline > .grip { margin-left: -8px; }
+#layout-reset:disabled { opacity: 0.3; cursor: default; }
+#layout-reset:disabled:hover { background-color: transparent; color: var(--muted); }
+
+/* --- 빈 화면(빠른 시작) · 예측 중 · 파일 놓기 --- */
+.stage-empty { max-width: 460px; padding: 32px 36px; border-style: solid; border-color: var(--glass-border); }
+.stage-empty .viewer-empty-icon { color: var(--accent); opacity: 1; }
+.stage-empty .viewer-empty-title { font-size: 17px; font-weight: 700; color: var(--text); }
+.empty-steps { display: flex; flex-direction: column; gap: 8px; margin: 10px 0 4px; padding: 0; list-style: none; text-align: left; }
+.empty-steps li { display: flex; align-items: center; gap: 10px; color: var(--label); }
+.empty-steps b {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  font-size: 12px;
+  color: var(--accent);
+  background-color: var(--accent-soft);
+  border-radius: 50%;
+}
+.empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 12px 0 4px; }
+.empty-actions .btn { min-height: 44px; padding: 0 18px; font-size: 14px; border-radius: 12px; }
+
+.stage-loading {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  align-items: center;
+  gap: 12px;
+  padding: 14px 22px;
+  font-weight: 700;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+}
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid var(--accent-soft);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.stage-drop {
+  position: absolute;
+  z-index: 20;
+  inset: 12px 12px 12px 92px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent);
+  pointer-events: none;
+  background: rgba(var(--scrim), 0.72);
+  border: 3px dashed var(--accent);
+  border-radius: 22px;
+}
+.stage.file-over .stage-drop { display: flex; }
+
+/* --- 다듬기: 떠 있는 요소가 부드럽게 나타나고, 키보드 초점이 또렷하게 보인다 --- */
+@keyframes float-in { from { opacity: 0; } to { opacity: 1; } }
+.panel, .panel-pill, .drawer, .timeline, .chip, .chip-btn, .stage-toggle, .stage-zoom { animation: float-in 0.18s ease-out; }
+.chip-btn, .rain-presets button, .drawer-item, .stage-toggle button, .stage-zoom button, .btn-theme, #rail .view-tab, .tl-play {
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+.tl-play:hover:not(:disabled), .panel .run-bar .btn-primary:hover:not(:disabled) { filter: brightness(1.08); }
+:is(button, a, input, select, summary, [tabindex]):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .panel, .panel-pill, .drawer, .timeline, .chip, .chip-btn, .stage-toggle, .stage-zoom { animation: none; }
+  .spinner { animation-duration: 2.4s; }
+}
+
 /* --- 모바일: 레일은 위쪽 가로 바, 지도 → 칩 → 시간 슬라이더 → 조건 패널 → 기록 순으로 쌓는다 --- */
 @media (max-width: 1000px) {
   #rail {
@@ -1667,16 +1768,18 @@ body:not(.dark) .unr-badge { color: #8a5200; }
   .stage { display: flex; flex-direction: column; height: auto; min-height: 0; overflow: visible; }
   .stage-map { position: relative; inset: auto; order: 1; width: 100%; max-height: 82vh; aspect-ratio: 1 / 1; }
   .stage-empty { margin: 16px; }
-  .stage-toggle { top: 12px; bottom: auto; left: 12px; }
   .stage-fit { display: none !important; }   /* 정사각이라 채우기와 전체 보기가 같다 */
   .stage-zoom { right: 12px; bottom: 12px; }
   .chips { position: static; order: 2; justify-content: flex-start; max-width: none; padding: 10px 12px 0; }
-  .timeline { position: static; order: 3; max-width: none; margin: 10px 12px 0; }
+  .timeline { position: relative; left: auto; right: auto; bottom: auto; order: 3; max-width: none; margin: 64px 12px 0; }   /* 위 64px = 지도/시간 변화 전환 자리 */
   .tl-legend { display: none; }
   .panel,
   .panel-pill { position: static; order: 4; width: auto; max-height: none; margin: 12px; }
   .drawer { position: static; order: 5; width: auto; max-height: none; margin: 0 12px 16px; }
   .chk-flow .chk-arrow { display: none; }
+  .movable { transform: none !important; }   /* 세로로 쌓이는 화면에서는 옮긴 위치를 쓰지 않는다 */
+  .grip, #layout-reset { display: none; }
+  .stage-drop { inset: 8px; }
   .page { padding: 16px; }
   .page > * { max-width: none; }
 }
