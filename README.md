@@ -21,9 +21,12 @@ git clone https://github.com/beak00hyunmin7/team_yucheital_frontend.git
 서버 PC 에서 AI 서버(8000, `run_windows.bat` 이 `0.0.0.0` 으로 엶)와 화면을 같이 열어 줍니다.
 
 ```powershell
-cd project_yucheital\yuche_frontend
-python -m http.server 8080 --bind 0.0.0.0
+python project_yucheital\dev_server\static_server.py 8080 0.0.0.0
 ```
+
+`python -m http.server` 로도 열리지만, 캐시 헤더가 없어 브라우저가 예전 `style.css` 를 계속 쓰는 일이 생깁니다
+(화면을 고쳤는데 새 손잡이·스타일이 안 보임). `static_server.py` 는 `Cache-Control: no-cache` 를 붙여 매번 바뀌었는지 확인하게 합니다.
+`style.css` 를 고치면 `vtkjs.html` 의 `style.css?v=` 값도 올려 주세요.
 
 다른 기기에서는 `http://서버PC의IP:8080/vtkjs.html` 만 열면 됩니다 (API 주소는 자동으로 `서버PC의IP:8000`).
 서버 PC 의 IP 는 `ipconfig` 의 IPv4 주소입니다. 접속이 안 되면 Windows 방화벽에서 8000·8080 포트(또는 python.exe)의 인바운드 허용을 확인하세요.

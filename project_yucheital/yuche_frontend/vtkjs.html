@@ -6,7 +6,8 @@
     <title>유체이탈 · 배수 예측</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap">
-    <link rel="stylesheet" href="./style.css">
+    <!-- ?v= 는 style.css 를 고칠 때 올린다: 브라우저가 예전 CSS 를 계속 쓰지 않게 -->
+    <link rel="stylesheet" href="./style.css?v=20261112b">
 </head>
 <body>
     <!-- 첫 화면: 프로젝트 로고. 잠깐 보여 준 뒤(또는 누르면 바로) 본 화면으로 넘어간다 -->
@@ -476,7 +477,7 @@
            - 상태 : GET  /api/health
            - 기록 : GET/POST/DELETE /api/history, PATCH/DELETE /api/history/{id}  (로그인 토큰 필요)
            서버 주소 기본값은 이 화면을 어떻게 열었느냐로 정한다.
-             - http://호스트:8080  (화면만 여는 정적 서버, 예: python -m http.server 8080 --bind 0.0.0.0)
+             - http://호스트:8080  (화면만 여는 정적 서버, 예: python dev_server/static_server.py 8080 0.0.0.0)
                                    -> 같은 호스트의 8000번 포트. 같은 공유기의 다른 PC·폰은 주소만 치면 된다
              - 그 밖의 http(s) 주소 (공개 링크·테스트 서버처럼 화면과 /api 를 한 주소에서 내줄 때)
                                    -> 이 화면과 같은 주소(origin)

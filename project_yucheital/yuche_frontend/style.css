@@ -1672,10 +1672,10 @@ body:not(.dark) .unr-badge { color: #8a5200; }
 .timeline > .grip { margin-left: -8px; }
 /* --- 패널 크기 조절 손잡이: 가장자리(띠)와 아래 모서리 --- */
 .rz { position: absolute; z-index: 2; touch-action: none; }
-.rz-e, .rz-w { top: 16px; bottom: 16px; width: 8px; cursor: ew-resize; }
+.rz-e, .rz-w { top: 16px; bottom: 16px; width: 10px; cursor: ew-resize; }
 .rz-e { right: 0; }
 .rz-w { left: 0; }
-.rz-s { left: 18px; right: 18px; bottom: 0; height: 8px; cursor: ns-resize; }
+.rz-s { left: 18px; right: 18px; bottom: 0; height: 10px; cursor: ns-resize; }
 .rz-se, .rz-sw { bottom: 0; width: 18px; height: 18px; }
 .rz-se { right: 0; cursor: nwse-resize; }
 .rz-sw { left: 0; cursor: nesw-resize; }
@@ -1684,7 +1684,9 @@ body:not(.dark) .unr-badge { color: #8a5200; }
 .rz-e::after { right: 2px; }
 .rz-w::after { left: 2px; }
 .rz-s::after { left: 50%; bottom: 2px; width: 36px; height: 3px; transform: translateX(-50%); }
-.rz:hover::after, .rz.active::after { opacity: 0.85; }
+/* 패널에 마우스를 올리면 잡을 수 있는 가장자리가 옅게 보이고, 가장자리 위에서는 진해진다 */
+:is(.panel, .drawer, .timeline):hover > :is(.rz-e, .rz-w, .rz-s)::after { opacity: 0.35; }
+.rz:hover::after, .rz.active::after, :is(.panel, .drawer, .timeline):hover > .rz:hover::after { opacity: 0.9; }
 /* 모서리는 항상 옅게 보이는 'ㄴ'자 표시 */
 .rz-se::after, .rz-sw::after { bottom: 5px; width: 8px; height: 8px; background: none; border-bottom: 2px solid var(--muted); border-radius: 0; opacity: 0.55; }
 .rz-se::after { right: 5px; border-right: 2px solid var(--muted); }
