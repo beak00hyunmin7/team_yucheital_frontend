@@ -1670,6 +1670,31 @@ body:not(.dark) .unr-badge { color: #8a5200; }
 .grip:hover { opacity: 1; background-color: var(--subtle-bg); }
 .chips > .grip { background: var(--glass); border: 1px solid var(--glass-border); border-radius: 12px; opacity: 0.9; }
 .timeline > .grip { margin-left: -8px; }
+/* --- 패널 크기 조절 손잡이: 가장자리(띠)와 아래 모서리 --- */
+.rz { position: absolute; z-index: 2; touch-action: none; }
+.rz-e, .rz-w { top: 16px; bottom: 16px; width: 10px; cursor: ew-resize; }
+.rz-e { right: 0; }
+.rz-w { left: 0; }
+.rz-s { left: 18px; right: 18px; bottom: 0; height: 10px; cursor: ns-resize; }
+.rz-se, .rz-sw { bottom: 0; width: 18px; height: 18px; }
+.rz-se { right: 0; cursor: nwse-resize; }
+.rz-sw { left: 0; cursor: nesw-resize; }
+.rz::after { content: ""; position: absolute; background: var(--accent); border-radius: 2px; opacity: 0; transition: opacity 0.15s; }
+.rz-e::after, .rz-w::after { top: 50%; width: 3px; height: 36px; transform: translateY(-50%); }
+.rz-e::after { right: 2px; }
+.rz-w::after { left: 2px; }
+.rz-s::after { left: 50%; bottom: 2px; width: 36px; height: 3px; transform: translateX(-50%); }
+/* 패널에 마우스를 올리면 잡을 수 있는 가장자리가 옅게 보이고, 가장자리 위에서는 진해진다 */
+:is(.panel, .drawer, .timeline):hover > :is(.rz-e, .rz-w, .rz-s)::after { opacity: 0.35; }
+.rz:hover::after, .rz.active::after, :is(.panel, .drawer, .timeline):hover > .rz:hover::after { opacity: 0.9; }
+/* 모서리는 항상 옅게 보이는 'ㄴ'자 표시 */
+.rz-se::after, .rz-sw::after { bottom: 5px; width: 8px; height: 8px; background: none; border-bottom: 2px solid var(--muted); border-radius: 0; opacity: 0.55; }
+.rz-se::after { right: 5px; border-right: 2px solid var(--muted); }
+.rz-sw::after { left: 5px; border-left: 2px solid var(--muted); }
+.rz-se:hover::after, .rz-sw:hover::after, .rz-se.active::after, .rz-sw.active::after { border-color: var(--accent); opacity: 1; }
+.resizing { user-select: none; }
+.timeline .rz-e, .timeline .rz-w { top: 10px; bottom: 10px; }
+
 #layout-reset:disabled { opacity: 0.3; cursor: default; }
 #layout-reset:disabled:hover { background-color: transparent; color: var(--muted); }
 
@@ -1789,7 +1814,8 @@ body:not(.dark) .unr-badge { color: #8a5200; }
   .drawer { position: static; order: 5; width: auto; max-height: none; margin: 0 12px 16px; }
   .chk-flow .chk-arrow { display: none; }
   .movable { transform: none !important; }   /* 세로로 쌓이는 화면에서는 옮긴 위치를 쓰지 않는다 */
-  .grip, #layout-reset { display: none; }
+  .grip, #layout-reset, .rz { display: none; }
+  .resized { width: auto !important; height: auto !important; max-width: none !important; max-height: none !important; }   /* 조절한 크기도 쓰지 않는다 */
   .stage-drop { inset: 8px; }
   .page { padding: 16px; }
   .page > * { max-width: none; }
