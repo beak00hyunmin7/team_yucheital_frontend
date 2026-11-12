@@ -50,7 +50,7 @@
         </a>
         <div class="rail-spacer"></div>
         <span class="model-status" id="model-status" role="status" aria-live="polite">모델 서버 확인 중…</span>
-        <button class="btn-theme" id="layout-reset" aria-label="패널 위치 초기화" title="패널 위치 초기화 (패널은 손잡이를 끌어 옮길 수 있어요)" disabled>
+        <button class="btn-theme" id="layout-reset" aria-label="패널 위치·크기 초기화" title="패널 위치·크기 초기화 (손잡이를 끌면 옮기고, 가장자리를 끌면 크기가 바뀌어요)" disabled>
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="7" height="7" rx="1.5"/><rect x="14" y="4" width="7" height="7" rx="1.5"/><rect x="3" y="15" width="7" height="5" rx="1.5"/><path d="M14 17.5h7M18 14.5l3 3-3 3"/></svg>
         </button>
         <button class="btn-theme" id="theme-btn" onclick="toggleTheme()" aria-label="테마 전환" aria-pressed="true">
@@ -199,9 +199,9 @@
                     <div class="panel-row" id="time-row">
                         <div class="panel-row-head">
                             <label class="field-label" for="timeS">경과 시간</label>
-                            <span class="num-input"><input type="number" id="timeS" value="18" min="0" max="120" step="1"> 초</span>
+                            <span class="num-input"><input type="number" id="timeS" value="0" min="0" max="120" step="1"> 초</span>
                         </div>
-                        <input type="range" id="timeRange" min="0" max="120" step="1" value="18" aria-label="경과 시간 슬라이더">
+                        <input type="range" id="timeRange" min="0" max="120" step="1" value="0" aria-label="경과 시간 슬라이더">
                         <p class="field-error" id="err-timeS"></p>
                         <p class="form-hint" id="time-hint"></p>
                     </div>
@@ -1173,7 +1173,8 @@
                 const time = document.getElementById('timeS');
                 time.min = modelInfo.timeRange[0];
                 time.max = modelInfo.timeRange[1];
-                if (h.default_time_s != null) time.value = h.default_time_s;
+                // 입력칸 처음 값은 0초(강우 시작 직후). 서버의 default_time_s(18초)는 time_s 를 안 보낸 요청용이라 여기선 쓰지 않는다
+                time.value = Math.min(Math.max(0, modelInfo.timeRange[0]), modelInfo.timeRange[1]);
                 syncSliderBounds('timeRange', 'timeS');
                 document.getElementById('time-row').style.display = modelInfo.timeConditioned ? 'block' : 'none';
 
@@ -2432,10 +2433,11 @@
         let layout = {};
         try { layout = JSON.parse(localStorage.getItem(LAYOUT_KEY) || '{}') || {}; } catch (e) { layout = {}; }
         const movables = [];           // { key, els: [element...] }
+        const resizables = [];         // { key, el, minW, minH } — 아래 '패널 크기 조절'
 
         function saveLayout() {
             try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(layout)); } catch (e) { /* 저장 못 해도 동작에는 문제 없음 */ }
-            byId('layout-reset').disabled = !Object.values(layout).some(o => o && (o.dx || o.dy));
+            byId('layout-reset').disabled = !Object.values(layout).some(o => o && (o.dx || o.dy || o.w || o.h));
         }
 
         function applyOffset(m) {
@@ -2467,6 +2469,7 @@
 
         function clampAllMovables() {
             if (matchMedia(MOBILE_QUERY).matches) return;
+            resizables.forEach(clampSize);   // 크기 먼저 줄이고 위치를 가둔다
             movables.forEach(clampOffset);
         }
 
@@ -2548,11 +2551,130 @@
         makeMovable('drawer', [byId('drawer')], [document.querySelector('#drawer .drawer-head')]);
         makeMovable('timeline', [byId('timelapse')], [addGrip(byId('timelapse'), '시간 슬라이더')]);
 
+        /* ---------- 패널 크기 조절 ----------
+           조건 패널 · 기록 서랍 · 시간 슬라이더의 가장자리나 모서리를 끌어 크기를 바꾼다.
+           - 끄는 쪽의 반대편 가장자리는 제자리에 둔다 (오른쪽·가운데 기준으로 놓인 패널도 같은 느낌으로)
+           - 크기는 위치와 함께 저장된다: layout['size:키'] = { w, h } (0 = 원래 크기)
+           - 가장자리를 더블클릭하면 그 패널 크기만, 레일의 초기화 버튼은 위치·크기 전부 원래대로
+           - 모바일(세로 쌓기)에서는 쓰지 않는다 */
+        const sizeKey = key => 'size:' + key;
+        const clampNum = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+        // 패널이 머물 수 있는 영역 (레일 밑과 화면 가장자리 여백은 뺀다)
+        function stageBox() {
+            const s = byId('view-predict').getBoundingClientRect();
+            return { left: s.left + RAIL_SPACE + STAGE_PAD, right: s.right - STAGE_PAD, top: s.top + STAGE_PAD, bottom: s.bottom - STAGE_PAD };
+        }
+
+        function applySize(r) {
+            const s = layout[sizeKey(r.key)] || {};
+            r.el.style.width = s.w ? s.w + 'px' : '';
+            r.el.style.maxWidth = s.w ? 'none' : '';
+            r.el.style.height = s.h ? s.h + 'px' : '';
+            r.el.style.maxHeight = s.h ? 'none' : '';
+            r.el.classList.toggle('resized', !!(s.w || s.h));
+        }
+
+        // 창이 작아져 패널이 화면보다 커지면 화면에 맞게 줄인다
+        function clampSize(r) {
+            const s = layout[sizeKey(r.key)];
+            if (!s || r.el.offsetParent === null) return;
+            const b = stageBox();
+            const w = s.w ? Math.min(s.w, Math.max(r.minW, b.right - b.left)) : 0;
+            const h = s.h ? Math.min(s.h, Math.max(r.minH, b.bottom - b.top)) : 0;
+            if (w !== (s.w || 0) || h !== (s.h || 0)) {
+                layout[sizeKey(r.key)] = { w, h };
+                applySize(r);
+            }
+        }
+
+        // edges: 'e'(오른쪽) 'w'(왼쪽) 's'(아래) 'se' 'sw'(아래 모서리)
+        function makeResizable(key, el, edges, minW, minH) {
+            const r = { key, el, minW, minH };
+            resizables.push(r);
+            applySize(r);
+            const m = movables.find(x => x.key === key);
+            const handles = edges.map(edge => {
+                const h = document.createElement('span');
+                h.className = 'rz rz-' + edge;
+                h.title = '끌어서 크기 조절 · 더블클릭하면 원래 크기';
+                h.setAttribute('aria-hidden', 'true');
+                el.appendChild(h);
+                let start = null;
+
+                h.addEventListener('pointerdown', (e) => {
+                    if (matchMedia(MOBILE_QUERY).matches) return;
+                    if (e.pointerType === 'mouse' && e.button !== 0) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    start = { x: e.clientX, y: e.clientY, rect: el.getBoundingClientRect(), id: e.pointerId };
+                    h.setPointerCapture(e.pointerId);
+                    el.classList.add('resizing');
+                    h.classList.add('active');
+                });
+
+                h.addEventListener('pointermove', (e) => {
+                    if (!start || e.pointerId !== start.id) return;
+                    const R = start.rect, b = stageBox();
+                    const mx = e.clientX - start.x, my = e.clientY - start.y;
+                    const cur = layout[sizeKey(key)] || {};
+                    let w = cur.w || 0, hh = cur.h || 0;
+                    if (edge.includes('e')) w = clampNum(R.width + mx, minW, b.right - R.left);
+                    if (edge.includes('w')) w = clampNum(R.width - mx, minW, R.right - b.left);
+                    if (edge.includes('s')) hh = clampNum(R.height + my, minH, b.bottom - R.top);
+                    layout[sizeKey(key)] = { w: Math.round(w), h: Math.round(hh) };
+                    applySize(r);
+                    // 크기가 바뀌면서 움직인 만큼 위치를 되돌려, 끄는 쪽의 반대편 가장자리를 붙잡아 둔다
+                    if (m) {
+                        const now = el.getBoundingClientRect();
+                        const ddx = edge.includes('w') ? R.right - now.right : R.left - now.left;
+                        const ddy = R.top - now.top;
+                        if (Math.abs(ddx) > 0.5 || Math.abs(ddy) > 0.5) {
+                            const o = layout[key] || { dx: 0, dy: 0 };
+                            layout[key] = { dx: o.dx + ddx, dy: o.dy + ddy };
+                            applyOffset(m);
+                        }
+                    }
+                });
+
+                const end = (e) => {
+                    if (!start || e.pointerId !== start.id) return;
+                    start = null;
+                    el.classList.remove('resizing');
+                    h.classList.remove('active');
+                    if (m) clampOffset(m);
+                    saveLayout();
+                };
+                h.addEventListener('pointerup', end);
+                h.addEventListener('pointercancel', end);
+                h.addEventListener('click', (e) => e.stopPropagation());
+
+                h.addEventListener('dblclick', (e) => {
+                    e.stopPropagation();
+                    delete layout[sizeKey(key)];
+                    applySize(r);
+                    if (m) clampOffset(m);
+                    saveLayout();
+                });
+                return h;
+            });
+
+            // 내용이 스크롤되는 패널(조건 · 서랍)에서도 손잡이가 보이는 테두리에 붙어 있게
+            el.addEventListener('scroll', () => {
+                handles.forEach(h => { h.style.transform = el.scrollTop ? `translateY(${el.scrollTop}px)` : ''; });
+            }, { passive: true });
+        }
+
+        makeResizable('panel', byId('cond-panel'), ['e', 's', 'se'], 280, 180);
+        makeResizable('drawer', byId('drawer'), ['w', 's', 'sw'], 240, 140);
+        makeResizable('timeline', byId('timelapse'), ['w', 'e'], 380, 0);
+
         byId('layout-reset').addEventListener('click', () => {
             layout = {};
+            resizables.forEach(applySize);
             movables.forEach(applyOffset);
             saveLayout();
-            showToast('패널을 원래 자리로 돌렸어요.');
+            showToast('패널을 원래 자리와 크기로 돌렸어요.');
         });
         window.addEventListener('resize', clampAllMovables);
         saveLayout();   // 초기화 버튼 활성 상태 맞추기
