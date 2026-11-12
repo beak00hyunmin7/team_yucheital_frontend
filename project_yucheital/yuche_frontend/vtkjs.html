@@ -691,37 +691,85 @@
                 gl.skirt = new THREE.Mesh(sg, new THREE.MeshLambertMaterial({ color: 0x3a444f, side: THREE.DoubleSide }));
                 group.add(gl.skirt);
 
-                // 물 면: 지형과 같은 격자, 수심만큼 살짝 들어 올리고 깊을수록 진하게
+                // 물 면: 지형과 같은 격자, 수심만큼 살짝 들어 올린다.
+                // 질감(초안 D '흐르는 물결'): 지형 경사를 따라 물결 무늬가 흘러가고, 얕은 곳 바닥엔 빛무늬가 일렁인다.
+                //   aFlow = 내리막 방향(무늬 좌표 uv 기준, 가파른 곳 90% 값으로 정규화한 길이 0..1)
+                const flow = new Float32Array(n * n * 2);
+                for (let i = 0; i < n * n; i++) {
+                    let u = -S.gx[i] / S.gRef, v = S.gz[i] / S.gRef;   // uv 의 v 는 z 와 반대 방향
+                    const l = Math.hypot(u, v);
+                    if (l > 1) { u /= l; v /= l; }
+                    flow[i * 2] = u; flow[i * 2 + 1] = v;
+                }
                 const wg = new THREE.BufferGeometry();
                 wg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * n * 3), 3));
+                wg.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
                 wg.setAttribute('aDepth', new THREE.BufferAttribute(new Float32Array(n * n), 1));
+                wg.setAttribute('aFlow', new THREE.BufferAttribute(flow, 2));
                 wg.setIndex(new THREE.BufferAttribute(index, 1));
                 gl.waterMat = new THREE.ShaderMaterial({
                     transparent: true, depthWrite: false, side: THREE.DoubleSide,
-                    uniforms: { uTime: { value: 0 }, uLift: { value: WATER_LIFT }, uA0: { value: 0.1 }, uA1: { value: 0.4 } },
+                    uniforms: {
+                        uTime: { value: 0 }, uLift: { value: WATER_LIFT }, uA0: { value: 0.1 }, uA1: { value: 0.4 },
+                        uSun: { value: new THREE.Vector3(-0.7, 1.1, 0.5).normalize() },   // 장면의 해(DirectionalLight)와 같은 방향
+                    },
                     vertexShader: `
                         attribute float aDepth;
+                        attribute vec2 aFlow;
                         uniform float uLift;
                         varying float vD;
-                        varying vec3 vP;
+                        varying vec3 vW;
+                        varying vec2 vFlow;
+                        varying vec2 vUv;
                         void main() {
-                            vD = aDepth;
+                            vD = aDepth; vFlow = aFlow; vUv = uv;
                             vec3 p = position;
                             p.y += 0.0012 + aDepth * uLift;
-                            vP = p;
-                            gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+                            vec4 w = modelMatrix * vec4(p, 1.0);
+                            vW = w.xyz;
+                            gl_Position = projectionMatrix * viewMatrix * w;
                         }`,
                     fragmentShader: `
                         uniform float uTime, uA0, uA1;
+                        uniform vec3 uSun;
                         varying float vD;
-                        varying vec3 vP;
+                        varying vec3 vW;
+                        varying vec2 vFlow;
+                        varying vec2 vUv;
+                        float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+                        float noise(vec2 p) {
+                            vec2 i = floor(p), f = fract(p), u = f * f * (3.0 - 2.0 * f);
+                            return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
+                        }
+                        float fbm(vec2 p) { float s = 0.0, a = 0.5; for (int k = 0; k < 4; k++) { s += a * noise(p); p *= 2.03; a *= 0.5; } return s; }
+                        // 물 면의 기본 법선(화면 미분) -> 무늬 높이 fbm(q) 의 기울기로 흔든다
+                        vec3 faceNormal() { vec3 n = normalize(cross(dFdx(vW), dFdy(vW))); return n.y < 0.0 ? -n : n; }
+                        vec3 bump(vec3 n, vec2 q) {
+                            float e = 0.35, h0 = fbm(q), hx = fbm(q + vec2(e, 0.0)), hz = fbm(q + vec2(0.0, e));
+                            return normalize(n + vec3(h0 - hx, 0.0, h0 - hz) * 1.1);
+                        }
                         void main() {
-                            float a = smoothstep(uA0, uA1, vD);
-                            if (a < 0.01) discard;
-                            vec3 col = mix(vec3(0.42, 0.78, 1.0), vec3(0.04, 0.2, 0.78), smoothstep(0.08, 0.85, vD));
-                            float w = sin(vP.x * 95.0 + uTime * 1.9) * sin(vP.z * 80.0 - uTime * 1.4);
-                            col += 0.06 * w;
-                            gl_FragColor = vec4(col, a * (0.62 + 0.26 * smoothstep(0.1, 0.8, vD)));
+                            float a0 = smoothstep(uA0, uA1, vD);
+                            if (a0 < 0.01) discard;
+                            // 흐름 지도: 반 주기 어긋난 두 무늬를 번갈아 섞어서, 끊기지 않고 경사 방향으로 계속 흘러가게 한다
+                            float t = uTime * 0.32;
+                            float p0 = fract(t), p1 = fract(t + 0.5);
+                            float w0 = 1.0 - abs(2.0 * p0 - 1.0);
+                            vec2 f = vFlow * 2.6;
+                            vec2 q0 = vUv * 36.0 - f * p0, q1 = vUv * 36.0 - f * p1 + 7.3;
+                            vec3 nb = faceNormal();
+                            vec3 n = normalize(mix(bump(nb, q1), bump(nb, q0), w0));
+                            // 얕은 곳 바닥의 빛무늬(커스틱)
+                            float cz = mix(fbm(q1 * 0.6), fbm(q0 * 0.6), w0);
+                            float caustic = pow(1.0 - abs(sin(cz * 22.0 + uTime * 0.6)), 7.0);
+                            vec3 V = normalize(cameraPosition - vW), L = normalize(uSun);
+                            float dep = smoothstep(0.0, 0.8, vD);
+                            vec3 col = mix(vec3(0.20, 0.66, 0.80), vec3(0.03, 0.24, 0.50), dep);
+                            col += caustic * vec3(0.65, 0.92, 1.0) * 0.38 * (1.0 - smoothstep(0.25, 0.85, vD));
+                            float fres = pow(1.0 - max(dot(n, V), 0.0), 3.0);
+                            col = mix(col, vec3(0.80, 0.92, 1.0), fres * 0.45);
+                            col += pow(max(dot(reflect(-L, n), V), 0.0), 70.0) * 1.1;
+                            gl_FragColor = vec4(col, a0 * (0.58 + 0.3 * dep + fres * 0.2));
                         }`,
                 });
                 gl.water = new THREE.Mesh(wg, gl.waterMat);
