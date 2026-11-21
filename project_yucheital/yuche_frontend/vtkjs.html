@@ -6,8 +6,7 @@
     <title>유체이탈 · 배수 예측</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap">
-    <!-- ?v= 는 style.css 를 고칠 때 올린다: 브라우저가 예전 CSS 를 계속 쓰지 않게 -->
-    <link rel="stylesheet" href="./style.css?v=20261121a">
+    <link rel="stylesheet" href="./style.css">
 </head>
 <body>
     <!-- 첫 화면: 프로젝트 로고. 잠깐 보여 준 뒤(또는 누르면 바로) 본 화면으로 넘어간다 -->
@@ -280,9 +279,9 @@
                     <div class="panel-row" id="time-row">
                         <div class="panel-row-head">
                             <label class="field-label" for="timeS">경과 시간</label>
-                            <span class="num-input"><input type="number" id="timeS" value="0" min="0" max="120" step="1"> 초</span>
+                            <span class="num-input"><input type="number" id="timeS" value="18" min="0" max="120" step="1"> 초</span>
                         </div>
-                        <input type="range" id="timeRange" min="0" max="120" step="1" value="0" aria-label="경과 시간 슬라이더">
+                        <input type="range" id="timeRange" min="0" max="120" step="1" value="18" aria-label="경과 시간 슬라이더">
                         <p class="field-error" id="err-timeS"></p>
                         <p class="form-hint" id="time-hint"></p>
                     </div>
@@ -1116,7 +1115,7 @@
            - 상태 : GET  /api/health
            - 기록 : GET/POST/DELETE /api/history, PATCH/DELETE /api/history/{id}  (로그인 토큰 필요)
            서버 주소 기본값은 이 화면을 어떻게 열었느냐로 정한다.
-             - http://호스트:8080  (화면만 여는 정적 서버, 예: python dev_server/static_server.py 8080 0.0.0.0)
+             - http://호스트:8080  (화면만 여는 정적 서버, 예: python -m http.server 8080 --bind 0.0.0.0)
                                    -> 같은 호스트의 8000번 포트. 같은 공유기의 다른 PC·폰은 주소만 치면 된다
              - 그 밖의 http(s) 주소 (공개 링크·테스트 서버처럼 화면과 /api 를 한 주소에서 내줄 때)
                                    -> 이 화면과 같은 주소(origin)
@@ -1931,8 +1930,7 @@
                 const time = document.getElementById('timeS');
                 time.min = modelInfo.timeRange[0];
                 time.max = modelInfo.timeRange[1];
-                // 입력칸 처음 값은 0초(강우 시작 직후). 서버의 default_time_s(18초)는 time_s 를 안 보낸 요청용이라 여기선 쓰지 않는다
-                time.value = Math.min(Math.max(0, modelInfo.timeRange[0]), modelInfo.timeRange[1]);
+                if (h.default_time_s != null) time.value = h.default_time_s;
                 syncSliderBounds('timeRange', 'timeS');
                 document.getElementById('time-row').style.display = modelInfo.timeConditioned ? 'block' : 'none';
 
@@ -3663,7 +3661,6 @@
         if (layout.panel) { delete layout.panel; saveLayout(); }
         makeMovable('timeline', [byId('timelapse')], [addGrabBar(byId('timelapse'), '시간 슬라이더')]);
         makeMovable('tools3d', [byId('v3d-tools')], [addGrabBar(byId('v3d-tools'), '3D 도구')]);
-
 
         byId('layout-reset').addEventListener('click', () => {
             layout = {};
