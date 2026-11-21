@@ -5,7 +5,7 @@
   --panel: #ffffff;
   --border: #d5dbe3;
   --border-light: #e7ebf0;
-  --muted: #7a8594;
+  --muted: #5f6b7a;   /* 흰 배경 대비 4.5:1 이상 (예전 #7a8594 는 약 3.9:1) */
   --label: #4a5563;
   --input-bg: #f7f9fb;
   --shadow: rgba(16, 24, 40, 0.06);
@@ -821,9 +821,26 @@ input:disabled {
 }
 
 .name-cell {
-  min-width: 180px;
+  min-width: 220px;
   white-space: nowrap;
 }
+/* 기록 썸네일 (같은 이름이 여러 개여도 그림으로 구분) */
+.record-thumb {
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+  margin-right: 10px;
+  vertical-align: middle;
+  object-fit: cover;
+  background-color: var(--subtle-bg);
+  border-radius: 8px;
+}
+.name-cell .chip-badge { margin-left: 6px; }
+/* 지금 지도에 떠 있는 결과 */
+.history-row.current { background-color: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+.now-tag { margin-left: 6px; font-size: 11px; font-weight: 600; color: var(--accent); }
+.head-count { margin-left: 4px; font-size: 15px; font-weight: 500; color: var(--muted); }
+.head-count:empty { display: none; }
 
 .record-name {
   font-weight: 600;
@@ -1074,16 +1091,20 @@ input:disabled {
    조건 패널(왼쪽) · 요약 칩 + 기록 서랍(오른쪽) · 시간 슬라이더(아래)가 떠 있다.
    1000px 이하(모바일)는 레일이 상단바가 되고 지도 → 칩 → 시간 → 조건 → 기록 순으로 쌓는다. */
 :root {
+  --panel-w: 340px;   /* 조건 패널 열 폭 (결과 이미지 버튼·범례도 같은 폭) */
+  --panel-z: 1;       /* 설정 '패널 크기'(50~150%). 패널 열을 transform: scale 로 키우고 줄인다 */
   --glass: rgba(255, 255, 255, 0.94);
   --glass-border: rgba(16, 24, 40, 0.12);
   --scrim: 243, 245, 248;
   --on-accent: #ffffff;
+  --warn: #b26a00;   /* '조건 변경됨' 같은 주의 표시 */
 }
 body.dark {
   --glass: rgba(13, 18, 24, 0.9);
   --glass-border: rgba(255, 255, 255, 0.12);
   --scrim: 13, 18, 24;
   --on-accent: #06202e;
+  --warn: #f5b84d;
 }
 
 .stage {
@@ -1102,30 +1123,35 @@ body.dark {
   justify-content: center;
   overflow: hidden;
   container-type: size;
-  cursor: grab;
+  cursor: default;
   user-select: none;
   touch-action: pan-y;   /* 세로 스크롤은 페이지에 넘기고, 가로 드래그·핀치는 지도가 받는다 */
 }
 .stage-map.zoomed { touch-action: none; }   /* 확대한 뒤에는 손가락 이동이 곧 지도 이동 */
+.stage-map.pannable { cursor: grab; }   /* 확대해서 끌 수 있을 때만 */
 .stage-map.dragging { cursor: grabbing; }
 .stage-map .stage-empty { cursor: default; }
 
 /* 지도(정사각)를 화면의 긴 변에 맞춰 꽉 채운다. 짧은 변 쪽은 가운데를 기준으로 잘린다 */
 .stage-square {
-  --side: max(100cqw, 100cqh);
+  /* 안전 영역(패널이 안 가리는 곳)의 긴 변에 맞춰 채운다. 패널 밑에는 흐린 배경(.stage-bg)만 깔린다 */
+  --side: max(1px, max(100cqw - var(--safe-l, 0px) - var(--safe-r, 0px), 100cqh - var(--safe-t, 0px) - var(--safe-b, 0px)));
   position: relative;
   flex: none;
   width: var(--side);
   height: var(--side);
   background: #fff;
   /* 보이는 창을 --cx/--cy(0~1, 지도 좌표)가 가운데 오도록 옮긴다. JS 가 배수구 후보에 맞춰 정한다 */
-  transform: translate(calc((0.5 - var(--cx, 0.5)) * var(--side)), calc((0.5 - var(--cy, 0.5)) * var(--side)))
+  transform: translate(calc((var(--safe-l, 0px) - var(--safe-r, 0px)) / 2 + (0.5 - var(--cx, 0.5)) * var(--side)),
+                       calc((var(--safe-t, 0px) - var(--safe-b, 0px)) / 2 + (0.5 - var(--cy, 0.5)) * var(--side)))
              translate(var(--tx, 0px), var(--ty, 0px)) scale(var(--zoom, 1));
 }
 /* 전체 보기: 잘리지 않게 짧은 변에 맞추고, 뒤는 같은 그림을 흐리게 깐다 */
 .stage-map.fit .stage-square {
-  --side: min(100cqw, 100cqh);
-  transform: translate(var(--tx, 0px), var(--ty, 0px)) scale(var(--zoom, 1));
+  /* 전체 보기는 안전 영역(패널이 안 가리는 곳) 안에 맞추고 그 가운데에 놓는다 (JS mapGeom 과 같은 식) */
+  --side: max(1px, min(100cqw - var(--safe-l, 0px) - var(--safe-r, 0px), 100cqh - var(--safe-t, 0px) - var(--safe-b, 0px)));
+  transform: translate(calc((var(--safe-l, 0px) - var(--safe-r, 0px)) / 2), calc((var(--safe-t, 0px) - var(--safe-b, 0px)) / 2))
+             translate(var(--tx, 0px), var(--ty, 0px)) scale(var(--zoom, 1));
   border-radius: 14px;
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.35);
 }
@@ -1136,7 +1162,7 @@ body.dark {
   height: calc(100% + 60px);
   object-fit: cover;
   filter: blur(26px) brightness(0.45);
-  opacity: 0;
+  opacity: 1;   /* 지도가 안전 영역만 채우므로, 패널 밑 빈 곳은 항상 흐린 그림으로 메운다 */
   pointer-events: none;
   transition: opacity 0.2s;
 }
@@ -1163,15 +1189,19 @@ body:not(.dark) .stage-bg { filter: blur(26px) brightness(0.9); }
   inset: 0;
   pointer-events: none;
   background:
-    linear-gradient(0deg, rgba(var(--scrim), 0.7), rgba(var(--scrim), 0) 220px),
-    linear-gradient(90deg, rgba(var(--scrim), 0.72) 0%, rgba(var(--scrim), 0) 34%, rgba(var(--scrim), 0) 70%, rgba(var(--scrim), 0.6) 100%);
+    /* 지도가 이제 패널 밑으로 들어가지 않으므로 좌우 그라데이션은 뺐다 (결과를 어둡게 가리지 않게).
+       아래쪽만 살짝 남겨 시간 슬라이더 주변을 정돈한다 */
+    linear-gradient(0deg, rgba(var(--scrim), 0.45), rgba(var(--scrim), 0) 160px);
 }
 .stage-map.fit .stage-scrim { opacity: 0.55; }
 .stage-square[style*="none"] ~ .stage-scrim { display: none; }   /* 결과 없을 땐 그라데이션 없음 */
 
 .stage-empty {
   position: relative;
-  margin-left: 440px;   /* 왼쪽 레일·조건 패널을 피해 남는 공간의 가운데에 놓는다 */
+  /* 안전 영역(레일·조건 패널·시간 슬라이더가 안 가리는 곳)의 가운데에 놓는다.
+     부모가 가운데 정렬이라, 왼쪽 여백에 (왼쪽 가림 - 오른쪽 가림)을 주면 중심이 그 절반만큼 옮겨진다 */
+  margin-left: calc(var(--safe-l, 0px) - var(--safe-r, 0px));
+  margin-top: calc(var(--safe-t, 0px) - var(--safe-b, 0px));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1218,7 +1248,7 @@ body:not(.dark) .marker-label b { color: #b42328; }
 .stage-toggle {
   position: absolute;
   z-index: 4;
-  bottom: 118px;   /* 아래 시간 슬라이더 바로 위 */
+  bottom: 24px;   /* 오른쪽 아래 구석 (시간 슬라이더는 이 열을 비켜 간다) */
   background: var(--glass);
   border: 1px solid var(--glass-border);
   border-radius: 12px;
@@ -1246,11 +1276,34 @@ body:not(.dark) .marker-label b { color: #b42328; }
   cursor: pointer;
 }
 .stage-fit:hover { background-color: var(--accent-soft); }
+/* 결과 이미지: 조건 패널(또는 접힌 알약) 바로 아래. top 은 JS(placeGallery)가 정하고, 패널이 펼쳐져 있으면 패널 폭(.wide) */
+.stage-gallery {
+  position: absolute;
+  z-index: 5;
+  left: 96px;
+  top: 16px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+}
+.stage-gallery.wide { width: var(--panel-w); }
+.stage-gallery:hover { background-color: var(--accent-soft); }
+.has-gallery .panel { max-height: calc((100% - 32px - 54px * var(--panel-z)) / var(--panel-z)); }   /* 아래 버튼 자리를 남긴다 */
 .stage-zoom {
   position: absolute;
   z-index: 4;
   right: 16px;
-  bottom: 170px;
+  bottom: 24px;   /* 오른쪽 아래 구석 */
   flex-direction: column;
   overflow: hidden;
   background: var(--glass);
@@ -1274,14 +1327,14 @@ body:not(.dark) .marker-label b { color: #b42328; }
 .stage-zoom button:disabled { opacity: 0.35; cursor: default; }
 .stage-zoom #zoom-reset { font-size: 12px; font-weight: 700; }
 
-/* --- 조건 패널 (목업: 왼쪽 96px, 위 16px, 폭 340px) --- */
+/* --- 조건 패널 (목업: 왼쪽 96px, 위 16px, 폭 340px · 설정 '컴팩트'는 300px) --- */
 .panel {
   position: absolute;
   z-index: 5;
   left: 96px;
   top: 16px;
-  width: 340px;
-  max-height: calc(100% - 32px);
+  width: var(--panel-w);
+  max-height: calc((100% - 32px) / var(--panel-z));   /* 크기를 키워도 화면 밖으로 안 나가게 */
   overflow-y: auto;
   padding: 16px 18px;
   background: var(--glass);
@@ -1401,7 +1454,18 @@ body:not(.dark) .marker-label b { color: #b42328; }
 .check-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 13px; cursor: pointer; }
 .check-row input { width: 18px; height: 18px; accent-color: var(--accent); }
 
-.panel .run-bar { display: block; margin-top: 16px; }
+.panel .run-bar {
+  /* 화면이 낮아 패널이 스크롤되어도 실행 버튼은 패널 아래쪽에 붙어 있게 */
+  position: sticky;
+  bottom: -16px;          /* 패널 아래 여백(16px)까지 덮는다 */
+  z-index: 1;
+  display: block;
+  margin: 16px -18px -16px;
+  padding: 10px 18px 16px;
+  border-radius: 0 0 18px 18px;
+}
+/* 패널이 실제로 스크롤될 때만 배경을 깔아 아래 내용과 구분한다 (평소엔 패널 배경과 똑같이 보이게) */
+.panel.scrolls .run-bar { background: var(--glass); box-shadow: 0 -10px 16px -12px rgba(0, 0, 0, 0.45); }
 .panel .run-bar .btn-primary {
   width: 100%;
   height: 46px;
@@ -1431,97 +1495,72 @@ body:not(.dark) .marker-label b { color: #b42328; }
 .panel-pill svg { color: var(--accent); }
 .panel-pill span { color: var(--muted); font-variant-numeric: tabular-nums; }
 
-/* --- 요약 칩 + 도구 버튼 (목업: 오른쪽 위) --- */
+/* --- 결과 요약 바 (오른쪽 위): [결과 조건 | 최대 침수 | 면적] 한 덩어리 + 조건이 바뀌면 아래 알림 줄 --- */
 .chips {
   position: absolute;
   z-index: 5;
   top: 16px;
   right: 20px;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 10px;
+  flex-direction: column;   /* 위: 숫자 칸 한 줄(.chips-row), 아래: 조건 변경 알림 */
   max-width: 600px;
-}
-.chip {
-  flex-direction: column;
-  padding: 8px 14px;
+  overflow: hidden;
   background: var(--glass);
   border: 1px solid var(--glass-border);
   border-radius: 14px;
+  backdrop-filter: blur(10px);
+  transition: border-color 0.15s;
 }
+.chips-row { display: flex; }
+.chips.stale { border-color: color-mix(in srgb, var(--warn) 55%, transparent); }
+.chip {
+  flex-direction: column;
+  padding: 8px 16px;
+}
+.chip + .chip { border-left: 1px solid var(--glass-border); }
+.chip-badge {   /* '샘플' 표시: 샘플 지형으로 낸 결과 */
+  margin-left: 4px;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--on-accent, #fff);
+  vertical-align: 1px;
+  background-color: var(--accent);
+  border-radius: 6px;
+}
+.chip-cond .chip-value b { font-size: 16px; line-height: 28px; }   /* 조건은 숫자보다 한 단계 작게 */
+.chips.stale .chip-cond .chip-value b { color: var(--warn); }
+.chips-stale {
+  contain: inline-size;   /* 알림 문장이 길어도 바 폭을 늘리지 않고 숫자 칸 폭 안에서 줄바꿈 */
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 7px 16px;
+  font-size: 12px;
+  color: var(--warn);
+  border-top: 1px solid var(--glass-border);
+}
+.stale-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  background-color: var(--warn);
+  border-radius: 50%;
+}
+.panel-pill .stale-dot { margin-left: 2px; }
 .chip-label { font-size: 11px; color: var(--muted); }
 .chip-value { font-size: 12px; color: var(--muted); }
 .chip-value b { margin-right: 2px; font-size: 20px; color: var(--text); font-variant-numeric: tabular-nums; }
-.chip-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 56px;
-  padding: 0 16px;
-  color: var(--text);
-  font: inherit;
-  background: var(--glass);
-  border: 1px solid var(--glass-border);
-  border-radius: 14px;
-  cursor: pointer;
-}
-.chip-btn:hover { background-color: var(--accent-soft); }
-.chip-btn[aria-pressed="true"] { border-color: var(--accent); }
-
-/* --- 기록 서랍 (목업: 오른쪽 20px, 위 96px, 폭 300px) --- */
-.drawer {
-  position: absolute;
-  z-index: 5;
-  right: 20px;
-  top: 96px;
-  width: 300px;
-  max-height: calc(100% - 210px);
-  overflow-y: auto;
-  padding: 14px 14px 10px;
-  background: var(--glass);
-  border: 1px solid var(--glass-border);
-  border-radius: 18px;
-}
-.drawer-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.drawer-head h2 { margin: 0; font-size: 14px; }
-.drawer-head a { padding: 10px 2px; font-size: 12px; color: var(--accent); text-decoration: none; }
-.drawer-list { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
-.drawer-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 6px;
-  color: var(--text);
-  font: inherit;
-  text-align: left;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 12px;
-  cursor: pointer;
-}
-.drawer-item:hover { background-color: var(--subtle-bg); }
-.drawer-item.active {
-  background-color: var(--accent-soft);
-  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
-}
-.drawer-item img,
-.drawer-noimg { flex: none; width: 52px; height: 52px; object-fit: cover; background: var(--border-light); border-radius: 8px; }
-.drawer-text { display: flex; flex-direction: column; min-width: 0; }
-.drawer-name { overflow: hidden; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
-.drawer-sub { overflow: hidden; font-size: 12px; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }
-.drawer-empty { padding: 14px 6px; font-size: 13px; color: var(--muted); text-align: center; }
-.drawer-empty .btn { margin-top: 10px; }
 
 /* --- 시간 슬라이더 (목업: 아래 가운데, 폭 760px, 원형 재생 버튼) --- */
 .timeline {
   position: absolute;
   z-index: 5;
-  left: 452px;
-  right: 20px;
+  /* 지도와 같은 기준(안전 영역)의 가운데에 놓는다 → 지도 바로 아래 가운데.
+     범례·확대 버튼과 겹치지 않게 양쪽에서 같은 만큼 줄여 가운데를 유지한다 */
+  left: var(--safe-l, 452px);
+  right: var(--safe-r, 0px);
   bottom: 24px;
-  max-width: 780px;
+  max-width: var(--tl-max, 780px);   /* JS(updateSafeArea)가 범례·확대 버튼에 닿지 않게 정한다 */
   margin: 0 auto;
   align-items: center;
   gap: 16px;
@@ -1561,9 +1600,39 @@ body:not(.dark) .marker-label b { color: #b42328; }
 .tl-progress.error { font-weight: 400; color: var(--error); }
 .tl-progress.error .spinner,
 .tl-progress.error .tl-progress-bar { display: none; }
-.tl-legend { flex: 0 0 150px; }
-.tl-legend-bar { height: 8px; background: linear-gradient(to right, #0b3a73, #1f6fb5, #8bbbe0, #f0f6fc); border-radius: 4px; }
-.tl-legend-labels { display: flex; justify-content: space-between; margin-top: 3px; font-size: 11px; color: var(--muted); }
+/* --- 수심 범례 (왼쪽 아래, 조건 패널 열 맨 아래) ---
+   색은 모델 학습 색과 같은 matplotlib Blues, 위치는 √(수심/60cm). 그래서 눈금이 왼쪽에 몰려 있다 */
+.stage-legend {
+  position: absolute;
+  z-index: 5;
+  left: 96px;
+  bottom: 24px;
+  width: var(--panel-w);
+  padding: 10px 16px 8px;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  backdrop-filter: blur(10px);
+}
+.lg-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 12px; font-weight: 700; }
+.lg-bar-wrap { position: relative; margin-top: 22px; }   /* 위쪽은 최대 수심 ▲ 자리 */
+.lg-bar {
+  height: 10px;
+  background: linear-gradient(to right, #f7fbff 0%, #deebf7 12.5%, #c6dbef 25%, #9ecae1 37.5%, #6baed6 50%, #4292c6 62.5%, #2171b5 75%, #08519c 87.5%, #08306b 100%);
+  border: 1px solid var(--glass-border);
+  border-radius: 5px;
+}
+/* 지금 결과의 최대 수심: 막대 위 ▲ + 글자 */
+.lg-max { position: absolute; bottom: 100%; transform: translateX(-50%); margin-bottom: -2px; pointer-events: none; }
+.lg-max i { display: block; width: 0; height: 0; margin: 0 auto; border: 5px solid transparent; border-top: 6px solid var(--text); border-bottom: 0; }
+.lg-max b { position: absolute; bottom: calc(100% + 1px); left: 50%; transform: translateX(-50%); font-size: 11px; white-space: nowrap; color: var(--text); }
+.lg-max.right b { left: auto; right: -6px; transform: none; }
+.lg-ticks { position: relative; height: 16px; margin-top: 4px; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.lg-ticks span { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
+.lg-ticks span:first-child { transform: none; }
+.lg-ticks span:last-child { transform: translateX(-100%); }
+.lg-ticks .lg-wet { color: var(--text); }   /* 5cm = 요약 바 '침수 면적' 기준 */
+.has-legend.has-gallery .panel { max-height: calc((100% - 32px - 150px * var(--panel-z)) / var(--panel-z)); }
 
 /* --- 알림(토스트) --- */
 .toast {
@@ -1655,21 +1724,35 @@ body:not(.dark) .unr-badge { color: #8a5200; }
 .drag-handle { cursor: grab; touch-action: none; user-select: none; }
 .moving .drag-handle,
 .drag-handle.moving { cursor: grabbing; }
-.grip {
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  align-self: stretch;
-  width: 20px;
-  min-height: 44px;
-  color: var(--muted);
-  border-radius: 8px;
-  opacity: 0.55;
+/* 위쪽 손잡이 띠: 패널 윗변 전체(높이 14px)가 잡히는 곳이고, 가운데 짧은 막대는 '여기를 잡으세요' 표시 */
+.grab-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  height: 14px;
+  border-radius: inherit;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
 }
-.grip:hover { opacity: 1; background-color: var(--subtle-bg); }
-.chips > .grip { background: var(--glass); border: 1px solid var(--glass-border); border-radius: 12px; opacity: 0.9; }
-.timeline > .grip { margin-left: -8px; }
+.grab-bar::after {
+  content: "";
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  width: 36px;
+  height: 4px;
+  margin-left: -18px;
+  background-color: var(--muted);
+  border-radius: 2px;
+  opacity: 0.45;
+  transition: opacity 0.15s, width 0.15s, margin-left 0.15s;
+}
+.grab-bar:hover::after,
+.moving .grab-bar::after { width: 52px; margin-left: -26px; opacity: 0.9; }
+.has-grab-bar.timeline { padding-top: 18px; }
+.has-grab-bar.v3d-tools { padding-top: 16px; }
 #layout-reset:disabled { opacity: 0.3; cursor: default; }
 #layout-reset:disabled:hover { background-color: transparent; color: var(--muted); }
 
@@ -1697,8 +1780,9 @@ body:not(.dark) .unr-badge { color: #8a5200; }
 .stage-loading {
   position: absolute;
   z-index: 3;
-  left: 50%;
-  top: 50%;
+  /* 안전 영역(패널이 안 가리는 곳)의 가운데 */
+  left: calc(var(--safe-l, 0px) + (100% - var(--safe-l, 0px) - var(--safe-r, 0px)) / 2);
+  top: calc(var(--safe-t, 0px) + (100% - var(--safe-t, 0px) - var(--safe-b, 0px)) / 2);
   transform: translate(-50%, -50%);
   align-items: center;
   gap: 12px;
@@ -1738,14 +1822,14 @@ body:not(.dark) .unr-badge { color: #8a5200; }
 
 /* --- 다듬기: 떠 있는 요소가 부드럽게 나타나고, 키보드 초점이 또렷하게 보인다 --- */
 @keyframes float-in { from { opacity: 0; } to { opacity: 1; } }
-.panel, .panel-pill, .drawer, .timeline, .chip, .chip-btn, .stage-toggle, .stage-zoom { animation: float-in 0.18s ease-out; }
-.chip-btn, .rain-presets button, .drawer-item, .stage-toggle button, .stage-zoom button, .btn-theme, #rail .view-tab, .tl-play {
+.panel, .panel-pill, .timeline, .chips, .stage-gallery, .stage-toggle, .stage-zoom { animation: float-in 0.18s ease-out; }
+.stage-gallery, .rain-presets button, .stage-toggle button, .stage-zoom button, .btn-theme, #rail .view-tab, .tl-play {
   transition: background-color 0.15s, border-color 0.15s, color 0.15s;
 }
 .tl-play:hover:not(:disabled), .panel .run-bar .btn-primary:hover:not(:disabled) { filter: brightness(1.08); }
 :is(button, a, input, select, summary, [tabindex]):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) {
-  .panel, .panel-pill, .drawer, .timeline, .chip, .chip-btn, .stage-toggle, .stage-zoom { animation: none; }
+  .panel, .panel-pill, .timeline, .chips, .stage-gallery, .stage-toggle, .stage-zoom { animation: none; }
   .spinner { animation-duration: 2.4s; }
 }
 
@@ -1781,15 +1865,18 @@ body:not(.dark) .unr-badge { color: #8a5200; }
   .stage-empty { margin: 16px; }
   .stage-fit { display: none !important; }   /* 정사각이라 채우기와 전체 보기가 같다 */
   .stage-zoom { right: 12px; bottom: 12px; }
-  .chips { position: static; order: 2; justify-content: flex-start; max-width: none; padding: 10px 12px 0; }
+  .stage-gallery { position: static; order: 4; width: auto; margin: 0 12px 12px; }   /* 조건 패널 바로 아래 */
+  .chips { position: static; order: 2; max-width: none; margin: 10px 12px 0; }
   .timeline { position: relative; left: auto; right: auto; bottom: auto; order: 3; max-width: none; margin: 64px 12px 0; }   /* 위 64px = 지도/시간 변화 전환 자리 */
-  .tl-legend { display: none; }
+  .stage-legend { position: static; order: 3; width: auto; margin: 10px 12px 0; }
+  .panel, .panel-pill, .stage-gallery, .stage-legend { transform: none; }   /* 세로로 쌓는 화면은 크기 조절 안 함 */
   .panel,
   .panel-pill { position: static; order: 4; width: auto; max-height: none; margin: 12px; }
-  .drawer { position: static; order: 5; width: auto; max-height: none; margin: 0 12px 16px; }
   .chk-flow .chk-arrow { display: none; }
   .movable { transform: none !important; }   /* 세로로 쌓이는 화면에서는 옮긴 위치를 쓰지 않는다 */
-  .grip, #layout-reset { display: none; }
+  .grab-bar, #layout-reset { display: none; }
+  .has-grab-bar.timeline { padding-top: 12px; }
+  .has-grab-bar.v3d-tools { padding-top: 4px; }
   .stage-drop { inset: 8px; }
   .page { padding: 16px; }
   .page > * { max-width: none; }
@@ -1854,11 +1941,6 @@ body.xmas::before {
   background-position: 0 0, 18px 0, 36px 0;
   background-repeat: repeat-x;
   opacity: 0.85;
-}
-
-.btn-xmas[aria-pressed="true"] {
-  border-color: #3fae5f;
-  background-color: rgba(63, 174, 95, 0.12);
 }
 
 body.xmas .btn-primary {
@@ -1969,4 +2051,269 @@ body.xmas .step-num::before {
 @media (max-width: 1000px) {
   .v3d-tools { top: 12px; right: 12px; bottom: auto; }
   .v3d-exag input { width: 72px; }
+}
+
+/* --- 설정 창 (레일의 ⚙ → 화면 가운데) --- */
+.settings { position: relative; }
+.settings-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background-color: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+}
+.settings-card {
+  width: 520px;
+  max-width: 100%;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  padding: 22px 24px 24px;
+  background-color: var(--panel);
+  border: 1px solid var(--glass-border);
+  border-radius: 18px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+  animation: float-in 0.18s ease-out;
+}
+.settings-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.settings-head h2 { margin: 0; font-size: 20px; font-weight: 700; }
+.settings-close {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  color: var(--muted);
+  font-size: 24px;
+  line-height: 1;
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.settings-close:hover { color: var(--text); background-color: var(--subtle-bg); }
+.set-title { margin: 18px 4px 8px; font-size: 13px; font-weight: 700; color: var(--muted); }
+.set-group { overflow: hidden; border: 1px solid var(--border-light); border-radius: 14px; }
+.set-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  min-height: 58px;
+  padding: 10px 16px;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+.set-row + .set-row { border-top: 1px solid var(--border-light); }
+button.set-row:hover { background-color: var(--subtle-bg); }
+.set-row.set-static { cursor: default; }
+.set-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.set-text b { font-size: 15px; font-weight: 600; }
+.set-text span { font-size: 12.5px; line-height: 1.45; color: var(--muted); }
+.set-btn { flex: none; min-height: 36px; padding: 0 16px; }
+.set-btn:disabled { opacity: 0.4; cursor: default; }
+.settings-foot { margin: 16px 4px 0; font-size: 12px; color: var(--muted); }
+/* 켜고 끄는 스위치 (aria-pressed 로 상태 표시) */
+.switch {
+  position: relative;
+  flex: none;
+  width: 46px;
+  height: 26px;
+  background-color: var(--subtle-hover);
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  background-color: var(--muted);
+  border-radius: 50%;
+  transition: transform 0.15s, background-color 0.15s;
+}
+.set-row[aria-pressed="true"] .switch { background-color: var(--accent); border-color: var(--accent); }
+.set-row[aria-pressed="true"] .switch::after { transform: translateX(20px); background-color: var(--on-accent, #fff); }
+.set-row.set-col { flex-direction: column; align-items: stretch; gap: 10px; }
+.set-range { display: flex; align-items: center; gap: 12px; }
+.set-range input[type="range"] { flex: 1; margin: 0; accent-color: var(--accent); cursor: pointer; }
+.set-num { display: inline-flex; flex: none; align-items: center; gap: 4px; font-size: 14px; font-weight: 700; }
+.set-num input {
+  width: 62px;
+  min-height: 36px;
+  padding: 0 8px;
+  color: var(--text);
+  font: inherit;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  background-color: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.set-num input:focus { outline: none; border-color: var(--accent); }
+.seg-mini { display: inline-flex; flex: none; padding: 3px; background-color: var(--subtle-bg); border-radius: 10px; }
+.seg-mini button {
+  min-height: 34px;
+  padding: 0 14px;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.seg-mini button[aria-pressed="true"] { color: var(--on-accent, #fff); font-weight: 700; background-color: var(--accent); }
+@media (prefers-reduced-motion: reduce) {
+  .switch, .switch::after, .settings-card { transition: none; animation: none; }
+}
+
+/* --- 패널 크기 (설정 %) : 왼쪽 열을 같은 비율로 키우고 줄인다 ---
+   transform 이라 자리는 그대로이고, 보이는 크기만 바뀐다(getBoundingClientRect 는 바뀐 크기를 준다) */
+.panel, .panel-pill, .stage-gallery { transform: scale(var(--panel-z)); transform-origin: top left; }
+.stage-legend { transform: scale(var(--panel-z)); transform-origin: bottom left; }
+.empty-actions .btn { align-items: center; justify-content: center; }   /* JS 가 display:inline-flex 로 보여 줄 때 글자가 위로 쏠리지 않게 */
+
+/* --- 샘플 지형 고르기 창 (설정 창과 같은 틀) --- */
+.settings-card.sample-card-wrap { width: 760px; }
+.sample-sub { margin: 4px 2px 16px; font-size: 13px; color: var(--muted); }
+.sample-sub b { color: var(--text); }
+.sample-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.sample-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  background: transparent;
+  border: 1px solid var(--border-light);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+.sample-card:hover, .sample-card:focus-visible { background-color: var(--subtle-bg); border-color: var(--accent); }
+.sample-card canvas, .sample-card img { flex: none; width: 108px; height: 108px; object-fit: cover; border-radius: 10px; background: var(--subtle-bg); }
+.sample-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.sample-text b { font-size: 15px; font-weight: 700; }
+.sample-text span { font-size: 12.5px; line-height: 1.45; color: var(--muted); }
+.sample-text small { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+@media (max-width: 720px) { .sample-grid { grid-template-columns: 1fr; } }
+
+/* --- 왼쪽 열: [이전 화면으로] → [조건 패널 / 알약] → [결과 이미지] … [범례]
+   모두 왼쪽 96px 에 맞추고 폭을 같게 한다. 펼치면 패널 폭(--panel-w), 접으면 알약 폭(--pill-w).
+   높이도 버튼류(이전 화면·알약·결과 이미지)는 --col-btn-h 로 같다. 패널 크기(%)는 transform 으로 함께 --- */
+:root { --pill-w: 280px; --col-btn-h: 48px; --col-gap: 10px; }
+.stage-back {
+  position: absolute;
+  z-index: 5;
+  left: 96px;
+  top: 16px;
+  width: var(--pill-w);
+  height: var(--col-btn-h);
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  transform: scale(var(--panel-z));
+  transform-origin: top left;
+}
+.stage-back.wide { width: var(--panel-w); }
+.stage-back:hover { background-color: var(--accent-soft); }
+.stage-back svg { color: var(--accent); }
+/* 이전 화면 버튼이 있으면 조건 패널·알약을 그만큼 내린다 (크기 % 반영) */
+.has-back .panel,
+.has-back .panel-pill { top: calc(16px + (var(--col-btn-h) + var(--col-gap)) * var(--panel-z)); }
+.has-back .panel { max-height: calc((100% - 32px - (var(--col-btn-h) + var(--col-gap)) * var(--panel-z)) / var(--panel-z)); }
+.has-back.has-gallery .panel { max-height: calc((100% - 32px - 2 * (var(--col-btn-h) + var(--col-gap)) * var(--panel-z)) / var(--panel-z)); }
+.has-back.has-legend.has-gallery .panel { max-height: calc((100% - 32px - (2 * (var(--col-btn-h) + var(--col-gap)) + 96px) * var(--panel-z)) / var(--panel-z)); }
+/* 접힌 알약·버튼들: 같은 폭과 높이 */
+.panel-pill { width: var(--pill-w); height: var(--col-btn-h); padding: 0 16px; }
+.stage-gallery { height: var(--col-btn-h); min-height: 0; justify-content: flex-start; padding: 0 16px; }   /* 아이콘·글자 시작점을 위아래 버튼과 맞춘다 */
+.stage-gallery:not(.wide) { width: var(--pill-w); }
+.folded .stage-legend { width: var(--pill-w); }
+@media (max-width: 1000px) {
+  .stage-back { top: 12px; left: 12px; width: auto; transform: none; }
+  .panel-pill, .stage-gallery:not(.wide), .folded .stage-legend { width: auto; }
+}
+
+/* --- 예측 중: 단계 + 걸린 시간 --- */
+.loading-text { display: flex; flex-direction: column; gap: 2px; }
+.loading-text b { font-size: 15px; }
+#stage-loading-sub { font-size: 12px; font-weight: 400; color: var(--muted); font-variant-numeric: tabular-nums; }
+#stage-loading-sub:empty { display: none; }
+.stage-loading { border-radius: 18px; }
+
+/* --- 예측 실패 카드 (안전 영역 가운데) --- */
+.stage-error {
+  position: absolute;
+  z-index: 6;
+  left: calc(var(--safe-l, 0px) + (100% - var(--safe-l, 0px) - var(--safe-r, 0px)) / 2);
+  top: calc(var(--safe-t, 0px) + (100% - var(--safe-t, 0px) - var(--safe-b, 0px)) / 2);
+  transform: translate(-50%, -50%);
+  width: min(420px, calc(100% - 32px));
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 26px 28px 22px;
+  text-align: center;
+  cursor: default;
+  background: var(--panel);
+  border: 1px solid color-mix(in srgb, var(--error) 45%, var(--glass-border));
+  border-radius: 18px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+}
+.stage-error svg { color: var(--error); }
+.err-title { margin: 4px 0 0; font-size: 17px; font-weight: 700; color: var(--text); }
+.err-msg { margin: 0; font-size: 13px; line-height: 1.55; color: var(--muted); word-break: keep-all; overflow-wrap: anywhere; }
+.err-actions { display: flex; gap: 8px; margin-top: 12px; }
+.err-actions .btn { min-height: 40px; padding: 0 18px; border-radius: 10px; }
+.under-error, .under-overlay { visibility: hidden; }   /* 예측 중·실패 카드가 뜨면 빈 화면 안내판은 잠깐 숨긴다 */
+
+/* --- 키보드로 이동할 때만 보이는 포커스 테두리 (마우스 클릭에는 안 보임) --- */
+button:focus-visible,
+a:focus-visible,
+summary:focus-visible,
+select:focus-visible,
+input[type="range"]:focus-visible,
+input[type="checkbox"]:focus-visible,
+input[type="radio"]:focus-visible + span,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+input[type="text"]:focus-visible,
+input[type="number"]:focus-visible,
+input[type="email"]:focus-visible,
+input[type="password"]:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: 1px;
+}
+
+/* --- 패널 크기(%)를 나머지 떠 있는 패널에도: 요약 바(오른쪽 위), 시간 슬라이더(아래 가운데), 확대 버튼·3D 도구(오른쪽 아래)
+   각자 붙어 있는 모서리를 기준으로 커지고 줄어든다. 옮길 수 있는 패널은 옮긴 거리(--dx/--dy)를 먼저 적용 --- */
+.chips { transform: scale(var(--panel-z)); transform-origin: top right; }
+.stage-zoom { transform: scale(var(--panel-z)); transform-origin: bottom right; }
+.timeline,
+.timeline.movable { transform: translate(var(--dx, 0px), var(--dy, 0px)) scale(var(--panel-z)); transform-origin: bottom center; }
+.v3d-tools,
+.v3d-tools.movable { transform: translate(var(--dx, 0px), var(--dy, 0px)) scale(var(--panel-z)); transform-origin: bottom right; }
+@media (max-width: 1000px) {
+  .chips, .stage-zoom, .timeline, .timeline.movable, .v3d-tools, .v3d-tools.movable { transform: none !important; }
 }
