@@ -1721,6 +1721,8 @@
                 modelInfo.authEnabled = !!h.auth_enabled && h.db === 'ok';
                 if (Array.isArray(h.rain_range_mm)) modelInfo.rainRange = h.rain_range_mm;
                 if (Array.isArray(h.time_range_s)) modelInfo.timeRange = h.time_range_s;
+                if (Array.isArray(h.timelapse_times) && h.timelapse_times.length) TIMELAPSE_TIMES = h.timelapse_times.map(Number);
+                if (typeof h.drain_ref_time_s === 'number') DRAIN_REF_TIME_S = h.drain_ref_time_s;
 
                 // 입력칸 범위를 서버가 알려준 학습 범위에 맞춘다
                 const rain = document.getElementById('rainMm');
@@ -2454,6 +2456,10 @@
             form.append('rain_mm', p.rainMm);            // 강우량 [mm]
             form.append('time_s', p.timeS);              // 경과 시간 [초]
             form.append('dx', p.dx);                     // 셀 크기 [m] (terrain 모드만 의미 있음)
+            // 안 쓰는 그림 생략 (서버가 그리지도 보내지도 않음). 시간 변화용 light / 첫 화면 두 요청의 no_analysis·no_map
+            if (p.light) form.append('light', 'true');
+            if (p.noAnalysis) form.append('no_analysis', 'true');
+            if (p.noMap) form.append('no_map', 'true');
             if (p.mode === 'image') {                    // 이미지 색 체계: 서버가 높이로 읽어 학습 형식으로 다시 그림
                 form.append('color_scheme', p.color.scheme);
                 form.append('reverse', p.color.reverse ? 'true' : 'false');
@@ -2665,10 +2671,10 @@
 
         /* ---------- 시간 경과 재생 ---------- */
         // 학습 데이터의 6개 시점(18~120초) + 사용자가 입력한 시점을 키프레임으로 예측하고, 그 사이는 이미지를 섞어 잇는다
-        const TIMELAPSE_TIMES = [18, 38, 59, 79, 100, 120];
+        let TIMELAPSE_TIMES = [18, 38, 59, 79, 100, 120];   // /api/health 의 timelapse_times 가 있으면 그 값으로 바뀐다
         // 배수구 후보 위치를 정하는 기준 시점. 시간이 짧을수록 물이 많으므로 가장 이른 18초(물이 가장 많이
         // 고인 순간)의 예측에서 찾는다. 사용자가 고른 경과 시간과 상관없이 같은 지형·강우면 같은 위치가 나온다.
-        const DRAIN_REF_TIME_S = TIMELAPSE_TIMES[0];
+        let DRAIN_REF_TIME_S = TIMELAPSE_TIMES[0];          // /api/health 의 drain_ref_time_s 가 있으면 그 값
         const TIMELAPSE_SECONDS_PER_REAL_SECOND = 8.5;  // 재생 속도: 전체 약 12초
         const TIMELAPSE_HOLD_MS = 800;                  // 끝에서 잠깐 멈춤
         const TIMELAPSE_WRAP_FADE_MS = 700;             // 처음으로 돌아갈 때 부드럽게 전환
@@ -2825,7 +2831,7 @@
                     setTimelapseStatus(`시점별 예측 중 ${i + 1} / ${total}`, i, total);
                     let data = preloaded[time] || null;
                     if (!data) {
-                        data = await requestPredict({ mode, file, rainMm, timeS: time, dx, color }, controller.signal);
+                        data = await requestPredict({ mode, file, rainMm, timeS: time, dx, color, light: true }, controller.signal);
                     }
                     if (controller.signal.aborted) return;
                     await addTimelapseFrame(time, png(data.overlay_png_base64));
@@ -2886,7 +2892,7 @@
             // 배수구 위치는 DRAIN_REF_TIME_S(18초) 예측에서 찾는다. 사용자가 다른 시간을 골랐으면
             // 기준 시점 예측을 같이(병렬로) 요청한다. 실패하면 null -> 아래에서 사용자 시점으로 대신한다.
             const startRef = () => (modelInfo.timeConditioned && timeS !== DRAIN_REF_TIME_S)
-                ? requestPredict({ ...base, timeS: DRAIN_REF_TIME_S }).catch(() => null)
+                ? requestPredict({ ...base, timeS: DRAIN_REF_TIME_S, noMap: true }).catch(() => null)
                 : null;
             let refPromise = startRef();
 
@@ -2895,7 +2901,7 @@
             byId('stage-loading').style.display = 'flex';
 
             try {
-                let data = await requestPredict({ ...base, timeS });   // AI 모델 서버 /api/predict (주소는 위의 ANALYZE_API)
+                let data = await requestPredict({ ...base, timeS, noAnalysis: !!refPromise });   // AI 모델 서버 /api/predict (주소는 위의 ANALYZE_API)
 
                 // 학습 형식이 아닌 색 체계라 서버가 높이로 읽어 변환했다면, 맞게 읽었는지(높낮이가 안 뒤집혔는지) 확인받는다
                 if (mode === 'image' && data.color_info && data.color_info.converted) {
@@ -2916,6 +2922,10 @@
                 let refData = null;
                 if (meta.time_conditioned) {
                     refData = meta.time_s === DRAIN_REF_TIME_S ? data : await refPromise;
+                }
+                if (!refData && mode === 'terrain' && !data.analysis_png_base64) {
+                    // 18초 요청이 실패해 분석 지도가 없다 -> 사용자 시점으로 분석 지도까지 다시 받는다
+                    data = await requestPredict({ ...base, timeS });
                 }
                 const drainSource = refData || data;
                 const drainTime = refData ? DRAIN_REF_TIME_S : (meta.time_conditioned ? meta.time_s : null);
@@ -2960,6 +2970,7 @@
                     info.push(`색 해석: ${data.color_info.label}${data.color_info.reversed ? ' · 높낮이 반전' : ''} (학습 형식으로 변환해 예측)`);
                 }
                 info.push('파란색이 진할수록 물이 많이 모이는 곳입니다.');
+                (data.warnings || []).forEach(w => info.push('주의: ' + w));
 
                 const recordMeta = { checkpoint: data.checkpoint, ...meta, stats: data.stats };
                 stageState.recordId = null;   // 저장되면(saveRecord) 그 기록이 서랍에서 강조된다
