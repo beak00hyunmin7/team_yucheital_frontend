@@ -6,7 +6,7 @@
     <title>유체이탈 · 배수 예측</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap">
-    <link rel="stylesheet" href="./style.css">
+    <link rel="stylesheet" href="./style.css?v=20261124b">
 </head>
 <body>
     <!-- 첫 화면: 프로젝트 로고. 잠깐 보여 준 뒤(또는 누르면 바로) 본 화면으로 넘어간다 -->
@@ -127,6 +127,21 @@
                     <button type="button" class="btn btn-ghost set-btn" id="layout-reset" disabled>초기화</button>
                 </div>
             </div>
+
+            <p class="set-title">3D 보기</p>
+            <div class="set-group">
+                <button type="button" class="set-row" id="boat-btn" aria-pressed="false">
+                    <span class="set-text"><b>오리배 띄우기 🦆</b><span>물 위에 오리배가 떠서 내리막을 따라 떠내려가요. 3D 지도를 클릭하면 그 자리에 하나 더 떨어뜨려요.</span></span>
+                    <span class="switch" aria-hidden="true"></span>
+                </button>
+                <div class="set-row set-static set-col" id="boat-count-row">
+                    <span class="set-text"><b>떠 있는 오리배 수</b></span>
+                    <span class="set-range">
+                        <input type="range" id="boat-count" min="1" max="8" step="1" value="3" aria-label="떠 있는 오리배 수">
+                        <span class="set-num"><input type="number" id="boat-count-val" min="1" max="8" step="1" value="3" aria-label="오리배 수 직접 입력">척</span>
+                    </span>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -154,11 +169,27 @@
             <!-- 3D 지형 보기: 높이를 세운 지형 위에 물 면과 흐르는 입자를 얹는다 (드래그 회전 · 휠 확대 · Shift+드래그 이동) -->
             <div class="stage-3d" id="stage-3d" style="display: none;" aria-label="3D 지형 보기"></div>
             <div class="v3d-tools" id="v3d-tools" style="display: none;" role="group" aria-label="3D 보기 설정">
-                <label class="v3d-exag" title="지형 높이를 과장해서 보기">높이
+                <label class="v3d-exag" title="지형 높이를 과장해서 보기">
+                    <span class="v3d-cap">높이</span>
                     <input type="range" id="v3d-exag" min="0.3" max="3" step="0.1" value="1" aria-label="높이 과장">
+                    <span class="v3d-val" id="v3d-exag-val">×1.0</span>
                 </label>
-                <button type="button" id="v3d-flow" aria-pressed="true" title="물이 흐르는 방향을 입자로 표시">물 흐름</button>
-                <button type="button" id="v3d-reset" title="처음 시점으로 (더블클릭)">시점 초기화</button>
+                <button type="button" class="v3d-btn" id="v3d-flow" aria-pressed="true" title="물이 흐르는 방향을 입자로 표시">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+                        <path d="M3 8c2-2 4-2 6 0s4 2 6 0 4-2 6 0M3 13c2-2 4-2 6 0s4 2 6 0 4-2 6 0M3 18c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/>
+                    </svg>
+                    <span>물 흐름</span>
+                </button>
+                <span class="v3d-btn v3d-duck" id="v3d-boat-hint" style="display: none;" data-tip="지도를 클릭하면 오리배가 떨어져요" role="note" aria-label="오리배 켜짐 · 지도를 클릭하면 오리배가 떨어져요">
+                    <span class="v3d-emoji" aria-hidden="true">🦆</span>
+                    <span>오리배</span>
+                </span>
+                <button type="button" class="v3d-btn" id="v3d-reset" title="처음 시점으로 (더블클릭)">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4.5h4.5"/>
+                    </svg>
+                    <span>초기화</span>
+                </button>
             </div>
             <div class="stage-empty" id="viewer-placeholder">
                 <svg class="viewer-empty-icon" viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
@@ -168,7 +199,7 @@
                 <p class="viewer-empty-title">등고선을 올리면 물이 모이는 곳을 예측해 드려요</p>
                 <ol class="empty-steps">
                     <li><b>1</b>등고선 이미지나 고도 격자 파일을 올리고</li>
-                    <li><b>2</b>강우량과 경과 시간을 고른 뒤</li>
+                    <li><b>2</b>강우량을 고른 뒤</li>
                     <li><b>3</b>'배수 예측 실행'을 누르세요</li>
                 </ol>
                 <div class="empty-actions">
@@ -202,6 +233,20 @@
             </button>
             <!-- 확대 · 축소 · 원래대로 (휠·핀치·더블클릭·드래그로도 가능) -->
             <div class="stage-zoom" id="stage-zoom" style="display: none;" role="group" aria-label="지도 확대·이동">
+                <!-- 수심 범례 (세로): 모델 색 기준 Blues 0~60cm, 위치 = √(수심/60). ▶ 이번 결과 최대, 주황 선 = 마우스가 가리키는 곳 -->
+                <div class="depth-legend" id="depth-legend" aria-label="수심 범례">
+                    <span class="dl-t">최대</span><b class="dl-max" id="dl-max">–</b><span class="dl-t">cm</span>
+                    <div class="dl-body">
+                        <i class="dl-bar" aria-hidden="true"></i>
+                        <span class="dl-tk" style="bottom: 0%">0</span>
+                        <span class="dl-tk" style="bottom: 28.87%">5</span>
+                        <span class="dl-tk" style="bottom: 50%">15</span>
+                        <span class="dl-tk" style="bottom: 70.71%">30</span>
+                        <span class="dl-tk" style="bottom: 100%">60+</span>
+                        <i class="dl-mark" id="dl-mark" style="display: none;" title="이번 결과의 최대 수심"></i>
+                        <i class="dl-hover" id="dl-hover" style="display: none;"></i>
+                    </div>
+                </div>
                 <button type="button" id="zoom-in" aria-label="확대" title="확대 (마우스 휠)">+</button>
                 <button type="button" id="zoom-reset" aria-label="원래 크기로" title="원래 크기로 (더블클릭)">100%</button>
                 <button type="button" id="zoom-out" aria-label="축소" title="축소 (마우스 휠, 50% 까지)">&minus;</button>
@@ -276,7 +321,7 @@
                     </div>
 
                     <!-- 경과 시간 -->
-                    <div class="panel-row" id="time-row">
+                    <div class="panel-row" id="time-row" style="display: none;">
                         <div class="panel-row-head">
                             <label class="field-label" for="timeS">경과 시간</label>
                             <span class="num-input"><input type="number" id="timeS" value="18" min="0" max="120" step="1"> 초</span>
@@ -342,26 +387,7 @@
             </div>
         </section>
 
-        <!-- 결과 요약 바 (오른쪽 위): 어떤 조건의 결과인지 + 핵심 숫자. 입력 조건이 바뀌면 아래에 알림 줄이 붙는다 -->
-        <div class="chips" id="chips" style="display: none;" role="status" aria-live="polite">
-            <div class="chips-row">
-            <div class="chip chip-cond" id="chip-cond" style="display: none;">
-                <span class="chip-label">결과 조건 <span class="chip-badge" id="chip-sample" style="display: none;">샘플</span></span>
-                <span class="chip-value"><b id="chip-cond-val"></b></span>
-            </div>
-            <div class="chip" id="chip-depth" style="display: none;">
-                <span class="chip-label" id="chip-depth-label">최대 침수 (예측)</span>
-                <span class="chip-value"><b id="chip-depth-val"></b> cm</span>
-            </div>
-            <div class="chip" id="chip-area" style="display: none;">
-                <span class="chip-label" id="chip-area-label">5cm 이상 면적</span>
-                <span class="chip-value"><b id="chip-area-val"></b> %</span>
-            </div>
-            </div>
-            <p class="chips-stale" id="chips-stale" style="display: none;">
-                <span class="stale-dot" aria-hidden="true"></span><span id="chips-stale-text"></span>
-            </p>
-        </div>
+
 
         <!-- 시간 슬라이더: 같은 지형을 시점별로 예측한 결과를 이어서 보여준다 -->
         <section class="timeline" id="timelapse" style="display: none;" aria-label="시간 경과에 따른 침수 변화">
@@ -377,7 +403,13 @@
             </button>
             <div class="tl-main">
                 <div class="tl-row">
-                    <span class="tl-label">경과 시간</span>
+                    <!-- 어떤 결과인지: 지형 이름 · 강우 [샘플] (입력 조건이 바뀌면 '● 강우량 변경됨'). 시간은 오른쪽 숫자 -->
+                    <span class="tl-label" id="chips" role="status" aria-live="polite">
+                        <b class="mt-name" id="mt-name"></b><span class="mt-sep" id="mt-sep1" aria-hidden="true">·</span><span id="chip-cond-val"></span>
+                        <span class="chip-badge" id="chip-sample" style="display: none;">샘플</span>
+                        <span class="tl-fallback" id="mt-fallback">경과 시간</span>
+                        <span class="mt-stale" id="chips-stale" style="display: none;"><span class="stale-dot" aria-hidden="true"></span><span id="chips-stale-text"></span></span>
+                    </span>
                     <span class="tl-time" id="timelapse-time"></span>
                 </div>
                 <input type="range" id="timelapse-range" min="18" max="120" step="0.1" value="18" disabled aria-label="재생 시점">
@@ -576,6 +608,8 @@
             const PARTICLES = 1500;
             const FLOW_SPEED = 9;        // 입자 속도 (격자 칸/초, 가장 가파른 곳 기준)
             const WET_MIN = 0.015;       // 이 수심[m]보다 얕으면 물로 그리지 않는다
+            const HOLE_R = 0.028;        // 배수구 구멍 반지름 (지도 한 변 대비)
+            const HOLE_DEPTH = 0.05;     // 구멍 깊이 (가장 낮은 가장자리 아래로)
 
             let THREE = null, loading = null;
             const S = {
@@ -607,6 +641,19 @@
 
             function available() { return !!S.hn; }
 
+            // 그림 좌표 (u, v: 0~1, 왼쪽 위 기준)의 수심[m]. time 이 없으면 지금 시점. 자료가 없으면 null
+            function depthAt(u, v, time) {
+                if (!available() || !S.frames.length || u < 0 || u > 1 || v < 0 || v > 1) return null;
+                const f = S.frames, t = time != null ? time : (S.time != null ? S.time : f[0].time);
+                let i = 0;
+                while (i < f.length - 2 && t >= f[i + 1].time) i++;
+                const a = f[i], b = f[Math.min(i + 1, f.length - 1)];
+                const span = b.time - a.time;
+                const mix = span > 0 ? Math.min(Math.max((t - a.time) / span, 0), 1) : 0;
+                const x = u * (S.n - 1), z = v * (S.n - 1);
+                return sample(a.depth, x, z) * (1 - mix) + sample(b.depth, x, z) * mix;
+            }
+
             /* ---------- 데이터 ---------- */
             function setTerrain(grid, drain) {
                 clear();
@@ -629,6 +676,7 @@
                 mags.sort((a, b) => a - b);
                 S.gRef = Math.max(mags[Math.floor(mags.length * 0.9)], 1e-5);
                 S.drain = drain || null;
+                S.hole = S.drain ? { x: S.drain.x * (n - 1), z: S.drain.y * (n - 1), r: HOLE_R * (n - 1) } : null;   // 격자 좌표
                 S.depth = new Float32Array(n * n);
                 S.dirtyTerrain = true;
             }
@@ -668,7 +716,7 @@
                 hide();
                 disposeScene();
                 S.n = 0; S.hn = S.gx = S.gz = S.depth = null;
-                S.frames = []; S.time = null; S.drain = null; S.dRef = 0.1;
+                S.frames = []; S.time = null; S.drain = null; S.hole = null; S.dRef = 0.1;
             }
 
             /* ---------- 지형 색 (높이별 흙색 + 등고선) ---------- */
@@ -750,7 +798,20 @@
                 tg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
                 tg.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
                 tg.setIndex(new THREE.BufferAttribute(index, 1));
-                gl.terrain = new THREE.Mesh(tg, new THREE.MeshLambertMaterial({ map: makeTerrainTexture() }));
+                // 배수구 자리는 지형 면을 둥글게 뚫는다 (그 아래에 구멍 벽·바닥을 따로 그린다)
+                gl.holeU = {
+                    uHole: { value: new THREE.Vector2(S.drain ? S.drain.x - 0.5 : 0, S.drain ? S.drain.y - 0.5 : 0) },
+                    uHoleR: { value: S.drain ? HOLE_R : 0 },
+                };
+                const terrainMat = new THREE.MeshLambertMaterial({ map: makeTerrainTexture() });
+                terrainMat.onBeforeCompile = (sh) => {
+                    Object.assign(sh.uniforms, gl.holeU);
+                    sh.vertexShader = 'varying vec2 vHoleP;\n' + sh.vertexShader.replace('#include <project_vertex>',
+                        '#include <project_vertex>\n    vHoleP = (modelMatrix * vec4(transformed, 1.0)).xz;');
+                    sh.fragmentShader = 'uniform vec2 uHole;\nuniform float uHoleR;\nvarying vec2 vHoleP;\n' + sh.fragmentShader.replace('void main() {',
+                        'void main() {\n    if (uHoleR > 0.0 && distance(vHoleP, uHole) < uHoleR) discard;');
+                };
+                gl.terrain = new THREE.Mesh(tg, terrainMat);
                 group.add(gl.terrain);
 
                 // 옆면 (잘린 단면처럼 보이게)
@@ -779,7 +840,7 @@
                 wg.setIndex(new THREE.BufferAttribute(index, 1));
                 gl.waterMat = new THREE.ShaderMaterial({
                     transparent: true, depthWrite: false, side: THREE.DoubleSide,
-                    uniforms: { uTime: { value: 0 }, uLift: { value: WATER_LIFT }, uA0: { value: 0.1 }, uA1: { value: 0.4 } },
+                    uniforms: { uTime: { value: 0 }, uLift: { value: WATER_LIFT }, uA0: { value: 0.1 }, uA1: { value: 0.4 }, uHole: gl.holeU.uHole, uHoleR: gl.holeU.uHoleR },
                     vertexShader: `
                         attribute float aDepth;
                         uniform float uLift;
@@ -793,10 +854,12 @@
                             gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
                         }`,
                     fragmentShader: `
-                        uniform float uTime, uA0, uA1;
+                        uniform float uTime, uA0, uA1, uHoleR;
+                        uniform vec2 uHole;
                         varying float vD;
                         varying vec3 vP;
                         void main() {
+                            if (uHoleR > 0.0 && distance(vP.xz, uHole) < uHoleR) discard;   // 배수구 구멍 위에는 물 면을 안 그린다
                             float a = smoothstep(uA0, uA1, vD);
                             if (a < 0.01) discard;
                             vec3 col = mix(vec3(0.42, 0.78, 1.0), vec3(0.04, 0.2, 0.78), smoothstep(0.08, 0.85, vD));
@@ -844,21 +907,33 @@
                 group.add(gl.lines, gl.points);
                 gl.part = { x: new Float32Array(PARTICLES), z: new Float32Array(PARTICLES), age: new Float32Array(PARTICLES), life: new Float32Array(PARTICLES).fill(-1) };
 
-                // 배수구 후보: 빨간 핀 + 바닥 고리 + 이름표
+                // 배수구 후보: 땅에 뚫린 구멍(벽·바닥·테두리·격자 뚜껑) + 위에서 가리키는 빨간 화살표 + 이름표
+                // 구멍 벽과 테두리는 지형 높이를 따라야 해서 updateTerrain 의 layoutHole 이 모양을 만든다
                 if (S.drain) {
-                    const red = new THREE.MeshBasicMaterial({ color: 0xff4d4d });
                     const pin = new THREE.Group();
-                    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.0028, 0.0028, 0.11, 8), red);
-                    pole.position.y = 0.055;
-                    const head = new THREE.Mesh(new THREE.SphereGeometry(0.013, 20, 14), red);
-                    head.position.y = 0.118;
-                    const halo = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.0035, 8, 40), new THREE.MeshBasicMaterial({ color: 0xff4d4d, transparent: true, opacity: 0.9, depthTest: false }));
+                    gl.holeWall = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide }));
+                    gl.holeFloor = new THREE.Mesh(new THREE.CircleGeometry(HOLE_R, 40), new THREE.MeshBasicMaterial({ color: 0x07090c }));
+                    gl.holeFloor.rotation.x = -Math.PI / 2;
+                    gl.holeRim = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshLambertMaterial({
+                        color: 0xa9afb6, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+                    gl.holeGrate = new THREE.Group();
+                    const metal = new THREE.MeshLambertMaterial({ color: 0x8b939c });
+                    for (const t of [-0.5, 0, 0.5]) {                  // 빗물받이처럼 나란한 쇠살
+                        const len = 2 * HOLE_R * Math.sqrt(1 - t * t);
+                        const bar = new THREE.Mesh(new THREE.BoxGeometry(len, 0.0022, 0.0028), metal);
+                        bar.position.z = t * HOLE_R;
+                        gl.holeGrate.add(bar);
+                    }
+                                        gl.holeGrate.rotation.y = 0.5;
+                    const red = new THREE.MeshBasicMaterial({ color: 0xff4d4d });
+                    gl.arrow = new THREE.Mesh(new THREE.ConeGeometry(0.013, 0.028, 24), red);
+                    gl.arrow.rotation.x = Math.PI;                      // 아래를 가리키게
+                    const halo = new THREE.Mesh(new THREE.TorusGeometry(HOLE_R * 1.55, 0.003, 8, 48), new THREE.MeshBasicMaterial({ color: 0xff4d4d, transparent: true, opacity: 0.9, depthTest: false }));
                     halo.rotation.x = Math.PI / 2;
-                    halo.position.y = 0.004;
                     halo.renderOrder = 9;
                     const label = makeLabelSprite('배수구 설치 후보');
-                    label.position.y = 0.175;
-                    pin.add(pole, head, halo, label);
+                    gl.label = label;
+                    pin.add(gl.holeWall, gl.holeFloor, gl.holeRim, gl.holeGrate, gl.arrow, halo, label);
                     group.add(pin);
                     gl.pin = pin; gl.halo = halo;
                 }
@@ -887,11 +962,53 @@
                 sp.needsUpdate = true;
                 gl.skirt.geometry.computeVertexNormals();
                 gl.skirt.geometry.computeBoundingSphere();
-                if (gl.pin && S.drain) {
-                    const gx = S.drain.x * (n - 1), gz = S.drain.y * (n - 1);
-                    gl.pin.position.set(S.drain.x - 0.5, groundY(sample(S.hn, gx, gz)), S.drain.y - 0.5);
-                }
+                if (gl.pin && S.drain) layoutHole();
                 S.dirtyTerrain = false;
+            }
+
+            // 배수구 구멍 모양: 가장자리마다 지형 높이를 읽어 벽 윗선과 테두리를 맞춘다 (높이 과장이 바뀌면 다시 만든다)
+            function layoutHole() {
+                const gl = S.gl, n = S.n, N = 48;
+                const cx = S.drain.x - 0.5, cz = S.drain.y - 0.5;
+                const gAt = (wx, wz) => groundY(sample(S.hn, (wx + 0.5) * (n - 1), (wz + 0.5) * (n - 1)));
+                const g0 = gAt(cx, cz);
+                const tops = [];
+                for (let k = 0; k <= N; k++) {
+                    const a = k / N * Math.PI * 2;
+                    tops.push(gAt(cx + Math.cos(a) * HOLE_R, cz + Math.sin(a) * HOLE_R));
+                }
+                const bottom = Math.min(...tops) - HOLE_DEPTH;
+                // 벽: 위는 밝은 회색, 아래로 갈수록 어둡게
+                const wp = [], wc = [], wi = [];
+                for (let k = 0; k <= N; k++) {
+                    const a = k / N * Math.PI * 2, x = Math.cos(a) * HOLE_R, z = Math.sin(a) * HOLE_R;
+                    wp.push(x, tops[k] + 0.0005, z, x, bottom, z);
+                    wc.push(0.07, 0.08, 0.095, 0.006, 0.007, 0.01);
+                    if (k < N) { const i = k * 2; wi.push(i, i + 1, i + 2, i + 2, i + 1, i + 3); }
+                }
+                const wg = gl.holeWall.geometry;
+                wg.setAttribute('position', new THREE.Float32BufferAttribute(wp, 3));
+                wg.setAttribute('color', new THREE.Float32BufferAttribute(wc, 3));
+                wg.setIndex(wi);
+                wg.computeBoundingSphere();
+                gl.holeFloor.position.y = bottom + 0.0005;
+                // 테두리: 구멍 둘레의 시멘트 띠 (지형 위에 얹힘)
+                const rp = [], ri = [], R2 = HOLE_R * 1.28;
+                for (let k = 0; k <= N; k++) {
+                    const a = k / N * Math.PI * 2, c = Math.cos(a), sn = Math.sin(a);
+                    rp.push(c * HOLE_R, tops[k] + 0.0012, sn * HOLE_R, c * R2, gAt(cx + c * R2, cz + sn * R2) + 0.0012, sn * R2);
+                    if (k < N) { const i = k * 2; ri.push(i, i + 1, i + 2, i + 2, i + 1, i + 3); }
+                }
+                const rg = gl.holeRim.geometry;
+                rg.setAttribute('position', new THREE.Float32BufferAttribute(rp, 3));
+                rg.setIndex(ri);
+                rg.computeVertexNormals();
+                rg.computeBoundingSphere();
+                gl.holeGrate.position.y = Math.max(...tops) * 0.5 + Math.min(...tops) * 0.5 + 0.0016;
+                gl.halo.position.y = g0 + 0.003;
+                gl.arrowBase = Math.max(...tops) + 0.055;
+                gl.label.position.y = gl.arrowBase + 0.065;
+                gl.pin.position.set(cx, 0, cz);
             }
 
             function updateWater() {
@@ -933,7 +1050,8 @@
                     p.x[i] += gx * FLOW_SPEED * k * dt; p.z[i] += gz * FLOW_SPEED * k * dt;
                     p.age[i] += dt;
                     const d = sample(S.depth, p.x[i], p.z[i]);
-                    if (p.x[i] < 0 || p.z[i] < 0 || p.x[i] > n - 1 || p.z[i] > n - 1 || d < WET_MIN) {
+                    if (p.x[i] < 0 || p.z[i] < 0 || p.x[i] > n - 1 || p.z[i] > n - 1 || d < WET_MIN
+                        || (S.hole && Math.hypot(p.x[i] - S.hole.x, p.z[i] - S.hole.z) < S.hole.r)) {   // 구멍에 닿은 물줄기는 빠져서 사라짐
                         p.life[i] = -1; la[i * 2] = la[i * 2 + 1] = pa[i] = 0; continue;
                     }
                     const alpha = Math.sin(Math.PI * p.age[i] / p.life[i]) * Math.min(1, d / 0.05) * 0.95;
@@ -953,15 +1071,291 @@
                 }
             }
 
+            /* ---------- 오리배 (설정 '오리배 띄우기') ----------
+               - 물 위에 떠서 지형 내리막을 따라 천천히 떠내려간다 (흐르는 입자와 같은 방향 규칙. 모델이 준 속도가 아니다)
+               - 평평한 웅덩이에서는 빙글빙글 돌고, 오래 멈추거나 물이 빠지면 사라졌다가 다른 곳에서 다시 뜬다
+               - 배수구 구멍에 닿으면 빙글빙글 돌며 빠진다
+               - 3D 지도를 클릭하면 그 자리 위에서 떨어져 '첨벙' 하고 내려앉는다 (마른 땅이면 옆으로 눕고 사라진다) */
+            const BOAT_LEN = 0.052;          // 오리배 길이 (지도 한 변 대비)
+            const BOAT_SPEED = 2.6;          // 떠내려가는 속도 (격자 칸/초, 가파른 곳 기준)
+            const BOAT_MAX_DROPPED = 6;      // 클릭으로 떨어뜨린 배는 이만큼까지 (넘으면 오래된 것부터 사라짐)
+            const BOAT_DROP_H = 0.3;         // 떨어지기 시작하는 높이 (물 면 위)
+            const DUCK_COLORS = [0xffd84a, 0xffd84a, 0xffd84a, 0xfff7e6, 0xffc9d9];   // 노랑이 가장 자주, 가끔 흰색·분홍
+            S.boat = { on: false, count: 3, list: [], fx: [], cool: 0, lastDrop: null };
+            let ringGeo = null, dropGeo = null, shadowGeo = null, ballGeo = null, coneGeo = null;
+
+            // 오리배 모양 (길이 1, 앞쪽 = +x, 위 = +y): 납작한 몸통 + 날개 + 꽁지 + 머리 + 부리 + 눈 + 볼
+            function makeDuck(color) {
+                ballGeo = ballGeo || new THREE.SphereGeometry(0.5, 24, 16);
+                coneGeo = coneGeo || new THREE.ConeGeometry(0.5, 1, 16);
+                const lam = c => new THREE.MeshLambertMaterial({ color: c, transparent: true });
+                const body = lam(color), wing = lam(new THREE.Color(color).multiplyScalar(0.9)), beak = lam(0xff8a24);
+                const eye = new THREE.MeshBasicMaterial({ color: 0x15171a, transparent: true });
+                const cheek = new THREE.MeshBasicMaterial({ color: 0xff9db2, transparent: true });
+                const g = new THREE.Group();
+                const part = (geo, mat, [x, y, z], [sx, sy, sz], rz = 0) => {
+                    const m = new THREE.Mesh(geo, mat);
+                    m.position.set(x, y, z); m.scale.set(sx, sy, sz); m.rotation.z = rz;
+                    m.renderOrder = 5;
+                    g.add(m);
+                    return m;
+                };
+                part(ballGeo, body, [0, 0.1, 0], [1.0, 0.5, 0.66]);                 // 몸통
+                part(ballGeo, wing, [-0.04, 0.2, 0.3], [0.5, 0.2, 0.12]);           // 날개 (양옆)
+                part(ballGeo, wing, [-0.04, 0.2, -0.3], [0.5, 0.2, 0.12]);
+                part(coneGeo, body, [-0.48, 0.3, 0], [0.2, 0.26, 0.2], 0.9);        // 꽁지 (뒤로 뾰족)
+                part(ballGeo, body, [0.3, 0.52, 0], [0.42, 0.42, 0.42]);            // 머리
+                part(ballGeo, beak, [0.53, 0.48, 0], [0.22, 0.08, 0.17]);           // 부리
+                part(ballGeo, eye, [0.45, 0.6, 0.12], [0.06, 0.07, 0.06]);          // 눈
+                part(ballGeo, eye, [0.45, 0.6, -0.12], [0.06, 0.07, 0.06]);
+                part(ballGeo, cheek, [0.42, 0.5, 0.17], [0.08, 0.05, 0.03]);        // 볼
+                part(ballGeo, cheek, [0.42, 0.5, -0.17], [0.08, 0.05, 0.03]);
+                return { group: g, mats: [body, wing, beak, eye, cheek] };
+            }
+
+            // 격자 좌표의 수심[m] · 땅 높이 · 물 면 높이 (물 면 셰이더와 같은 식)
+            function waterAt(x, z) {
+                const d = sample(S.depth, x, z), g = groundY(sample(S.hn, x, z));
+                return { d, ground: g, surf: g + 0.0012 + Math.min(d / S.dRef, 1) * WATER_LIFT };
+            }
+            const floats = d => d > WET_MIN * 1.3;
+            const toWorld = v => v / (S.n - 1) - 0.5;
+            const easeOutBack = p => 1 + 2.7 * Math.pow(p - 1, 3) + 1.7 * Math.pow(p - 1, 2);
+
+            function makeBoat(x, z, dropped) {
+                const gl = S.gl;
+                const obj = new THREE.Group();
+                obj.rotation.order = 'YXZ';                      // 흔들림(앞뒤·좌우) 먼저, 그다음 뱃머리 방향
+                const duck = makeDuck(DUCK_COLORS[Math.floor(Math.random() * DUCK_COLORS.length)]);
+                const mesh = duck.group, mats = duck.mats;
+                mesh.scale.setScalar(BOAT_LEN);
+                mesh.position.y = -0.03 * BOAT_LEN;              // 몸통 아래가 물에 잠기게
+                obj.add(mesh);
+                shadowGeo = shadowGeo || new THREE.CircleGeometry(0.5, 24);
+                const shadow = new THREE.Mesh(shadowGeo, new THREE.MeshBasicMaterial({ color: 0x0b1d33, transparent: true, opacity: 0, depthWrite: false }));
+                shadow.rotation.x = -Math.PI / 2;
+                shadow.visible = false;
+                shadow.renderOrder = 4;
+                gl.group.add(obj, shadow);
+                const w = waterAt(x, z);
+                const b = {
+                    x, z, vx: 0, vz: 0, head: Math.random() * Math.PI * 2, targetHead: null,
+                    dropped, state: dropped ? 'fall' : 'pop', t: 0, stuck: 0, bounce: 0, tilt: 0,
+                    phase: Math.random() * 6.3, y: dropped ? Math.max(w.surf, w.ground) + BOAT_DROP_H : w.surf, vy: 0,
+                    obj, mats, shadow,
+                };
+                S.boat.list.push(b);
+                return b;
+            }
+
+            function removeBoat(b) {
+                const gl = S.gl;
+                if (gl && gl.group) gl.group.remove(b.obj, b.shadow);
+                b.mats.forEach(m => m.dispose()); b.shadow.material.dispose();
+                const i = S.boat.list.indexOf(b);
+                if (i >= 0) S.boat.list.splice(i, 1);
+            }
+
+            function clearBoats() {
+                [...S.boat.list].forEach(removeBoat);
+                S.boat.fx.forEach(f => { if (S.gl && S.gl.group) S.gl.group.remove(f.m); f.m.material.dispose(); });
+                S.boat.fx = [];
+            }
+
+            // 물에 떨어질 때: 퍼지는 물결 고리 두 개 + 튀는 물방울
+            function splash(x, y, z) {
+                const gl = S.gl;
+                ringGeo = ringGeo || new THREE.RingGeometry(0.42, 0.5, 40);
+                dropGeo = dropGeo || new THREE.SphereGeometry(0.5, 8, 6);
+                for (let k = 0; k < 2; k++) {
+                    const m = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide }));
+                    m.rotation.x = -Math.PI / 2; m.position.set(x, y + 0.001, z); m.renderOrder = 6;
+                    gl.group.add(m);
+                    S.boat.fx.push({ kind: 'ring', m, t: -k * 0.18, life: 0.9 });
+                }
+                for (let k = 0; k < 9; k++) {
+                    const a = Math.random() * Math.PI * 2, sp = 0.05 + Math.random() * 0.06;
+                    const m = new THREE.Mesh(dropGeo, new THREE.MeshBasicMaterial({ color: 0xdff3ff, transparent: true, opacity: 0.95, depthWrite: false }));
+                    m.scale.setScalar(0.004 + Math.random() * 0.003); m.position.set(x, y + 0.004, z); m.renderOrder = 6;
+                    gl.group.add(m);
+                    S.boat.fx.push({ kind: 'drop', m, t: 0, life: 0.65, vx: Math.cos(a) * sp, vz: Math.sin(a) * sp, vy: 0.25 + Math.random() * 0.15 });
+                }
+            }
+            function updateFx(dt) {
+                const fx = S.boat.fx;
+                for (let i = fx.length - 1; i >= 0; i--) {
+                    const f = fx[i];
+                    f.t += dt;
+                    if (f.t < 0) continue;
+                    const p = f.t / f.life;
+                    if (p >= 1) { S.gl.group.remove(f.m); f.m.material.dispose(); fx.splice(i, 1); continue; }
+                    if (f.kind === 'ring') {
+                        const s = BOAT_LEN * (0.6 + 2.6 * p);
+                        f.m.scale.set(s, s, s);
+                        f.m.material.opacity = 0.85 * (1 - p);
+                    } else {
+                        f.vy -= 1.8 * dt;
+                        f.m.position.x += f.vx * dt; f.m.position.y += f.vy * dt; f.m.position.z += f.vz * dt;
+                        f.m.material.opacity = 0.95 * (1 - p);
+                    }
+                }
+            }
+
+            // 새 배를 띄울 자리: 물이 충분한 곳 중 높은 쪽(그래야 떠내려가는 모습이 보인다), 다른 배와는 떨어져서
+            function pickSpot() {
+                const n = S.n;
+                let best = null;
+                for (let t = 0; t < 40; t++) {
+                    const x = 2 + Math.random() * (n - 5), z = 2 + Math.random() * (n - 5);
+                    if (sample(S.depth, x, z) < WET_MIN * 3) continue;
+                    if (S.boat.list.some(b => Math.hypot(b.x - x, b.z - z) < 6)) continue;
+                    if (S.hole && Math.hypot(S.hole.x - x, S.hole.z - z) < S.hole.r * 4) continue;   // 배수구 바로 옆에서는 안 띄운다
+                    const h = sample(S.hn, x, z) + Math.random() * 0.15;
+                    if (!best || h > best.h) best = { x, z, h };
+                }
+                return best;
+            }
+
+            // 배 한 척을 한 프레임 움직인다. 다 사라졌으면 true
+            function stepBoat(b, dt) {
+                const n = S.n;
+                b.t += dt;
+                let w = waterAt(b.x, b.z);
+                let scale = 1, alpha = 1, roll = 0, pitch = 0;
+                if (b.state === 'pop') {                         // 자동으로 뜨는 배: 톡 하고 커지며 나타남
+                    const p = Math.min(1, b.t / 0.55);
+                    scale = easeOutBack(p);
+                    b.y = w.surf;
+                    if (p >= 1) { b.state = 'float'; b.t = 0; }
+                } else if (b.state === 'fall') {                 // 클릭한 배: 빙글 돌며 떨어지고, 그림자가 점점 진해진다
+                    b.vy -= 1.4 * dt; b.y += b.vy * dt; b.head += dt * 2.2;
+                    roll = Math.sin(b.t * 7) * 0.25; pitch = Math.cos(b.t * 5) * 0.15;
+                    const wet = floats(w.d), floor = wet ? w.surf : w.ground;
+                    const k = Math.min(1, Math.max(0, b.y - floor) / BOAT_DROP_H);
+                    const s = BOAT_LEN * (1.1 - 0.5 * k);
+                    b.shadow.visible = true;
+                    b.shadow.position.set(toWorld(b.x), floor + 0.0015, toWorld(b.z));
+                    b.shadow.scale.set(s, s, s);
+                    b.shadow.material.opacity = 0.32 * (1 - 0.7 * k);
+                    if (b.y <= floor) {
+                        b.y = floor; b.t = 0; b.shadow.visible = false;
+                        if (S.hole && Math.hypot(b.x - S.hole.x, b.z - S.hole.z) < S.hole.r) { b.state = 'sink'; b.sinkY = null; }   // 구멍에 바로 떨어짐
+                        else if (wet) { b.state = 'float'; b.bounce = 1; splash(toWorld(b.x), floor, toWorld(b.z)); }
+                        else b.state = 'ground';
+                    }
+                } else if (b.state === 'float') {
+                    if (!floats(w.d)) { b.state = 'ground'; b.t = 0; }   // 물이 빠졌다 -> 땅에 얹힘
+                    else {
+                        let gx = sample(S.gx, b.x, b.z), gz = sample(S.gz, b.x, b.z);
+                        const mag = Math.hypot(gx, gz);
+                        let tx = 0, tz = 0;
+                        if (mag > 1e-7) {
+                            gx /= -mag; gz /= -mag;              // 내리막 방향
+                            const k = Math.min(1, mag / S.gRef);
+                            const along = 0.2 + 0.8 * k, swirl = (1 - k) * 0.55;   // 평평한 웅덩이일수록 빙글빙글
+                            tx = gx * along - gz * swirl; tz = gz * along + gx * swirl;
+                        }
+                        const wob = Math.sin(S.clock * 0.8 + b.phase) * 0.3;     // 살짝 갈지자
+                        const tvx = (tx - tz * wob) * BOAT_SPEED, tvz = (tz + tx * wob) * BOAT_SPEED;
+                        const a = Math.min(1, dt * 1.6);
+                        b.vx += (tvx - b.vx) * a; b.vz += (tvz - b.vz) * a;
+                        const nx = b.x + b.vx * dt, nz = b.z + b.vz * dt;
+                        if (nx < 0.5 || nz < 0.5 || nx > n - 1.5 || nz > n - 1.5) { b.state = 'fade'; b.t = 0; }   // 지도 밖으로 떠나감
+                        else if (floats(sample(S.depth, nx, nz))) { b.x = nx; b.z = nz; }
+                        else { b.vx *= -0.4; b.vz *= -0.4; }     // 물가에 닿음: 살짝 튕김
+                        const sp = Math.hypot(b.vx, b.vz);
+                        b.stuck = sp < 0.25 ? b.stuck + dt : Math.max(0, b.stuck - dt * 0.5);
+                        if (sp > 0.08) b.targetHead = Math.atan2(-b.vz, b.vx);
+                        if (b.state === 'float' && (b.stuck > 5 || b.t > (b.dropped ? 70 : 40))) { b.state = 'fade'; b.t = 0; }
+                        if (b.state === 'float' && S.hole && Math.hypot(b.x - S.hole.x, b.z - S.hole.z) < S.hole.r) { b.state = 'sink'; b.t = 0; b.sinkY = null; }
+                        w = waterAt(b.x, b.z);
+                    }
+                    b.bounce *= Math.exp(-dt * 1.8);             // 첨벙 뒤 크게 출렁이다 잦아듦
+                    const amp = 1 + 4 * b.bounce;
+                    b.y = w.surf + Math.sin(S.clock * 2.6 + b.phase) * 0.0012 * amp;
+                    roll = Math.sin(S.clock * 2.1 + b.phase) * 0.09 * amp;
+                    pitch = Math.sin(S.clock * 1.7 + b.phase * 1.3) * 0.05 * amp;
+                } else if (b.state === 'sink') {                 // 배수구에 빠짐: 가운데로 끌려가며 빙글빙글 돌다가 쏙
+                    const p = Math.min(1, b.t / 1.4);
+                    if (S.hole) { const k = Math.min(1, dt * 4); b.x += (S.hole.x - b.x) * k; b.z += (S.hole.z - b.z) * k; }
+                    if (b.sinkY == null) b.sinkY = b.y;
+                    b.head += dt * (5 + 12 * p);
+                    b.y = b.sinkY - 0.06 * p * p;
+                    scale = 1 - 0.55 * p;
+                    roll = Math.sin(b.t * 14) * 0.15;
+                    alpha = p > 0.75 ? (1 - p) / 0.25 : 1;
+                    if (p >= 1) return true;
+                } else if (b.state === 'ground') {               // 마른 땅: 옆으로 눕고 잠시 뒤 사라짐
+                    b.y = w.ground;
+                    b.tilt += (0.55 - b.tilt) * Math.min(1, dt * 4);
+                    roll = b.tilt;
+                    if (b.t > 1.8) { b.state = 'fade'; b.t = 0; }
+                } else {                                         // fade: 살짝 가라앉으며 흐려짐
+                    const p = Math.min(1, b.t / 0.6);
+                    alpha = 1 - p; scale = 1 - 0.4 * p; roll = b.tilt;
+                    b.y = (floats(w.d) ? w.surf : w.ground) - 0.01 * p;
+                    if (p >= 1) return true;
+                }
+                if (b.targetHead != null) {
+                    const dh = Math.atan2(Math.sin(b.targetHead - b.head), Math.cos(b.targetHead - b.head));
+                    b.head += dh * Math.min(1, dt * 3);
+                }
+                b.obj.position.set(toWorld(b.x), b.y, toWorld(b.z));
+                b.obj.rotation.set(roll, b.head, pitch);
+                b.obj.scale.setScalar(Math.max(0.001, scale));
+                b.mats.forEach(m => { m.opacity = alpha; });
+                return false;
+            }
+
+            function updateBoats(dt) {
+                const B = S.boat;
+                if (!B.on) { if (B.list.length || B.fx.length) clearBoats(); return; }
+                updateFx(dt);
+                if (!S.frames.length) return;
+                // 자동으로 떠 있는 배 수를 설정 값에 맞춘다 (한 번에 한 척씩, 조금씩 시간을 두고)
+                const auto = B.list.filter(b => !b.dropped && b.state !== 'fade');
+                if (auto.length > B.count) auto.slice(B.count).forEach(b => { b.state = 'fade'; b.t = 0; });
+                B.cool -= dt;
+                if (auto.length < B.count && B.cool <= 0) {
+                    const p = pickSpot();
+                    if (p) makeBoat(p.x, p.z, false);
+                    B.cool = 0.7;
+                }
+                for (let i = B.list.length - 1; i >= 0; i--) {
+                    const b = B.list[i];
+                    if (stepBoat(b, dt)) removeBoat(b);
+                }
+            }
+
+            // 3D 지도를 클릭한 자리(화면 좌표)에 오리배를 떨어뜨린다
+            function dropBoatAt(clientX, clientY) {
+                const gl = S.gl;
+                if (!S.boat.on || !gl || !gl.terrain || !S.frames.length) return;
+                const r = gl.renderer.domElement.getBoundingClientRect();
+                const ndc = new THREE.Vector2((clientX - r.left) / r.width * 2 - 1, -(clientY - r.top) / r.height * 2 + 1);
+                const ray = new THREE.Raycaster();
+                ray.setFromCamera(ndc, gl.camera);
+                const hit = ray.intersectObject(gl.terrain, false)[0];
+                if (!hit) return;
+                const n = S.n;
+                const x = Math.min(n - 2, Math.max(1, (hit.point.x + 0.5) * (n - 1)));
+                const z = Math.min(n - 2, Math.max(1, (hit.point.z + 0.5) * (n - 1)));
+                const dropped = S.boat.list.filter(b => b.dropped && b.state !== 'fade');
+                if (dropped.length >= BOAT_MAX_DROPPED) { dropped[0].state = 'fade'; dropped[0].t = 0; }
+                makeBoat(x, z, true);
+            }
+
             function disposeMeshes() {
                 const gl = S.gl;
                 if (!gl || !gl.group) return;
+                S.boat.list = []; S.boat.fx = [];                // 배·물결도 group 안에 있어서 아래에서 같이 정리된다
                 gl.group.traverse(o => {
                     if (o.geometry) o.geometry.dispose();
                     if (o.material) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); }
                 });
                 gl.scene.remove(gl.group);
                 gl.group = gl.terrain = gl.water = gl.lines = gl.points = gl.pin = gl.halo = gl.skirt = null;
+                gl.holeWall = gl.holeFloor = gl.holeRim = gl.holeGrate = gl.arrow = gl.label = null; gl.arrowBase = null;
             }
             function disposeScene() { disposeMeshes(); }
 
@@ -984,7 +1378,10 @@
                 el.addEventListener('contextmenu', e => e.preventDefault());
                 el.addEventListener('pointerdown', e => {
                     el.setPointerCapture(e.pointerId);
-                    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, pan: e.button === 2 || e.shiftKey });
+                    pointers.set(e.pointerId, {
+                        x: e.clientX, y: e.clientY, pan: e.button === 2 || e.shiftKey,
+                        sx: e.clientX, sy: e.clientY, t0: performance.now(), moved: false, multi: pointers.size > 0, button: e.button,
+                    });
                     el.classList.add('dragging');
                 });
                 el.addEventListener('pointermove', e => {
@@ -1006,8 +1403,19 @@
                         if (before > 0 && now > 0) c.radius *= before / now;
                     }
                     p.x = e.clientX; p.y = e.clientY;
+                    if (Math.hypot(e.clientX - p.sx, e.clientY - p.sy) > 6) p.moved = true;   // 끌었으면 클릭이 아님
                 });
-                const end = e => { pointers.delete(e.pointerId); if (!pointers.size) el.classList.remove('dragging'); };
+                const end = e => {
+                    const p = pointers.get(e.pointerId);
+                    // 끌지 않고 짧게 누른 왼쪽 클릭 = 오리배 떨어뜨리기 (더블클릭의 두 번째 클릭은 건너뜀: 시점 초기화만)
+                    if (e.type === 'pointerup' && p && !p.moved && !p.pan && !p.multi && p.button === 0 && performance.now() - p.t0 < 450) {
+                        const now = performance.now(), last = S.boat.lastDrop;
+                        if (!(last && now - last.t < 350 && Math.hypot(e.clientX - last.x, e.clientY - last.y) < 10)) dropBoatAt(e.clientX, e.clientY);
+                        S.boat.lastDrop = { t: now, x: e.clientX, y: e.clientY };
+                    }
+                    pointers.delete(e.pointerId);
+                    if (!pointers.size) el.classList.remove('dragging');
+                };
                 el.addEventListener('pointerup', end);
                 el.addEventListener('pointercancel', end);
                 el.addEventListener('wheel', e => { e.preventDefault(); S.cam.radius *= Math.exp(e.deltaY * 0.0012); }, { passive: false });
@@ -1045,7 +1453,9 @@
                 gl.waterMat.uniforms.uTime.value = S.clock;
                 gl.lines.visible = gl.points.visible = S.flow;
                 if (S.flow) updateParticles(dt);
+                updateBoats(dt);
                 if (gl.halo) { const s = 1 + 0.25 * Math.sin(S.clock * 3); gl.halo.scale.set(s, s, 1); }
+                if (gl.arrow && gl.arrowBase != null) gl.arrow.position.y = gl.arrowBase + 0.009 * Math.sin(S.clock * 3.2);
                 if ((gl.tick = (gl.tick || 0) + 1) % 30 === 0) resize();   // 패널을 접거나 옮겼을 때 중심 다시 맞춤
                 applyCamera();
                 gl.renderer.render(gl.scene, gl.camera);
@@ -1099,9 +1509,14 @@
             }
 
             return {
-                available, setTerrain, addFrame, setTime, clear, show, hide, resetCamera,
+                available, depthAt, setTerrain, addFrame, setTime, clear, show, hide, resetCamera,
                 setExaggeration(v) { S.exag = v; S.dirtyTerrain = true; },
                 setFlow(on) { S.flow = !!on; },
+                setBoats(on, count) {
+                    S.boat.on = !!on;
+                    S.boat.count = Math.min(8, Math.max(1, Math.round(Number(count) || 3)));
+                    if (!S.boat.on && S.gl) clearBoats();
+                },
                 _state: S,
             };
         })();
@@ -1274,7 +1689,7 @@
            고른 값은 이 브라우저에 저장된다 */
         const SETTINGS_KEY = 'yuche_settings_v1';
         const PANEL_SCALE_MIN = 50, PANEL_SCALE_MAX = 150;   // 패널 크기 % 범위
-        const settings = { panelScale: 100, autoFold: true };
+        const settings = { panelScale: 100, autoFold: true, boats: false, boatCount: 3 };
         try {
             const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}') || {};
             if (saved.compact && saved.panelScale == null) saved.panelScale = 90;   // 예전 '컴팩트' 설정은 90% 로
@@ -1291,6 +1706,20 @@
             if (document.activeElement !== numEl) numEl.value = pct;   // 입력 중에는 글자를 덮어쓰지 않는다
             document.getElementById('panel-scale-reset').disabled = pct === 100;
             document.getElementById('autofold-btn').setAttribute('aria-pressed', String(!!settings.autoFold));
+            // 3D 보기: 오리배 (기본 꺼짐). 끄면 배 수 칸은 흐리게 막는다
+            const boats = !!settings.boats;
+            const cnt = Math.min(8, Math.max(1, Math.round(Number(settings.boatCount) || 3)));
+            settings.boatCount = cnt;
+            document.getElementById('boat-btn').setAttribute('aria-pressed', String(boats));
+            document.getElementById('boat-count-row').classList.toggle('is-off', !boats);
+            document.getElementById('boat-count').value = cnt;
+            document.getElementById('boat-count').disabled = !boats;
+            const boatNum = document.getElementById('boat-count-val');
+            boatNum.disabled = !boats;
+            if (document.activeElement !== boatNum) boatNum.value = cnt;
+            document.getElementById('v3d-boat-hint').style.display = boats ? '' : 'none';
+            document.getElementById('stage-3d').classList.toggle('boats', boats);
+            View3D.setBoats(boats, cnt);
             // 크기가 바뀌면 버튼·범례 자리와 지도 안전 영역을 다시 잰다 (transform 은 ResizeObserver 가 못 잡는다)
             if (window.yucheLayoutReady) { placeGallery(); updateSafeArea(); }
             if (save) { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (e) { /* 무시 */ } }
@@ -1315,6 +1744,21 @@
             settings.autoFold = !settings.autoFold;
             applySettings(true);
         });
+        document.getElementById('boat-btn').addEventListener('click', () => {
+            settings.boats = !settings.boats;
+            applySettings(true);
+        });
+        document.getElementById('boat-count').addEventListener('input', (e) => {
+            settings.boatCount = Number(e.target.value);
+            applySettings(true);
+        });
+        const boatNumEl = document.getElementById('boat-count-val');
+        boatNumEl.addEventListener('input', () => {
+            const v = Number(boatNumEl.value);
+            if (boatNumEl.value !== '' && v >= 1 && v <= 8) { settings.boatCount = v; applySettings(true); }
+        });
+        boatNumEl.addEventListener('change', () => { settings.boatCount = Number(boatNumEl.value) || 3; applySettings(true); boatNumEl.value = settings.boatCount; });
+        boatNumEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') boatNumEl.blur(); });
         applySettings(false);
 
         // 화면 가운데 설정 창: ⚙ 로 열고, ✕ · 바깥(어두운 곳) 클릭 · Esc 로 닫는다
@@ -1855,7 +2299,6 @@
         function updateRunSummary() {
             const parts = [MODE_TEXT[getMode()].short];
             if (modelInfo.rainConditioned) parts.push(`강우 ${document.getElementById('rainMm').value}mm`);
-            if (modelInfo.timeConditioned) parts.push(`경과 ${document.getElementById('timeS').value}초`);
             const file = document.getElementById('fileInput').files[0];
             parts.push(file ? file.name : '파일 미선택');
             document.getElementById('run-summary').textContent = parts.join(' · ');
@@ -1863,7 +2306,6 @@
             // 접힌 조건 패널(알약)에는 핵심 조건만 짧게
             const pill = [];
             if (modelInfo.rainConditioned) pill.push(`${document.getElementById('rainMm').value}mm`);
-            if (modelInfo.timeConditioned) pill.push(`${document.getElementById('timeS').value}초`);
             document.getElementById('panel-pill-text').textContent = pill.join(' · ');
             markRainPreset();
             if (window.yucheStaleReady) updateStale();   // 시작할 때는 아래 stageState·byId 가 아직 없어서 건너뛴다
@@ -1882,9 +2324,8 @@
             const r = stageState.result;
             if (!r) return [];
             const reasons = [];
-            const rainEl = byId('rainMm'), timeEl = byId('timeS');
+            const rainEl = byId('rainMm');
             if (modelInfo.rainConditioned && r.rain != null && rainEl.value !== '' && clampRain(Number(rainEl.value)) !== r.rain) reasons.push('강우량');
-            if (modelInfo.timeConditioned && r.time != null && timeEl.value !== '' && Number(timeEl.value) !== r.time) reasons.push('경과 시간');
             const f = fileKey(byId('fileInput').files[0]);
             if (r.file && f && f !== r.file) reasons.push('파일');
             return reasons;
@@ -1893,7 +2334,8 @@
             const reasons = staleReasons();
             const stale = reasons.length > 0;
             byId('chips-stale').style.display = stale ? 'flex' : 'none';
-            byId('chips-stale-text').textContent = stale ? `${reasons.join(' · ')} 변경됨 · 다시 예측하면 반영돼요` : '';
+            byId('chips-stale-text').textContent = stale ? `${reasons.join(' · ')} 변경됨` : '';
+            byId('chips-stale').title = stale ? '다시 예측하면 반영돼요' : '';
             byId('chips').classList.toggle('stale', stale);
             byId('pill-stale').style.display = stale ? 'inline-block' : 'none';
             const btn = byId('submit-btn');
@@ -1901,6 +2343,8 @@
                 const hasFile = !!byId('fileInput').files[0];
                 btn.textContent = stale && hasFile ? '변경된 조건으로 다시 예측' : submitLabel;
             }
+            // 결과가 있고 조건이 그대로면 실행 버튼은 테두리만 있는 보조 모양 (눌러야 할 것처럼 보이지 않게)
+            btn.classList.toggle('quiet', !!stageState.result && !stale);
         }
 
         /* ---------- 모델 서버 상태 (/api/health) ---------- */
@@ -1914,6 +2358,8 @@
                 modelInfo.authEnabled = !!h.auth_enabled && h.db === 'ok';
                 if (Array.isArray(h.rain_range_mm)) modelInfo.rainRange = h.rain_range_mm;
                 if (Array.isArray(h.time_range_s)) modelInfo.timeRange = h.time_range_s;
+                if (Array.isArray(h.timelapse_times) && h.timelapse_times.length) TIMELAPSE_TIMES = h.timelapse_times.map(Number);
+                if (typeof h.drain_ref_time_s === 'number') DRAIN_REF_TIME_S = h.drain_ref_time_s;
 
                 // 입력칸 범위를 서버가 알려준 학습 범위에 맞춘다
                 const rain = document.getElementById('rainMm');
@@ -1930,9 +2376,9 @@
                 const time = document.getElementById('timeS');
                 time.min = modelInfo.timeRange[0];
                 time.max = modelInfo.timeRange[1];
-                if (h.default_time_s != null) time.value = h.default_time_s;
+                time.value = 18;   // 첫 예측은 18초 고정 (배수구 후보 기준 시점). 다른 시간은 아래 시간 슬라이더로 본다
                 syncSliderBounds('timeRange', 'timeS');
-                document.getElementById('time-row').style.display = modelInfo.timeConditioned ? 'block' : 'none';
+                document.getElementById('time-row').style.display = 'none';   // 경과 시간은 조건 패널에서 고르지 않는다
 
                 // 화면에는 짧게, 모델·장치·로그인 여부 같은 세부 정보는 마우스를 올리면 보이게
                 const auth = modelInfo.authEnabled ? '로그인 필요' : '로그인 없이 사용 가능';
@@ -2069,7 +2515,7 @@
         // AI 서버로 보내는 숫자 변수들. visible() 이 false 면 검사하지 않는다(숨겨진 칸)
         const NUMERIC_FIELDS = [
             { id: 'rainMm', label: '강우량', visible: () => modelInfo.rainConditioned },
-            { id: 'timeS', label: '경과 시간', visible: () => modelInfo.timeConditioned },
+            { id: 'timeS', label: '경과 시간', visible: () => false },
             { id: 'dx', label: '격자 셀 크기', visible: () => getMode() === 'terrain' }
         ];
 
@@ -2349,14 +2795,6 @@
                     if (visible(tg)) top = Math.min(top, tg.getBoundingClientRect().top);
                     if (m.bottom - top < m.height * 0.4) b = Math.max(b, m.bottom - top + SAFE_GAP);
                 }
-                const lg = byId('stage-legend');   // 왼쪽 아래 범례 (패널을 접으면 지도 왼쪽 아래와 겹칠 수 있다)
-                if (visible(lg) && !visible(panel)) b = Math.max(b, m.bottom - lg.getBoundingClientRect().top + SAFE_GAP);
-                // 오른쪽 위 결과 요약 바: 지도 윗부분을 가리지 않게 위쪽 여백으로 잡는다
-                const chips = byId('chips');
-                if (visible(chips)) {
-                    const r = chips.getBoundingClientRect();
-                    if (r.top - m.top < m.height * 0.2) top0 = Math.max(top0, r.bottom - m.top + SAFE_GAP);
-                }
             }
             const mobile = matchMedia(MOBILE_QUERY).matches;   // 세로로 쌓는 화면은 패널이 지도 위에 안 떠 있다
             const t = mobile ? 0 : Math.round(Math.max(SAFE_GAP, top0)), rr = 0;   // 오른쪽엔 가리는 패널이 없다 (작은 칩·확대 버튼은 지도 위에 둔다)
@@ -2371,7 +2809,7 @@
                 const zoomEl = byId('stage-zoom');   // 오른쪽 아래 확대 버튼 (크기 % 에 따라 폭이 바뀐다)
                 const rightBound = zoomEl.getClientRects().length ? zoomEl.getBoundingClientRect().left - m.left - SAFE_GAP : m.width - 88;
                 const z = Number(getComputedStyle(document.documentElement).getPropertyValue('--panel-z')) || 1;
-                const tlMax = Math.max(320, Math.min(780 * z, 2 * Math.min(center - leftBound, rightBound - center)));
+                const tlMax = Math.max(320, Math.min(900 * z, 2 * Math.min(center - leftBound, rightBound - center)));
                 // 시간 슬라이더도 크기 % 만큼 transform 으로 커지므로, 보이는 폭이 tlMax 가 되도록 나눠서 넣는다
                 byId('view-predict').style.setProperty('--tl-max', Math.round(tlMax / z) + 'px');
             }
@@ -2386,12 +2824,23 @@
             updateStageFit();
         }
         // '결과 이미지' 버튼을 조건 패널(접혔으면 알약) 바로 아래에 붙인다. 패널이 펼쳐져 있으면 패널 폭에 맞춘다
+        const galleryHome = { parent: null, next: null };
         function placeGallery() {
             const g = byId('btn-gallery');
-            if (matchMedia(MOBILE_QUERY).matches) { g.style.top = ''; g.classList.remove('wide'); return; }
+            if (!galleryHome.parent) { galleryHome.parent = g.parentNode; galleryHome.next = g.nextSibling; }
             const panel = byId('cond-panel'), pill = byId('panel-pill');
-            const open = panel.getClientRects().length > 0;
+            const open = panel.style.display !== 'none' && !matchMedia(MOBILE_QUERY).matches;
+            if (open) {   // 펼친 패널: 실행 버튼 바로 아래 보조 버튼
+                const bar = document.querySelector('#cond-panel .run-bar');
+                if (g.parentNode !== bar) bar.appendChild(g);
+                g.classList.add('in-panel'); g.classList.remove('wide'); g.style.top = '';
+            } else if (g.parentNode !== galleryHome.parent) {
+                galleryHome.parent.insertBefore(g, galleryHome.next);
+            }
+            if (!open) g.classList.remove('in-panel');
+            if (matchMedia(MOBILE_QUERY).matches) { g.style.top = ''; g.classList.remove('wide'); return; }
             panel.classList.toggle('scrolls', open && panel.scrollHeight > panel.clientHeight + 1);   // 실행 버튼 띠 배경
+            if (open) return;
             const anchor = open ? panel : pill;
             if (!anchor.getClientRects().length) return;
             const stageRect = byId('view-predict').getBoundingClientRect();
@@ -2428,12 +2877,16 @@
 
         // 한 축을 가둔다. size = 화면 크기, lo/hi = 그 축 앞·뒤의 가린 폭(안전 영역 바깥),
         // b = 화면 가운데에서 미리 옮겨 둔 거리, scaled = 확대된 지도 한 변
+        // 지도는 어느 배율에서나 자유롭게 끌 수 있다. 다만 화면 밖으로 완전히 빠져 잃어버리지 않게
+        // 지도 가장자리가 화면 안쪽으로 MAP_KEEP_PX 만큼은 남도록만 막는다.
+        // t: 이동량, size: 화면 크기, b: 화면 가운데에서 미리 옮겨 둔 거리, scaled: 지금 배율의 지도 한 변
+        const MAP_KEEP_PX = 120;
+        // (lo/hi: 그 축의 앞·뒤를 패널이 가린 폭 -> 패널 밑으로 숨은 부분은 '보이는' 것으로 치지 않는다)
         function clampAxis(t, size, lo, hi, b, scaled) {
-            const o = (lo - hi) / 2;                 // 안전 영역 가운데 (화면 가운데 기준)
-            const ss = Math.max(1, size - lo - hi);  // 안전 영역 크기
-            // 지도가 그 축에서 안전 영역보다 크면(확대했을 때) 가장자리가 안으로 들어오지 않는 만큼만 움직이고,
-            // 작거나 같으면(100%·축소) 움직이지 않고 가운데에 둔다. (예전엔 100% 에서도 남는 가로 폭만큼 좌우로만 끌렸다)
-            const lim = scaled > ss + 0.5 ? (scaled - ss) / 2 : 0;
+            const o = (lo - hi) / 2;                      // 안전 영역 가운데 (화면 가운데 기준)
+            const ss = Math.max(1, size - lo - hi);       // 안전 영역 크기
+            const keep = Math.min(MAP_KEEP_PX, scaled / 2, ss / 2);
+            const lim = ss / 2 + scaled / 2 - keep;       // 지도 중심이 안전 영역 가운데에서 갈 수 있는 거리
             const c = Math.min(o + lim, Math.max(o - lim, b + t));
             return c - b;
         }
@@ -2456,8 +2909,11 @@
             map.classList.toggle('zoomed', zoomed);
             // 실제로 끌 수 있는 축이 있을 때만 '손' 커서
             const g = mapGeom, a = g.a || { l: 0, r: 0, t: 0, b: 0 }, scaled = g.side * mapView.s;
-            map.classList.toggle('pannable', !!g.side && (scaled > g.W - a.l - a.r + 0.5 || scaled > g.H - a.t - a.b + 0.5));
+            map.classList.toggle('pannable', !!g.side);   // 결과가 있으면 언제든 끌어서 옮길 수 있다
+            const moved = zoomed || Math.abs(mapView.tx) > 4 || Math.abs(mapView.ty) > 4;
             byId('zoom-reset').textContent = Math.round(mapView.s * 100) + '%';
+            byId('zoom-reset').classList.toggle('moved', moved);   // 옮기거나 확대했으면 '가운데로' 버튼을 강조
+            byId('zoom-reset').title = moved ? '가운데로 되돌리기 (더블클릭)' : '원래 크기로';
             byId('zoom-out').disabled = mapView.s <= MAP_ZOOM_MIN + 0.001;
             byId('zoom-in').disabled = mapView.s >= MAP_ZOOM_MAX - 0.001;
         }
@@ -2501,6 +2957,7 @@
             mapEl.setPointerCapture(e.pointerId);
             mapPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
             mapEl.classList.add('dragging');
+            hideDepthTip();
         });
 
         mapEl.addEventListener('pointermove', (e) => {
@@ -2525,6 +2982,31 @@
             p.y = e.clientY;
         });
 
+        // 마우스를 올린 곳의 수심을 오른쪽 세로 범례에 주황 선으로 표시한다 (커서 옆 글자는 띄우지 않는다)
+        function hideDepthTip() {
+            byId('dl-hover').style.display = 'none';
+        }
+        function showDepthTipAt(cx, cy) {
+            if (!mapHasImage() || stageState.view === '3d' || mapPointers.size || !View3D.available()) return hideDepthTip();
+            const el = byId(stageState.view === 'time' && timelapse.frames.length ? 'timelapse-canvas' : 'stage-img');
+            const r = el.getBoundingClientRect();
+            if (!r.width || !r.height) return hideDepthTip();
+            const u = (cx - r.left) / r.width, v = (cy - r.top) / r.height;
+            const time = stageState.view === 'time' ? Number(byId('timelapse-range').value) : (stageState.result ? stageState.result.time : null);
+            const d = View3D.depthAt(u, v, time);
+            if (d == null) return hideDepthTip();
+            const cm = d * 100;
+            const hv = byId('dl-hover');
+            hv.style.bottom = legendPos(cm) + '%';
+            hv.style.display = 'block';
+        }
+        mapEl.addEventListener('pointermove', (e) => {
+            if (e.pointerType === 'touch') return;
+            if (isMapControl(e.target)) return hideDepthTip();
+            showDepthTipAt(e.clientX, e.clientY);
+        });
+        mapEl.addEventListener('pointerleave', hideDepthTip);
+
         function endMapPointer(e) {
             mapPointers.delete(e.pointerId);
             if (!mapPointers.size) mapEl.classList.remove('dragging');
@@ -2535,7 +3017,8 @@
         // 더블클릭: 그 지점을 2.5배로, 이미 확대돼 있으면 원래대로
         mapEl.addEventListener('dblclick', (e) => {
             if (!mapHasImage() || isMapControl(e.target)) return;
-            if (Math.abs(mapView.s - 1) > 0.001) resetMapView();
+            const moved = Math.abs(mapView.tx) > 4 || Math.abs(mapView.ty) > 4;
+            if (Math.abs(mapView.s - 1) > 0.001 || moved) resetMapView();   // 확대했거나 옮겼으면 가운데로
             else zoomMapAt(e.clientX, e.clientY, 2.5);
             clampMapView();
             applyMapView();
@@ -2563,6 +3046,7 @@
             byId('stage-btn-time').setAttribute('aria-pressed', String(time));
             byId('stage-btn-3d').classList.toggle('on', is3d);
             byId('stage-btn-3d').setAttribute('aria-pressed', String(is3d));
+            if (is3d) hideDepthTip();
             // 3D 보기: 2D 지도(.stage-square)와 확대 버튼은 style.css 의 .view-3d 규칙이 숨긴다
             byId('stage-map').classList.toggle('view-3d', is3d);
             byId('stage-legend').style.display = (!is3d && byId('view-predict').classList.contains('has-legend')) ? 'block' : 'none';   // 3D 의 물 색은 이 범례와 다르다
@@ -2570,6 +3054,8 @@
             byId('stage-3d').style.display = is3d ? 'block' : 'none';
             byId('v3d-tools').style.display = is3d ? 'flex' : 'none';
             if (is3d) {
+                // 오리배가 켜져 있으면 처음 3D 를 열 때 한 번 안내 (도구 막대의 🦆 에 마우스를 올려도 같은 안내)
+                if (settings.boats && !window.yucheBoatHintShown) { window.yucheBoatHintShown = true; showToast('🦆 3D 지도를 클릭하면 그 자리에 오리배가 떨어져요'); }
                 View3D.show(byId('stage-3d')).then(ok => {
                     if (ok || stageState.view !== '3d') return;
                     setStageView('map');
@@ -2589,7 +3075,10 @@
         }
 
         /* ---------- 3D 보기 도구 ---------- */
-        byId('v3d-exag').addEventListener('input', (e) => View3D.setExaggeration(Number(e.target.value)));
+        byId('v3d-exag').addEventListener('input', (e) => {
+            View3D.setExaggeration(Number(e.target.value));
+            byId('v3d-exag-val').textContent = '×' + Number(e.target.value).toFixed(1);
+        });
         byId('v3d-flow').addEventListener('click', (e) => {
             const on = e.currentTarget.getAttribute('aria-pressed') !== 'true';
             e.currentTarget.setAttribute('aria-pressed', String(on));
@@ -2598,6 +3087,7 @@
         byId('v3d-reset').addEventListener('click', () => View3D.resetCamera());
 
         // 지도 한 장을 화면에 올린다. marker = 배수구 후보 {x, y} (0~1, 그림 왼쪽 위 기준)
+        let markerPeekTimer = null;
         function showStageImage(stage) {
             byId('stage-img').src = stage.src;
             byId('stage-bg').src = stage.src;
@@ -2605,7 +3095,8 @@
             byId('stage-square').style.display = 'block';
             byId('viewer-placeholder').style.display = 'none';
             byId('stage-back').style.display = 'inline-flex';
-            byId('view-predict').classList.add('has-back');   // 왼쪽 열(조건 패널·알약)을 버튼 높이만큼 내린다
+            byId('view-predict').classList.add('has-back');   // 접힌 알약을 버튼 높이만큼 내린다 (펼친 패널은 제목 옆 ←)
+            placeBackButton();
             updateBackLabel();
             stageState.marker = stage.marker || null;
             if (stage.marker) {
@@ -2615,10 +3106,11 @@
                     byId(id).style.top = `${m.y * 100}%`;
                 }
                 // 가장자리에서 라벨이 잘리지 않게: 오른쪽이면 왼쪽으로, 위쪽이면 아래로
-                byId('stage-marker-label').className = 'marker-label' + (m.x > 0.6 ? ' left' : '') + (m.y < 0.15 ? ' below' : '');
+                byId('stage-marker-label').className = 'marker-label peek' + (m.x > 0.6 ? ' left' : '') + (m.y < 0.15 ? ' below' : '');
+                clearTimeout(markerPeekTimer);
+                markerPeekTimer = setTimeout(() => byId('stage-marker-label').classList.remove('peek'), 3000);
             }
             resetMapView();   // 새 결과는 확대·이동을 처음 상태로
-            byId('view-predict').classList.add('has-legend');
             updateStageFit();
             setStageView('map');
         }
@@ -2632,7 +3124,8 @@
             byId('viewer-placeholder').style.display = '';
             byId('stage-back').style.display = 'none';
             byId('view-predict').classList.remove('has-back');
-            byId('chips').style.display = 'none';
+            resetChips();
+            hideDepthTip();
             byId('btn-gallery').style.display = 'none';
             byId('stage-legend').style.display = 'none';
             byId('view-predict').classList.remove('has-legend', 'has-gallery');
@@ -2649,7 +3142,10 @@
             updateSafeArea();
         }
         function updateBackLabel() {
-            byId('stage-back-text').textContent = stageState.from === 'history' ? '기록으로 돌아가기' : '처음 화면으로';
+            const label = stageState.from === 'history' ? '기록으로 돌아가기' : '처음 화면으로';
+            byId('stage-back-text').textContent = label;
+            byId('stage-back').title = label;
+            byId('stage-back').setAttribute('aria-label', label);
         }
         byId('stage-back').addEventListener('click', () => {
             if (stageState.from === 'history') goToView('history');
@@ -2658,39 +3154,55 @@
 
         /* ---------- 요약 칩 ---------- */
         const LEGEND_MAX_CM = 60;   // 모델 수심 색 기준 DEPTH_VMAX_M = 0.6m (ai_model/src/utils/render_fields.py)
+        // 결과 정보 채우기: 도크 글자(지형 이름 · 강우 [샘플]) + 세로 범례의 최대 수심. cond = { rain, time, name, sample }
         function updateChips(stats, cond) {
-            const has = !!(stats && stats.max_depth_cm != null);
-            const condText = [];
-            if (cond && cond.rain != null) condText.push(`${cond.rain}mm`);
-            if (cond && cond.time != null) condText.push(`${cond.time}초`);
-            byId('chip-cond-val').textContent = condText.join(' · ');
-            byId('chip-cond').style.display = condText.length ? 'flex' : 'none';
-            byId('chip-depth').style.display = has ? 'flex' : 'none';
-            byId('chip-area').style.display = has ? 'flex' : 'none';
-            byId('chips').style.display = (has || condText.length) ? 'flex' : 'none';
-            if (!has) byId('lg-max').style.display = 'none';
+            const c = cond || {};
+            byId('mt-name').textContent = c.name || '';
+            byId('chip-cond-val').textContent = c.rain != null ? `${c.rain}mm` : '';
+            byId('mt-sep1').style.display = (c.name && c.rain != null) ? '' : 'none';
+            byId('mt-fallback').style.display = (c.name || c.rain != null) ? 'none' : '';
+            const maxCm = stats && stats.max_depth_cm != null ? Number(stats.max_depth_cm) : NaN;
+            const has = isFinite(maxCm);
+            byId('dl-max').textContent = has ? maxCm.toFixed(1) : '–';
+            byId('dl-mark').style.display = has ? 'block' : 'none';
+            if (has) byId('dl-mark').style.bottom = legendPos(maxCm) + '%';
+            byId('dl-max').title = (has && c.time != null) ? `${c.time}초 결과 기준` : '';
             updateStale();
-            if (!has) return;
-            byId('chip-depth-label').textContent = '최대 침수';
-            const maxCm = Number(stats.max_depth_cm);
-            if (isFinite(maxCm)) {   // 범례 위 ▲: 눈금과 같은 제곱근 위치 (60cm 이상은 끝)
-                const pos = Math.sqrt(Math.min(Math.max(maxCm, 0), LEGEND_MAX_CM) / LEGEND_MAX_CM) * 100;
-                byId('lg-max').style.left = pos + '%';
-                byId('lg-max').classList.toggle('right', pos > 70);
-                byId('lg-max-text').textContent = `최대 ${maxCm.toFixed(1)}cm`;
-                byId('lg-max').style.display = 'block';
-            }
-            byId('chip-depth-val').textContent = Number(stats.max_depth_cm).toFixed(1);
-            byId('chip-area-val').textContent = Number(stats.wet_area_pct).toFixed(1);
-            byId('chip-area-label').textContent = `${stats.wet_threshold_cm ?? 5}cm 이상 면적`;
+        }
+        const legendPos = cm => Math.sqrt(Math.min(Math.max(cm, 0), LEGEND_MAX_CM) / LEGEND_MAX_CM) * 100;
+        function resetChips() {   // 처음 화면: 도크 글자는 '경과 시간', 범례는 비운다
+            byId('mt-name').textContent = ''; byId('chip-cond-val').textContent = '';
+            byId('mt-sep1').style.display = 'none'; byId('chip-sample').style.display = 'none';
+            byId('mt-fallback').style.display = '';
+            byId('dl-max').textContent = '–'; byId('dl-mark').style.display = 'none';
+        }
+        function updateTitleTime() {}   // 시간은 도크 오른쪽 숫자가 보여 준다 (예전 제목 줄용, 호출은 그대로 둔다)
+        // 파일 이름 -> 제목 줄에 쓸 지형 이름 (확장자와 '샘플_' 앞머리는 뺀다. 샘플은 배지로 따로 보인다)
+        function titleNameOf(filename) {
+            return String(filename || '').replace(/\.[^.]+$/, '').replace(new RegExp('^' + SAMPLE_PREFIX), '').replace(/_/g, ' ').trim();
         }
 
         /* ---------- 조건 패널 접기/펼치기 ---------- */
+        // 펼친 패널에서는 '처음 화면으로'를 조건 제목 옆 ← 로, 접으면 원래 자리(알약 위 버튼)로
+        const backHome = { parent: null, next: null };
+        function placeBackButton() {
+            const btn = byId('stage-back');
+            if (!backHome.parent) { backHome.parent = btn.parentNode; backHome.next = btn.nextSibling; }
+            const open = byId('cond-panel').style.display !== 'none' && !matchMedia(MOBILE_QUERY).matches;
+            if (open) {
+                const head = document.querySelector('#cond-panel .panel-head');
+                if (btn.parentNode !== head) head.insertBefore(btn, head.firstChild);
+            } else if (btn.parentNode !== backHome.parent) {
+                backHome.parent.insertBefore(btn, backHome.next);
+            }
+            btn.classList.toggle('in-head', open);
+        }
         function setPanelFolded(folded) {
             byId('cond-panel').style.display = folded ? 'none' : '';
             byId('panel-pill').style.display = folded ? 'flex' : 'none';
             byId('panel-fold').setAttribute('aria-expanded', String(!folded));
             byId('view-predict').classList.toggle('folded', folded);   // 접히면 왼쪽 열(이전 화면·결과 이미지·범례)도 알약 폭으로
+            placeBackButton();
             if (typeof clampAllMovables === 'function') clampAllMovables();   // 접힌 알약과 패널은 크기가 달라 다시 가둔다
         }
         byId('panel-fold').addEventListener('click', () => setPanelFolded(true));
@@ -2753,6 +3265,10 @@
             form.append('rain_mm', p.rainMm);            // 강우량 [mm]
             form.append('time_s', p.timeS);              // 경과 시간 [초]
             form.append('dx', p.dx);                     // 셀 크기 [m] (terrain 모드만 의미 있음)
+            // 안 쓰는 그림 생략 (서버가 그리지도 보내지도 않음). 시간 변화용 light / 첫 화면 두 요청의 no_analysis·no_map
+            if (p.light) form.append('light', 'true');
+            if (p.noAnalysis) form.append('no_analysis', 'true');
+            if (p.noMap) form.append('no_map', 'true');
             if (p.mode === 'image') {                    // 이미지 색 체계: 서버가 높이로 읽어 학습 형식으로 다시 그림
                 form.append('color_scheme', p.color.scheme);
                 form.append('reverse', p.color.reverse ? 'true' : 'false');
@@ -3089,6 +3605,7 @@
                 sample: String(m.filename || '').startsWith(SAMPLE_PREFIX)   // 샘플 지형으로 낸 결과 (기록에서 열어도 파일 이름으로 안다)
             };
             byId('chip-sample').style.display = stageState.result.sample ? 'inline-block' : 'none';
+            stageState.result.name = titleNameOf(m.filename);
             updateChips(m.stats, stageState.result);
             document.getElementById('btn-gallery').style.display = 'inline-flex';
             byId('view-predict').classList.add('has-gallery');   // 패널 최대 높이를 버튼 자리만큼 줄인다
@@ -3106,10 +3623,10 @@
 
         /* ---------- 시간 경과 재생 ---------- */
         // 학습 데이터의 6개 시점(18~120초) + 사용자가 입력한 시점을 키프레임으로 예측하고, 그 사이는 이미지를 섞어 잇는다
-        const TIMELAPSE_TIMES = [18, 38, 59, 79, 100, 120];
+        let TIMELAPSE_TIMES = [18, 38, 59, 79, 100, 120];   // /api/health 의 timelapse_times 가 있으면 그 값으로 바뀐다
         // 배수구 후보 위치를 정하는 기준 시점. 시간이 짧을수록 물이 많으므로 가장 이른 18초(물이 가장 많이
         // 고인 순간)의 예측에서 찾는다. 사용자가 고른 경과 시간과 상관없이 같은 지형·강우면 같은 위치가 나온다.
-        const DRAIN_REF_TIME_S = TIMELAPSE_TIMES[0];
+        let DRAIN_REF_TIME_S = TIMELAPSE_TIMES[0];          // /api/health 의 drain_ref_time_s 가 있으면 그 값
         const TIMELAPSE_SECONDS_PER_REAL_SECOND = 8.5;  // 재생 속도: 전체 약 12초
         const TIMELAPSE_HOLD_MS = 800;                  // 끝에서 잠깐 멈춤
         const TIMELAPSE_WRAP_FADE_MS = 700;             // 처음으로 돌아갈 때 부드럽게 전환
@@ -3143,6 +3660,7 @@
             drawTimelapseBlend(f[i].img, next.img, mix);
             document.getElementById('timelapse-range').value = time;
             document.getElementById('timelapse-time').textContent = `${Math.round(time)}초`;
+            updateTitleTime();
             View3D.setTime(time);   // 3D 보기의 물도 같은 시점으로
         }
 
@@ -3266,7 +3784,7 @@
                     setTimelapseStatus(`시점별 예측 중 ${i + 1} / ${total}`, i, total);
                     let data = preloaded[time] || null;
                     if (!data) {
-                        data = await requestPredict({ mode, file, rainMm, timeS: time, dx, color }, controller.signal);
+                        data = await requestPredict({ mode, file, rainMm, timeS: time, dx, color, light: true }, controller.signal);
                     }
                     if (controller.signal.aborted) return;
                     await addTimelapseFrame(time, png(data.overlay_png_base64));
@@ -3327,7 +3845,7 @@
             // 배수구 위치는 DRAIN_REF_TIME_S(18초) 예측에서 찾는다. 사용자가 다른 시간을 골랐으면
             // 기준 시점 예측을 같이(병렬로) 요청한다. 실패하면 null -> 아래에서 사용자 시점으로 대신한다.
             const startRef = () => (modelInfo.timeConditioned && timeS !== DRAIN_REF_TIME_S)
-                ? requestPredict({ ...base, timeS: DRAIN_REF_TIME_S }).catch(() => null)
+                ? requestPredict({ ...base, timeS: DRAIN_REF_TIME_S, noMap: true }).catch(() => null)
                 : null;
             let refPromise = startRef();
 
@@ -3337,7 +3855,7 @@
             startLoading('분석중..');
 
             try {
-                let data = await requestPredict({ ...base, timeS });   // AI 모델 서버 /api/predict (주소는 위의 ANALYZE_API)
+                let data = await requestPredict({ ...base, timeS, noAnalysis: !!refPromise });   // AI 모델 서버 /api/predict (주소는 위의 ANALYZE_API)
 
                 // 학습 형식이 아닌 색 체계라 서버가 높이로 읽어 변환했다면, 맞게 읽었는지(높낮이가 안 뒤집혔는지) 확인받는다
                 if (mode === 'image' && data.color_info && data.color_info.converted) {
@@ -3359,6 +3877,10 @@
                 let refData = null;
                 if (meta.time_conditioned) {
                     refData = meta.time_s === DRAIN_REF_TIME_S ? data : await refPromise;
+                }
+                if (!refData && mode === 'terrain' && !data.analysis_png_base64) {
+                    // 18초 요청이 실패해 분석 지도가 없다 -> 사용자 시점으로 분석 지도까지 다시 받는다
+                    data = await requestPredict({ ...base, timeS });
                 }
                 const drainSource = refData || data;
                 const drainTime = refData ? DRAIN_REF_TIME_S : (meta.time_conditioned ? meta.time_s : null);
@@ -3403,6 +3925,7 @@
                     info.push(`색 해석: ${data.color_info.label}${data.color_info.reversed ? ' · 높낮이 반전' : ''} (학습 형식으로 변환해 예측)`);
                 }
                 info.push('파란색이 진할수록 물이 많이 모이는 곳입니다.');
+                (data.warnings || []).forEach(w => info.push('주의: ' + w));
 
                 const recordMeta = { checkpoint: data.checkpoint, ...meta, stats: data.stats };
                 stageState.recordId = null;   // 저장되면(saveRecord) 그 기록이 기록 화면에서 강조된다
@@ -3660,7 +4183,9 @@
         // 조건 패널은 왼쪽에 고정한다(접기·펼치기만). 예전에 옮겨 둔 위치가 남아 있으면 지운다
         if (layout.panel) { delete layout.panel; saveLayout(); }
         makeMovable('timeline', [byId('timelapse')], [addGrabBar(byId('timelapse'), '시간 슬라이더')]);
-        makeMovable('tools3d', [byId('v3d-tools')], [addGrabBar(byId('v3d-tools'), '3D 도구')]);
+        // 3D 도구는 11/24 에 오른쪽 세로 막대로 바뀌었다. 예전 가로 막대를 옮겨 둔 값(tools3d)은 버리고 새 키를 쓴다
+        if (layout.tools3d) { delete layout.tools3d; saveLayout(); }
+        makeMovable('tools3d_v', [byId('v3d-tools')], [addGrabBar(byId('v3d-tools'), '3D 도구')]);
 
         byId('layout-reset').addEventListener('click', () => {
             layout = {};

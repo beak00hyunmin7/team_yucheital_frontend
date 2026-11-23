@@ -1091,7 +1091,7 @@ input:disabled {
    조건 패널(왼쪽) · 요약 칩 + 기록 서랍(오른쪽) · 시간 슬라이더(아래)가 떠 있다.
    1000px 이하(모바일)는 레일이 상단바가 되고 지도 → 칩 → 시간 → 조건 → 기록 순으로 쌓는다. */
 :root {
-  --panel-w: 340px;   /* 조건 패널 열 폭 (결과 이미지 버튼·범례도 같은 폭) */
+  --panel-w: 300px;   /* 조건 패널 열 폭 (접힌 상태의 버튼도 같은 폭) */
   --panel-z: 1;       /* 설정 '패널 크기'(50~150%). 패널 열을 transform: scale 로 키우고 줄인다 */
   --glass: rgba(255, 255, 255, 0.94);
   --glass-border: rgba(16, 24, 40, 0.12);
@@ -2017,40 +2017,100 @@ body.xmas .step-num::before {
 .stage-map.view-3d .stage-bg { opacity: 1; }
 .stage-map.view-3d .stage-scrim { display: block; opacity: 0.5; }
 
+/* 3D 도구: 오른쪽 아래 세로 막대 (2D 확대 버튼과 같은 자리, 아래끝은 도크와 같은 선) */
 .v3d-tools {
   position: absolute;
   z-index: 4;
   right: 16px;
-  bottom: 118px;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 6px 4px 10px;
+  bottom: 24px;
+  flex-direction: column;
+  align-items: stretch;
+  width: 66px;
+  padding: 4px;
   color: var(--text);
-  font-size: 13px;
+  font-size: 11px;
   background: var(--glass);
   border: 1px solid var(--glass-border);
-  border-radius: 12px;
+  border-radius: 14px;
 }
-.v3d-exag { display: flex; align-items: center; gap: 8px; margin: 0 6px; color: var(--muted); }
-.v3d-exag input { width: 110px; margin: 0; accent-color: var(--accent); cursor: pointer; }
-.v3d-tools button {
-  min-height: 36px;
-  padding: 0 12px;
+.v3d-exag {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 0 8px;
+  color: var(--muted);
+  cursor: default;
+}
+.v3d-cap { font-weight: 600; }
+.v3d-exag input {
+  writing-mode: vertical-lr;
+  direction: rtl;                 /* 위로 올릴수록 높게 */
+  width: 22px;
+  height: 112px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.v3d-val { font-size: 12px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+.v3d-btn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: 100%;
+  min-height: 54px;
+  padding: 6px 0;
   color: var(--text);
   font: inherit;
+  font-size: 11px;
   font-weight: 600;
   background: transparent;
   border: 0;
-  border-radius: 8px;
+  border-top: 1px solid var(--glass-border);
+  border-radius: 0;
   cursor: pointer;
 }
-.v3d-tools button:hover { background-color: var(--accent-soft); }
-.v3d-tools button[aria-pressed="true"] { color: var(--accent); }
-.v3d-tools button[aria-pressed="false"] { color: var(--muted); text-decoration: line-through; }
+.v3d-tools > .v3d-btn:last-child { border-radius: 0 0 10px 10px; }
+button.v3d-btn:hover { background-color: var(--accent-soft); }
+.v3d-btn[aria-pressed="true"] { color: var(--accent); }
+.v3d-btn[aria-pressed="false"] { color: var(--muted); }
+.v3d-btn[aria-pressed="false"] svg { opacity: 0.45; }
+.v3d-btn[aria-pressed="false"] span { text-decoration: line-through; }
+.v3d-emoji { font-size: 19px; line-height: 20px; }
+.v3d-duck { cursor: help; }
+/* 🦆 에 마우스를 올리면 왼쪽에 안내 말풍선 */
+.v3d-duck::after {
+  content: attr(data-tip);
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 12px);
+  padding: 7px 11px;
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 9px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(6px, -50%);
+  transition: opacity 0.15s, transform 0.15s;
+}
+.v3d-duck:hover::after { opacity: 1; transform: translate(0, -50%); }
 
+/* 좁은 화면: 지금처럼 위쪽 가로 막대 */
 @media (max-width: 1000px) {
-  .v3d-tools { top: 12px; right: 12px; bottom: auto; }
-  .v3d-exag input { width: 72px; }
+  .v3d-tools { top: 12px; right: 12px; bottom: auto; flex-direction: row; align-items: center; width: auto; }
+  .v3d-exag { flex-direction: row; padding: 0 8px; }
+  .v3d-exag input { writing-mode: horizontal-tb; direction: ltr; width: 72px; height: auto; }
+  .v3d-btn { flex-direction: row; width: auto; min-height: 40px; padding: 0 10px; border-top: 0; border-left: 1px solid var(--glass-border); }
+  .v3d-tools > .v3d-btn:last-child { border-radius: 0 10px 10px 0; }
+  .v3d-duck::after { display: none; }
 }
 
 /* --- 설정 창 (레일의 ⚙ → 화면 가운데) --- */
@@ -2317,3 +2377,144 @@ input[type="password"]:focus-visible {
 @media (max-width: 1000px) {
   .chips, .stage-zoom, .timeline, .timeline.movable, .v3d-tools, .v3d-tools.movable { transform: none !important; }
 }
+
+
+/* ===== 11/22 화면 정리: 아래 도크 · 왼쪽 열 줄이기 · 세로 수심 범례 =====
+   - 오른쪽 위 요약 바와 왼쪽 아래 범례 카드를 없애고, 결과 정보는 지도 바로 위 한 줄(.map-title)에 모은다
+   - '지도 / 시간 변화 / 3D' 전환은 시간 슬라이더 카드 안으로 (도크 하나)
+   - 펼친 조건 패널: '처음 화면으로'는 제목 옆 ←, '결과 이미지'는 실행 버튼 아래 보조 버튼 */
+.mt-name { overflow: hidden; text-overflow: ellipsis; max-width: 220px; font-weight: 700; color: var(--text); }
+.mt-sep { margin: 0 5px; color: var(--muted); }
+.mt-stale { display: inline-flex; align-items: center; gap: 5px; margin-left: 8px; font-size: 12px; color: var(--warn); }
+.stage-legend { display: none !important; }   /* 범례 카드는 쓰지 않는다 (최대 수심·색 기준은 제목 줄) */
+
+/* 아래 도크: 전환 버튼을 슬라이더 카드 안 왼쪽에 */
+.timeline .stage-toggle {
+  position: static;
+  flex: none;
+  padding: 3px;
+  background: var(--subtle-hover);
+  border: 0;
+  border-radius: 10px;
+  backdrop-filter: none;
+  animation: none;
+}
+.timeline .stage-toggle button { min-height: 34px; padding: 0 12px; }
+
+/* 펼친 패널의 ← (처음 화면으로 / 기록으로 돌아가기) */
+.panel-head { justify-content: flex-start; gap: 4px; }
+.panel-head .panel-fold { margin-left: auto; }
+.stage-back.in-head {
+  position: static;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  justify-content: center;
+  margin-left: -6px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  backdrop-filter: none;
+  transform: none;
+  animation: none;
+}
+.stage-back.in-head:hover { background-color: var(--accent-soft); }
+.stage-back.in-head span { display: none; }
+#view-predict:not(.folded) .panel { top: 16px; max-height: calc((100% - 32px) / var(--panel-z)); }
+
+/* 펼친 패널 안의 '결과 이미지 보기 · 저장' */
+.stage-gallery.in-panel {
+  position: static;
+  width: 100%;
+  height: 40px;
+  margin-top: 8px;
+  justify-content: center;
+  font-weight: 500;
+  font-size: 14px;
+  background: transparent;
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  backdrop-filter: none;
+  transform: none;
+  animation: none;
+}
+.stage-gallery.in-panel:hover { background-color: var(--accent-soft); }
+
+/* 결과가 있고 조건이 그대로일 때 실행 버튼은 보조 모양 */
+.panel .run-bar .btn-primary.quiet {
+  color: var(--accent);
+  background: transparent;
+  border: 1.5px solid color-mix(in srgb, var(--accent) 60%, transparent);
+  box-shadow: none;
+}
+.panel .run-bar .btn-primary.quiet:hover:not(:disabled) { filter: none; background-color: var(--accent-soft); }
+
+/* 배수구 말풍선: 처음 3초(.peek)와 마우스를 올렸을 때만 설명까지 */
+.marker-label { padding: 5px 10px; }
+.marker-label span { display: none; }
+.marker-label.peek { padding: 8px 12px; }
+.marker-label.peek span { display: block; }
+.drain-marker:hover + .marker-label { padding: 8px 12px; }
+.drain-marker:hover + .marker-label span { display: block; }
+
+/* 확대 버튼 가운데 '100%' 칸은 작게 */
+.stage-zoom #zoom-reset { height: 30px; font-size: 11px; }
+
+@media (max-width: 1000px) {
+  .timeline { margin-top: 12px; }
+}
+.dropzone-icon { flex: none; }   /* 안내 글이 두 줄이 돼도 올리기 아이콘이 찌그러지지 않게 */
+
+/* 도크 글자: '서울 · 50mm [샘플]' (시간 숫자는 오른쪽) */
+.tl-label { display: inline-flex; align-items: center; min-width: 0; overflow: hidden; white-space: nowrap; }
+.tl-label .chip-badge { margin-left: 6px; }
+.tl-label #chip-cond-val { color: var(--text); }
+
+/* 세로 수심 범례: 확대 버튼 묶음 맨 위 (같은 폭, 3D 에서는 확대 버튼과 함께 숨는다). ▶ 이번 결과 최대, 주황 ━ 마우스 위치 */
+.depth-legend {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 0 12px;
+  color: var(--text);
+  border-bottom: 1px solid var(--glass-border);
+}
+.dl-t { font-size: 10px; color: var(--muted); }
+.dl-max { font-size: 16px; line-height: 1.1; font-variant-numeric: tabular-nums; cursor: default; }
+.dl-body { position: relative; width: 44px; height: 128px; margin-top: 8px; }
+.dl-bar { position: absolute; left: 9px; top: 0; bottom: 0; width: 8px; border-radius: 4px; background: linear-gradient(0deg, #f7fbff, #c6dbef, #6baed6, #2171b5, #08306b); box-shadow: inset 0 0 0 1px var(--glass-border); }
+.dl-tk { position: absolute; left: 22px; font-size: 9.5px; line-height: 1; color: var(--muted); transform: translateY(50%); font-variant-numeric: tabular-nums; }
+.dl-mark, .dl-hover { position: absolute; width: 0; height: 0; border-top: 4px solid transparent; border-bottom: 4px solid transparent; transform: translateY(50%); }
+.dl-mark { left: 1px; border-left: 6px solid var(--text); }                 /* ▶ 이번 결과 최대 */
+.dl-hover { left: 5px; width: 16px; height: 3px; border: 0; border-radius: 2px; background: #ff8a3d; box-shadow: 0 0 0 1px rgba(0,0,0,0.35); transform: translateY(50%); }   /* ━ 마우스가 가리키는 곳 */
+
+/* 옮기거나 확대했으면 '가운데로' 버튼 강조 */
+.stage-zoom #zoom-reset.moved { color: var(--accent); }
+
+/* 마우스 위치 수심 */
+.depth-tip {
+  position: fixed;
+  z-index: 30;
+  padding: 4px 9px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  pointer-events: none;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  font-variant-numeric: tabular-nums;
+}
+.stage-map.dragging .stage-square { cursor: grabbing; }
+
+
+/* ===== 11/24 오리배 (설정 > 3D 보기) ===== */
+.stage-3d.boats canvas { cursor: pointer; }
+.stage-3d.boats canvas.dragging { cursor: grabbing; }
+.set-row.is-off { opacity: 0.45; }
+.set-row.is-off input { cursor: default; }
+#boat-btn .set-text span { word-break: keep-all; }
