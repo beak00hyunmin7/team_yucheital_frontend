@@ -934,18 +934,24 @@
             }
 
             /* ---------- 그리기 ---------- */
-            // 떠 있는 패널에 가려지지 않게 장면 중심을 옮긴다 (왼쪽 조건 패널 · 아래 시간 슬라이더)
+            // 떠 있는 패널에 가려지지 않게 장면 중심을 옮긴다 (왼쪽 조건 패널 · 오른쪽 기록 서랍 · 아래 시간 슬라이더)
+            // 두 패널 사이 빈 곳의 가운데에 지형이 오도록: 왼쪽에 가린 폭과 오른쪽에 가린 폭의 차이의 절반만큼 옮긴다
             function viewShift() {
                 const el = S.container;
                 if (matchMedia('(max-width: 1000px)').matches) return [0, 0];
                 const box = el.getBoundingClientRect();
-                let left = 0;
+                let left = 0, right = 0;
                 const panel = document.getElementById('cond-panel');
                 if (panel && panel.offsetParent) {
                     const r = panel.getBoundingClientRect();
                     if (r.left - box.left < box.width * 0.3) left = Math.max(0, r.right - box.left);
                 }
-                return [left / 2, 46];
+                const drawer = document.getElementById('drawer');
+                if (drawer && drawer.offsetParent && getComputedStyle(drawer).display !== 'none') {
+                    const r = drawer.getBoundingClientRect();
+                    if (box.right - r.right < box.width * 0.3) right = Math.max(0, box.right - r.left);
+                }
+                return [(left - right) / 2, 46];
             }
 
             function resize() {
