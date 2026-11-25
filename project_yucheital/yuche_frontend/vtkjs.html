@@ -155,6 +155,7 @@
                     <div class="segmented" role="radiogroup" aria-label="입력 종류">
                         <label><input type="radio" name="mode" value="image" checked><span>등고선 이미지</span></label>
                         <label><input type="radio" name="mode" value="terrain"><span>고도 격자</span></label>
+                        <label><input type="radio" name="mode" value="hand"><span>손그림</span></label>
                     </div>
                     <p class="form-hint" id="mode-hint"></p>
 
@@ -1644,6 +1645,13 @@
                 accept: '.npy,.csv,.txt,.dat,.asc,.grd,.tif,.tiff,.png,.jpg,.jpeg',
                 fileHint: '.npy · .csv · .txt · .dat · .asc · .grd · .tif · 회색조 높이맵 .png/.jpg',
                 exts: ['npy', 'csv', 'txt', 'dat', 'asc', 'grd', 'tif', 'tiff', 'png', 'jpg', 'jpeg']
+            },
+            hand: {
+                short: '손그림',
+                hint: '학습지에 파랑 동그라미를 여러 겹(안쪽일수록 높은 산), 꼭대기는 빨강으로 그린 뒤 네 모서리 네모가 다 보이게 찍어 올리세요. 동그라미는 끝까지 닫고, 선끼리 닿지 않게 그려 주세요.',
+                accept: 'image/*',          // 폰에서는 카메라로 바로 찍거나 사진첩에서 고를 수 있다
+                fileHint: '학습지 사진 (JPG · PNG · WEBP)',
+                exts: ['png', 'jpg', 'jpeg', 'webp']
             }
         };
         const MAX_UPLOAD_MB = 25;   // 서버 MAX_UPLOAD_BYTES
@@ -2451,11 +2459,11 @@
         // 실패하면 Error 를 던진다: .status(HTTP), .code(서버가 준 오류 종류), .detail(서버 메시지), .handled(이미 화면 처리함)
         async function requestPredict(p, signal) {
             const form = new FormData();
-            form.append('mode', p.mode);                 // 'image' | 'terrain'
+            form.append('mode', p.mode);                 // 'image' | 'terrain' | 'hand'
             form.append('file', p.file);
             form.append('rain_mm', p.rainMm);            // 강우량 [mm]
             form.append('time_s', p.timeS);              // 경과 시간 [초]
-            form.append('dx', p.dx);                     // 셀 크기 [m] (terrain 모드만 의미 있음)
+            form.append('dx', p.dx);                     // 셀 크기 [m] (terrain 모드만 의미 있음. hand 는 서버가 1 km 로 정함)
             // 안 쓰는 그림 생략 (서버가 그리지도 보내지도 않음). 시간 변화용 light / 첫 화면 두 요청의 no_analysis·no_map
             if (p.light) form.append('light', 'true');
             if (p.noAnalysis) form.append('no_analysis', 'true');
@@ -2923,7 +2931,7 @@
                 if (meta.time_conditioned) {
                     refData = meta.time_s === DRAIN_REF_TIME_S ? data : await refPromise;
                 }
-                if (!refData && mode === 'terrain' && !data.analysis_png_base64) {
+                if (!refData && (mode === 'terrain' || mode === 'hand') && !data.analysis_png_base64) {
                     // 18초 요청이 실패해 분석 지도가 없다 -> 사용자 시점으로 분석 지도까지 다시 받는다
                     data = await requestPredict({ ...base, timeS });
                 }
@@ -2934,6 +2942,9 @@
                 // '결과 이미지' 창: 데이터 모드는 배수구 후보가 그려진 분석 지도를 맨 앞에
                 // (분석 지도의 ★도 빨간 원과 같은 위치가 되도록 배수구 기준 시점의 지도를 쓴다)
                 const images = [];
+                if (data.hand_preview_png_base64) {   // 손그림: 사진을 어떻게 읽었는지 (왼쪽 편 사진 | 오른쪽 읽은 높이)
+                    images.push({ key: 'hand', label: '이렇게 읽었어요 (왼쪽 내 그림 · 오른쪽 읽은 높이)', src: png(data.hand_preview_png_base64) });
+                }
                 if (drainSource.analysis_png_base64) {
                     const label = drainTime != null ? `분석 지도 (배수구 후보 · ${drainTime}초 기준)` : '분석 지도 (배수구 후보)';
                     images.push({ key: 'analysis', label, src: png(drainSource.analysis_png_base64) });
@@ -2955,6 +2966,9 @@
                 const usedRain = Math.min(Math.max(rainMm, modelInfo.rainRange[0]), modelInfo.rainRange[1]);
                 // 결과 아래 설명은 짧게: 배수구 위치, 조건, 색 읽는 법
                 const info = [];
+                if (mode === 'hand' && meta.hand_levels) {
+                    info.push(`손그림: 동그라미를 ${meta.hand_levels}층 높이의 산으로 읽었어요 (결과 이미지의 '이렇게 읽었어요'에서 확인)`);
+                }
                 if (drainPos) {
                     // 배수구는 경과 시간과 상관없이 물이 가장 많은 18초 예측에서 찾는다 -> 그 이유를 짧게 붙인다
                     const basis = drainTime === DRAIN_REF_TIME_S ? `물이 가장 많은 ${drainTime}초 기준`
@@ -2964,7 +2978,7 @@
                 const cond = [];
                 if (meta.rain_conditioned) cond.push(`강우 ${usedRain}mm`);
                 if (meta.time_conditioned) cond.push(`경과 ${meta.time_s}초`);
-                if (meta.dx_m) cond.push(`셀 ${Number(meta.dx_m).toFixed(2)}m`);
+                if (meta.dx_m && mode !== 'hand') cond.push(`셀 ${Number(meta.dx_m).toFixed(2)}m`);
                 if (cond.length) info.push(`조건: ${cond.join(' · ')}`);
                 if (data.color_info && data.color_info.converted) {
                     info.push(`색 해석: ${data.color_info.label}${data.color_info.reversed ? ' · 높낮이 반전' : ''} (학습 형식으로 변환해 예측)`);
@@ -2989,6 +3003,8 @@
                     setFileStatus(ci.converted ? `${ci.label} → 학습 형식으로 변환됨` : '학습 형식으로 인식됨', 'ok');
                 } else if (mode === 'terrain') {
                     setFileStatus('고도 격자로 읽음', 'ok');
+                } else if (mode === 'hand') {
+                    setFileStatus(`손그림 ${meta.hand_levels || ''}층으로 읽음`, 'ok');
                 }
                 if (meta.time_conditioned) {
                     // 기다리지 않는다: 결과는 먼저 보여주고 재생용 프레임은 뒤에서 채운다
@@ -3025,6 +3041,8 @@
                 console.error(err);
                 if (err.code === 'unreadable_image') {
                     openUnreadableDialog(err.detail, mapFile);   // 지형도 등: 다음 행동을 안내
+                } else if (mode === 'hand' && err.status === 422 && err.detail) {
+                    alert(err.detail);   // 손그림을 못 읽었을 때: 서버 안내 문구(어떻게 다시 찍을지)만 보여준다
                 } else {
                     alert(err instanceof TypeError ? '서버 연결 불가' : '예측 실패: ' + err.message); //에러메시지 보내기
                 }
