@@ -6,10 +6,10 @@
     <title>유체이탈 · 배수 예측</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap">
-    <link rel="stylesheet" href="./style.css?v=20261125a">
+    <link rel="stylesheet" href="./style.css?v=20261126g">
 </head>
 <body>
-    <!-- 첫 화면: 프로젝트 로고. 잠깐 보여 준 뒤(또는 누르면 바로) 본 화면으로 넘어간다 -->
+    <!-- 첫 화면: 프로젝트 로고. 클릭(탭)하거나 Enter·Space 를 눌러야 본 화면으로 넘어간다 (저절로 넘어가지 않음) -->
     <div id="splash" class="splash" role="img" aria-label="유체이탈 — 등고선으로 예측하는 배수 지도">
         <div class="splash-inner">
             <!-- 프로젝트 로고: 이 폴더에 logo.png 를 넣으면 그 그림이 나온다. 없으면 아래 기본 그림(물방울)이 나온다 -->
@@ -25,7 +25,7 @@
             </svg>
             <p class="splash-name">유체이탈</p>
             <p class="splash-tag">등고선으로 예측하는 배수 지도</p>
-            <p class="splash-hint">화면을 누르면 바로 시작합니다</p>
+            <p class="splash-hint">화면을 클릭하면 시작합니다</p>
         </div>
     </div>
     <!-- 왼쪽 아이콘 레일: 화면 전환(예측 · 기록) · 서버 상태 · 테마 · 계정 -->
@@ -142,6 +142,39 @@
                     </span>
                 </div>
             </div>
+
+            <!-- 침수 위험지역 기준 (11/26 토론: '머문 시간' 방식). 바꾸면 지금 결과에 바로 다시 계산된다 -->
+            <p class="set-title">침수 위험지역 기준</p>
+            <div class="set-group" id="risk-set">
+                <p class="set-hint">보는 구간 동안 수심이 <b>기준 깊이</b> 이상인 상태가 <b>머문 시간</b> 넘게 이어진 곳을 빨간 빗금으로 칠해요.
+                    기준 깊이 = 최소 깊이와 (그 지형 최대 수심 × 상대 비율) 중 큰 값.</p>
+                <div class="set-row set-static set-col">
+                    <span class="set-text"><b>최소 깊이</b><span>이보다 얕은 물은 위험으로 보지 않아요 (모델은 실제보다 얕게 예측하는 편)</span></span>
+                    <span class="set-range"><input type="range" id="risk-abs" min="0.5" max="10" step="0.5" aria-label="최소 깊이 (cm)">
+                        <span class="set-num"><input type="number" id="risk-abs-val" min="0.5" max="10" step="0.5" aria-label="최소 깊이 직접 입력">cm</span></span>
+                </div>
+                <div class="set-row set-static set-col">
+                    <span class="set-text"><b>상대 비율</b><span>그 지형에서 가장 깊은 물(상위 1%) 대비 몇 % 이상이면 위험</span></span>
+                    <span class="set-range"><input type="range" id="risk-rel" min="0" max="90" step="5" aria-label="상대 비율 (%)">
+                        <span class="set-num"><input type="number" id="risk-rel-val" min="0" max="90" step="5" aria-label="상대 비율 직접 입력">%</span></span>
+                </div>
+                <div class="set-row set-static set-col">
+                    <span class="set-text"><b>머문 시간</b><span>기준 깊이 이상인 상태가 이만큼 이어져야 위험 (짧으면 지나가는 물길도 잡혀요)</span></span>
+                    <span class="set-range"><input type="range" id="risk-stay" min="10" max="100" step="5" aria-label="머문 시간 (초)">
+                        <span class="set-num"><input type="number" id="risk-stay-val" min="10" max="100" step="5" aria-label="머문 시간 직접 입력">초</span></span>
+                </div>
+                <div class="set-row set-static">
+                    <span class="set-text"><b>보는 구간 끝</b><span>18초부터 이 시점까지의 예측으로 판단해요 (짧을수록 배수구가 빨리 정해져요)</span></span>
+                    <select id="risk-end" class="set-select" aria-label="보는 구간 끝">
+                        <option value="38">38초</option><option value="59">59초</option><option value="79">79초</option>
+                        <option value="100">100초</option><option value="120">120초</option>
+                    </select>
+                </div>
+                <div class="set-row set-static">
+                    <span class="set-text"><b>처음 값으로</b><span>3cm · 40% · 40초 · 79초</span></span>
+                    <button type="button" class="btn btn-ghost set-btn" id="risk-reset">초기화</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -158,10 +191,12 @@
             <div class="stage-square" id="stage-square" style="display: none;">
                 <img id="stage-img" alt="예측 배수맵">
                 <canvas id="timelapse-canvas" style="display: none;"></canvas>
+                <!-- 침수 위험지역: 마지막 시점(120초)에도 물이 남는 곳을 빨간 빗금으로 (지도·시간 변화 보기 모두 위에 얹힌다) -->
+                <canvas id="risk-canvas" class="risk-canvas" style="display: none;" aria-hidden="true"></canvas>
                 <span class="drain-marker" id="stage-marker" style="display: none;"></span>
                 <div class="marker-label" id="stage-marker-label" style="display: none;">
                     <b>배수구 설치 후보</b>
-                    <span>예측 유출이 가장 큰 지점</span>
+                    <span id="stage-marker-sub">물이 가장 많이 고이는 곳</span>
                 </div>
                 <span class="drain-marker" id="timelapse-star" style="display: none;" title="배수구 후보"></span>
             </div>
@@ -174,11 +209,10 @@
                     <input type="range" id="v3d-exag" min="0.3" max="3" step="0.1" value="1" aria-label="높이 과장">
                     <span class="v3d-val" id="v3d-exag-val">×1.0</span>
                 </label>
-                <button type="button" class="v3d-btn" id="v3d-flow" aria-pressed="true" title="물이 흐르는 방향을 입자로 표시">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
-                        <path d="M3 8c2-2 4-2 6 0s4 2 6 0 4-2 6 0M3 13c2-2 4-2 6 0s4 2 6 0 4-2 6 0M3 18c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/>
-                    </svg>
-                    <span>물 흐름</span>
+                <!-- 물 흐름 표시: 누를 때마다 꺼짐 → 공(입자) → 화살표(유속) → 꺼짐 … 순서로 바뀐다 -->
+                <button type="button" class="v3d-btn" id="v3d-flow" aria-pressed="true" data-mode="1" title="물 흐름 표시 바꾸기 (꺼짐 → 공 → 화살표)">
+                    <span class="v3d-flow-icon" id="v3d-flow-icon" aria-hidden="true"></span>
+                    <span id="v3d-flow-label"><small>물 흐름</small>공</span>
                 </button>
                 <span class="v3d-btn v3d-duck" id="v3d-boat-hint" style="display: none;" data-tip="지도를 클릭하면 오리배가 떨어져요" role="note" aria-label="오리배 켜짐 · 지도를 클릭하면 오리배가 떨어져요">
                     <span class="v3d-emoji" aria-hidden="true">🦆</span>
@@ -205,6 +239,7 @@
                 <div class="empty-actions">
                     <button type="button" class="btn btn-primary" id="empty-pick">파일 고르기</button>
                     <button type="button" class="btn btn-ghost" id="empty-sample" style="display: none;">샘플 지형으로 해보기</button>
+                    <button type="button" class="btn btn-ghost" id="empty-cam">📷 손그림 카메라</button>
                 </div>
                 <p class="viewer-empty-sub">파일을 이 화면 아무 곳에나 끌어다 놓아도 됩니다</p>
             </div>
@@ -246,6 +281,10 @@
                         <i class="dl-mark" id="dl-mark" style="display: none;" title="이번 결과의 최대 수심"></i>
                         <i class="dl-hover" id="dl-hover" style="display: none;"></i>
                     </div>
+                </div>
+                <!-- 빨간 빗금 뜻 (위험지역이 있을 때만 보인다) -->
+                <div class="risk-key" id="risk-key" style="display: none;" title="빨간 빗금 = 침수 위험지역 (마지막 시점에도 물이 남는 곳)">
+                    <i class="rk-sw" aria-hidden="true"></i><span>침수<br>위험</span>
                 </div>
                 <button type="button" id="zoom-in" aria-label="확대" title="확대 (마우스 휠)">+</button>
                 <button type="button" id="zoom-reset" aria-label="원래 크기로" title="원래 크기로 (더블클릭)">100%</button>
@@ -304,6 +343,14 @@
                         <button type="button" class="dropzone-remove" id="dropzone-remove" style="display: none;" aria-label="파일 빼기" title="파일 빼기">&times;</button>
                     </div>
                     <p class="field-error" id="err-fileInput"></p>
+                    <!-- 손그림 모드: 카메라로 학습지를 비추면 인식될 때까지 찾다가 바로 분석한다 -->
+                    <div class="cam-row" id="cam-row" style="display: none;">
+                        <button type="button" class="btn btn-primary cam-open" id="cam-open">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+                            카메라로 손그림 인식
+                        </button>
+                        <p class="form-hint" id="cam-note"></p>
+                    </div>
 
                     <!-- 강우량 -->
                     <div class="panel-row" id="rain-block">
@@ -476,12 +523,16 @@
                 <button class="notice-close" onclick="closeDetail()" aria-label="닫기">&times;</button>
             </div>
             <div class="detail-body">
-                <img id="detail-img" alt="저장된 결과">
+                <div class="detail-figs">
+                    <figure id="detail-input-fig"><img id="detail-input-img" alt="입력한 지도"><figcaption>입력한 지도</figcaption></figure>
+                    <figure id="detail-img-fig"><img id="detail-img" alt="저장된 결과"><figcaption>결과</figcaption></figure>
+                </div>
                 <dl class="detail-list" id="detail-list"></dl>
             </div>
             <ul class="result-info" id="detail-info"></ul>
             <div class="auth-modal-actions">
                 <button class="btn-cancel" onclick="closeDetail()">닫기</button>
+                <button class="btn-cancel" id="detail-reuse-btn">이 조건 다시 넣기</button>
                 <button class="btn-confirm" id="detail-open-btn">결과 화면에 열기</button>
             </div>
         </div>
@@ -574,6 +625,33 @@
         </div>
     </div>
 
+    <!-- 손그림 카메라: 학습지를 비추면 네 모서리 네모와 선을 찾고, 인식되면 바로 찍어서 분석으로 넘어간다 -->
+    <div id="cam-modal" class="cam-modal" style="display: none;" role="dialog" aria-modal="true" aria-label="손그림 카메라">
+        <div class="cam-stage" id="cam-stage">
+            <video id="cam-video" playsinline muted autoplay></video>
+            <canvas id="cam-overlay" class="cam-overlay" aria-hidden="true"></canvas>
+            <div class="cam-flash" id="cam-flash"></div>
+            <div class="cam-sheet-guide" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+        </div>
+        <div class="cam-bar">
+            <div class="cam-texts" role="status" aria-live="polite">
+                <p class="cam-status" id="cam-status">종이를 카메라에 비춰 주세요</p>
+                <p class="cam-sub" id="cam-sub">네 모서리 네모가 모두 보이게 · 빈 네모는 왼쪽 위</p>
+            </div>
+            <div class="cam-progress" aria-hidden="true"><i id="cam-progress-fill"></i></div>
+            <div class="cam-actions">
+                <!-- 카메라가 둘 이상이면 이름으로 고른다 (예: 노트북 내장 웹캠 / 휴대폰 연결 카메라). 고른 것은 기억 -->
+                <label class="cam-pick" id="cam-pick" style="display: none;">
+                    <span>카메라</span>
+                    <select id="cam-select" aria-label="카메라 고르기"></select>
+                </label>
+                <button type="button" class="btn btn-ghost" id="cam-file">사진 파일로</button>
+                <button type="button" class="btn btn-ghost" id="cam-shot">지금 찍기</button>
+                <button type="button" class="btn btn-ghost" id="cam-close">닫기</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 로그인/회원가입 모달 -> 다른창으로 넘어가는것처럼 보이는것, 즉 덮여씌운다 느낌 (평소엔 숨겨져 있음) -->
     <div id="auth-modal" class="auth-modal-backdrop" style="display: none;">
         <div class="auth-modal-card">
@@ -610,12 +688,14 @@
             const WET_MIN = 0.015;       // 이 수심[m]보다 얕으면 물로 그리지 않는다
             const HOLE_R = 0.028;        // 배수구 구멍 반지름 (지도 한 변 대비)
             const HOLE_DEPTH = 0.05;     // 구멍 깊이 (가장 낮은 가장자리 아래로)
-
+            // 물 흐름 표시 방식 (도구 막대 버튼으로 순환): 0 = 꺼짐, 1 = 공(흐르는 입자), 2 = 화살표(유속장)
+            const FLOW_OFF = 0, FLOW_BALL = 1, FLOW_ARROW = 2;
+            
             let THREE = null, loading = null;
             const S = {
                 n: 0, hn: null, gx: null, gz: null, gRef: 1,      // 높이(0..1)와 그 기울기
                 frames: [], time: null, depth: null, dRef: 0.1,   // 시점별 수심[m], 지금 수심, 정규화 기준
-                drain: null, exag: 1, flow: true,
+                drain: null, exag: 1, flow: FLOW_BALL,
                 container: null, active: false, raf: null, last: 0, clock: 0,
                 cam: { theta: -0.62, phi: 0.98, radius: 2.35, tx: 0, ty: 0.04, tz: 0 },
                 gl: null,                                          // three 객체 묶음
@@ -675,6 +755,9 @@
                 }
                 mags.sort((a, b) => a - b);
                 S.gRef = Math.max(mags[Math.floor(mags.length * 0.9)], 1e-5);
+                // 오리배 유속 계산용 실제 크기: 고저차[m], 격자 한 칸[m]
+                S.reliefM = grid.relief_m > 0 ? grid.relief_m : DEFAULT_RELIEF_M;
+                S.cellM = (grid.extent_m > 0 ? grid.extent_m : DEFAULT_EXTENT_M) / (n - 1);
                 S.drain = drain || null;
                 S.hole = S.drain ? { x: S.drain.x * (n - 1), z: S.drain.y * (n - 1), r: HOLE_R * (n - 1) } : null;   // 격자 좌표
                 S.depth = new Float32Array(n * n);
@@ -907,6 +990,20 @@
                 group.add(gl.lines, gl.points);
                 gl.part = { x: new Float32Array(PARTICLES), z: new Float32Array(PARTICLES), age: new Float32Array(PARTICLES), life: new Float32Array(PARTICLES).fill(-1) };
 
+                // 화살표 모드: 공 모드와 같은 흐르는 입자(꼬리 포함)인데, 머리가 점 대신 흐르는 쪽을 가리키는 화살촉이다.
+                // 한 번에 그리는 InstancedMesh (입자 수만큼). 안 보이는 입자는 크기 0
+                const ash = new THREE.Shape();
+                ash.moveTo(1, 0); ash.lineTo(-0.35, 0.55); ash.lineTo(-0.1, 0); ash.lineTo(-0.35, -0.55); ash.closePath();
+                const ageo = new THREE.ShapeGeometry(ash);
+                ageo.rotateX(-Math.PI / 2);          // 바닥(xz)에 눕힌다: 화살촉 끝 = +x, 앞면 = 위
+                gl.arrows = new THREE.InstancedMesh(ageo, new THREE.MeshBasicMaterial({
+                    color: 0xd8f3ff, transparent: true, opacity: 0.95, depthWrite: false, side: THREE.DoubleSide }), PARTICLES);
+                gl.arrows.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+                gl.arrows.frustumCulled = false;
+                gl.arrows.renderOrder = 4;
+                group.add(gl.arrows);
+                gl.dummy = new THREE.Object3D();
+
                 // 배수구 후보: 땅에 뚫린 구멍(벽·바닥·테두리·격자 뚜껑) + 위에서 가리키는 빨간 화살표 + 이름표
                 // 구멍 벽과 테두리는 지형 높이를 따라야 해서 updateTerrain 의 layoutHole 이 모양을 만든다
                 if (S.drain) {
@@ -964,6 +1061,7 @@
                 gl.skirt.geometry.computeBoundingSphere();
                 if (gl.pin && S.drain) layoutHole();
                 S.dirtyTerrain = false;
+                S.dirtyArrows = true;   // 화살표 높이도 지형을 따라간다
             }
 
             // 배수구 구멍 모양: 가장자리마다 지형 높이를 읽어 벽 윗선과 테두리를 맞춘다 (높이 과장이 바뀌면 다시 만든다)
@@ -1019,6 +1117,7 @@
                 gl.waterMat.uniforms.uA0.value = WET_MIN * inv;
                 gl.waterMat.uniforms.uA1.value = Math.max(0.07, WET_MIN * 2.5) * inv;
                 S.dirtyWater = false;
+                S.dirtyArrows = true;   // 수심이 바뀌면 유속도 바뀐다
             }
 
             function spawn(i) {
@@ -1039,22 +1138,38 @@
                 const lp = gl.lines.geometry.attributes.position.array, la = gl.lines.geometry.attributes.aAlpha.array;
                 const pp = gl.points.geometry.attributes.position.array, pa = gl.points.geometry.attributes.aAlpha.array;
                 const lift = WATER_LIFT / S.dRef;
+                const arrows = S.flow === FLOW_ARROW && gl.arrows, o = gl.dummy;
+                const hideArrow = (i) => { if (arrows) { o.scale.set(0, 0, 0); o.updateMatrix(); gl.arrows.setMatrixAt(i, o.matrix); } };
+                // [11/26] 배수구 가까이(HOLE_PULL 칸 안)에서는 물방울이 구멍 쪽으로 끌려가며, 구멍에 닿기 전에는
+                // 수명·얕은 물·평평한 땅 때문에 사라지지 않게 한다 (예전엔 배수구 한참 앞에서 점이 끊겨 보였다)
+                const H = S.hole, PULL = H ? Math.max(10, H.r * 5) : 0;
                 for (let i = 0; i < PARTICLES; i++) {
+                    const hd = H ? Math.hypot(p.x[i] - H.x, p.z[i] - H.z) : Infinity;
+                    const near = hd < PULL;
+                    if (p.life[i] >= 0 && p.age[i] >= p.life[i] && near && p.age[i] < p.life[i] * 3) p.life[i] = p.age[i] + 0.05;   // 구멍 근처는 조금 더 산다
                     if (p.life[i] < 0 || p.age[i] >= p.life[i]) spawn(i);
-                    if (p.life[i] < 0) { la[i * 2] = la[i * 2 + 1] = pa[i] = 0; continue; }
+                    if (p.life[i] < 0) { la[i * 2] = la[i * 2 + 1] = pa[i] = 0; hideArrow(i); continue; }
                     let gx = sample(S.gx, p.x[i], p.z[i]), gz = sample(S.gz, p.x[i], p.z[i]);
                     const mag = Math.hypot(gx, gz);
-                    if (mag < 1e-7) { p.life[i] = -1; la[i * 2] = la[i * 2 + 1] = pa[i] = 0; continue; }
-                    gx /= -mag; gz /= -mag;                                  // 내리막 방향
-                    const k = 0.3 + 0.7 * Math.min(1, mag / S.gRef);
+                    if (mag < 1e-7 && !near) { p.life[i] = -1; la[i * 2] = la[i * 2 + 1] = pa[i] = 0; hideArrow(i); continue; }
+                    if (mag >= 1e-7) { gx /= -mag; gz /= -mag; } else { gx = 0; gz = 0; }   // 내리막 방향
+                    let k = 0.3 + 0.7 * Math.min(1, mag / S.gRef);
+                    if (near) {   // 구멍에 가까울수록 구멍 쪽으로 (가장자리에서는 내리막 그대로)
+                        const w = Math.min(1, Math.pow(1 - hd / PULL, 0.7) * 1.3);
+                        const tx = (H.x - p.x[i]) / Math.max(hd, 1e-6), tz = (H.z - p.z[i]) / Math.max(hd, 1e-6);
+                        gx = gx * (1 - w) + tx * w; gz = gz * (1 - w) + tz * w;
+                        const m2 = Math.hypot(gx, gz) || 1; gx /= m2; gz /= m2;
+                        k = Math.max(k, 0.55);
+                    }
                     p.x[i] += gx * FLOW_SPEED * k * dt; p.z[i] += gz * FLOW_SPEED * k * dt;
                     p.age[i] += dt;
                     const d = sample(S.depth, p.x[i], p.z[i]);
-                    if (p.x[i] < 0 || p.z[i] < 0 || p.x[i] > n - 1 || p.z[i] > n - 1 || d < WET_MIN
+                    if (p.x[i] < 0 || p.z[i] < 0 || p.x[i] > n - 1 || p.z[i] > n - 1 || d < (near ? WET_MIN * 0.25 : WET_MIN)
                         || (S.hole && Math.hypot(p.x[i] - S.hole.x, p.z[i] - S.hole.z) < S.hole.r)) {   // 구멍에 닿은 물줄기는 빠져서 사라짐
-                        p.life[i] = -1; la[i * 2] = la[i * 2 + 1] = pa[i] = 0; continue;
+                        p.life[i] = -1; la[i * 2] = la[i * 2 + 1] = pa[i] = 0; hideArrow(i); continue;
                     }
-                    const alpha = Math.sin(Math.PI * p.age[i] / p.life[i]) * Math.min(1, d / 0.05) * 0.95;
+                    const alpha = (near ? Math.max(0.55, Math.sin(Math.PI * Math.min(0.5, p.age[i] / p.life[i]))) : Math.sin(Math.PI * p.age[i] / p.life[i]))
+                        * Math.min(1, Math.max(d, near ? 0.03 : 0) / 0.05) * 0.95;   // 구멍 근처는 끝까지 보이게
                     const tail = 1.2 + 2.6 * k;                               // 꼬리 길이 (칸)
                     const tx = Math.max(0, Math.min(n - 1, p.x[i] - gx * tail)), tz = Math.max(0, Math.min(n - 1, p.z[i] - gz * tail));
                     const hy = groundY(sample(S.hn, p.x[i], p.z[i])) + d * lift + 0.004;
@@ -1065,23 +1180,57 @@
                     la[i * 2] = 0; la[i * 2 + 1] = alpha * 0.85;
                     pp[i * 3] = hx; pp[i * 3 + 1] = hy; pp[i * 3 + 2] = hz;
                     pa[i] = alpha;
+                    if (arrows) {   // 꼬리 끝(머리)에 흐르는 방향을 가리키는 화살촉. 빠를수록·진할수록 조금 크게
+                        const sz = (0.007 + 0.006 * k) * Math.min(1, alpha * 1.6);
+                        o.position.set(hx, hy + 0.001, hz);
+                        o.rotation.set(0, Math.atan2(-gz, gx), 0);
+                        o.scale.set(sz, 1, sz);
+                        o.updateMatrix();
+                        gl.arrows.setMatrixAt(i, o.matrix);
+                    }
                 }
+                if (arrows) gl.arrows.instanceMatrix.needsUpdate = true;
                 for (const g of [gl.lines.geometry, gl.points.geometry]) {
                     g.attributes.position.needsUpdate = true; g.attributes.aAlpha.needsUpdate = true;
                 }
             }
 
             /* ---------- 오리배 (설정 '오리배 띄우기') ----------
-                - 물 위에 떠서 지형 내리막을 따라 천천히 떠내려간다 (흐르는 입자와 같은 방향 규칙. 모델이 준 속도가 아니다)
+                - 물 위에 떠서 수면이 낮아지는 쪽으로 떠내려간다. 속도는 그 자리의 유속 (매닝 공식 v = h^(2/3)·√S / n,
+                 h = 예측 수심, S = 수면 경사). 모델이 유속을 주지 않으므로 수심·지형으로 계산한 근사값이다
+               - 재생 중: 위 유속 x 재생 배속(모델 시간 8.5초 = 화면 1초). 물살 따라 빨라지고 느려진다
+               - 멈췄을 때: 유속과 상관없이 일정한 속도(BOAT_IDLE_SPEED)로 같은 방향을 따라 떠다닌다
                 - 평평한 웅덩이에서는 빙글빙글 돌고, 오래 멈추거나 물이 빠지면 사라졌다가 다른 곳에서 다시 뜬다
                 - 배수구 구멍에 닿으면 빙글빙글 돌며 빠진다
                - 3D 지도를 클릭하면 그 자리 위에서 떨어져 '첨벙' 하고 내려앉는다 (마른 땅이면 옆으로 눕고 사라진다) */
             const BOAT_LEN = 0.025;          // 오리배 길이 (지도 한 변 대비)
-            const BOAT_SPEED = 2.6;          // 떠내려가는 속도 (격자 칸/초, 가파른 곳 기준)
+            const MANNING_N = 0.035;         // 매닝 거칠기 계수 (풀·흙 바닥 정도)
+            const BOAT_VMAX = 5;             // 유속 상한 [m/s] (수심 자료의 튀는 값 방지)
+            const BOAT_IDLE_SPEED = 1.2;     // 멈췄을 때 떠다니는 일정 속도 [격자 칸/화면 초]
+            const DEFAULT_RELIEF_M = 20;     // 서버가 고저차를 안 줄 때(이미지·손그림 모드) 가정하는 지형 고저차 [m]
+            const DEFAULT_EXTENT_M = 1000;   // 지도 한 변 길이를 모를 때: 학습 지형과 같은 1 km
             const BOAT_MAX_DROPPED = 6;      // 클릭으로 떨어뜨린 배는 이만큼까지 (넘으면 오래된 것부터 사라짐)
             const BOAT_DROP_H = 0.3;         // 떨어지기 시작하는 높이 (물 면 위)
             const DUCK_COLORS = [0xffd84a, 0xffd84a, 0xffd84a, 0xfff7e6, 0xffc9d9];   // 노랑이 가장 자주, 가끔 흰색·분홍
             S.boat = { on: false, count: 3, list: [], fx: [], cool: 0, lastDrop: null };
+            S.playing = false;   // 시간 변화 재생 중인지 (재생 중에만 유속을 쓴다)
+            S.rate = 1;          // 재생 배속: 모델 시간(초) / 화면 시간(초)
+
+            // 수면 높이 [m] = 지형 높이 + 수심
+            function surfM(x, z) { return sample(S.hn, x, z) * S.reliefM + sample(S.depth, x, z); }
+            // 그 자리의 유속: 방향(격자 단위 벡터)과 크기 [m/s]
+            function flowAt(x, z) {
+                const n = S.n;
+                const xl = Math.max(0, x - 1), xr = Math.min(n - 1, x + 1), zu = Math.max(0, z - 1), zd = Math.min(n - 1, z + 1);
+                const sx = (surfM(xr, z) - surfM(xl, z)) / ((xr - xl) * S.cellM);
+                const sz = (surfM(x, zd) - surfM(x, zu)) / ((zd - zu) * S.cellM);
+                const slope = Math.hypot(sx, sz);
+                if (slope < 1e-9) return { dx: 0, dz: 0, v: 0, slope: 0 };
+                const h = Math.max(0, sample(S.depth, x, z));
+                const v = Math.min(BOAT_VMAX, Math.pow(h, 2 / 3) * Math.sqrt(slope) / MANNING_N);
+                return { dx: -sx / slope, dz: -sz / slope, v, slope };
+            }
+            function setPlayback(playing, rate) { S.playing = !!playing; S.rate = rate > 0 ? rate : 1; }
             let ringGeo = null, dropGeo = null, shadowGeo = null, ballGeo = null, coneGeo = null;
 
             // 오리배 모양 (길이 1, 앞쪽 = +x, 위 = +y): 납작한 몸통 + 날개 + 꽁지 + 머리 + 부리 + 눈 + 볼
@@ -1246,26 +1395,40 @@
                 } else if (b.state === 'float') {
                     if (!floats(w.d)) { b.state = 'ground'; b.t = 0; }   // 물이 빠졌다 -> 땅에 얹힘
                     else {
-                        let gx = sample(S.gx, b.x, b.z), gz = sample(S.gz, b.x, b.z);
-                        const mag = Math.hypot(gx, gz);
-                        let tx = 0, tz = 0;
-                        if (mag > 1e-7) {
-                            gx /= -mag; gz /= -mag;              // 내리막 방향
-                            const k = Math.min(1, mag / S.gRef);
-                            const along = 0.2 + 0.8 * k, swirl = (1 - k) * 0.55;   // 평평한 웅덩이일수록 빙글빙글
-                            tx = gx * along - gz * swirl; tz = gz * along + gx * swirl;
+                        const fl = flowAt(b.x, b.z);
+                        const k = Math.min(1, fl.slope / 0.002);             // 수면 경사가 거의 없으면(웅덩이) 맴돈다
+                        const along = 0.35 + 0.65 * k, swirl = (1 - k) * 0.5;
+                        let tx = fl.dx * along - fl.dz * swirl, tz = fl.dz * along + fl.dx * swirl;
+                        let spd;
+                        if (S.playing) {
+                            // 재생 중: 유속 [m/s] -> 화면 속도 [격자 칸/화면 초] = 유속 / 칸 크기 x 재생 배속
+                            spd = fl.v / S.cellM * S.rate;
+                        } else {
+                            // 멈춤: 방향만 물살을 따르고 속도는 일정. 수면이 완전히 평평하면 지형 내리막, 그것도 없으면 지금 가던 쪽
+                            let len = Math.hypot(tx, tz);
+                            if (len < 1e-6) {
+                                const gx = -sample(S.gx, b.x, b.z), gz = -sample(S.gz, b.x, b.z);
+                                const gl2 = Math.hypot(gx, gz);
+                                if (gl2 > 1e-7) { tx = gx / gl2; tz = gz / gl2; }
+                                else { tx = Math.cos(b.head); tz = -Math.sin(b.head); }
+                                len = 1;
+                            }
+                            tx /= len; tz /= len;
+                            spd = BOAT_IDLE_SPEED;
                         }
-                        const wob = Math.sin(S.clock * 0.8 + b.phase) * 0.3;     // 살짝 갈지자
-                        const tvx = (tx - tz * wob) * BOAT_SPEED, tvz = (tz + tx * wob) * BOAT_SPEED;
-                        const a = Math.min(1, dt * 1.6);
+                        const wob = Math.sin(S.clock * 0.8 + b.phase) * 0.2;     // 살짝 갈지자
+                        const tvx = (tx - tz * wob) * spd, tvz = (tz + tx * wob) * spd;
+                        const a = Math.min(1, dt * 1.6 * Math.max(1, Math.sqrt(S.rate)));   // 빨리 감을 때는 속도도 빨리 따라간다
                         b.vx += (tvx - b.vx) * a; b.vz += (tvz - b.vz) * a;
                         const nx = b.x + b.vx * dt, nz = b.z + b.vz * dt;
+                        let blocked = false;
                         if (nx < 0.5 || nz < 0.5 || nx > n - 1.5 || nz > n - 1.5) { b.state = 'fade'; b.t = 0; }   // 지도 밖으로 떠나감
                         else if (floats(sample(S.depth, nx, nz))) { b.x = nx; b.z = nz; }
-                        else { b.vx *= -0.4; b.vz *= -0.4; }     // 물가에 닿음: 살짝 튕김
+                        else { b.vx *= -0.4; b.vz *= -0.4; blocked = true; }     // 물가에 닿음: 살짝 튕김
                         const sp = Math.hypot(b.vx, b.vz);
-                        b.stuck = sp < 0.25 ? b.stuck + dt : Math.max(0, b.stuck - dt * 0.5);
-                        if (sp > 0.08) b.targetHead = Math.atan2(-b.vz, b.vx);
+                        // 물살이 느린 건 멈춘 게 아니다: 물가에 계속 막힐 때만 '갇힘'으로 센다
+                        b.stuck = blocked ? b.stuck + dt : Math.max(0, b.stuck - dt * 0.5);
+                        if (sp > 0.02) b.targetHead = Math.atan2(-b.vz, b.vx);
                         if (b.state === 'float' && (b.stuck > 5 || b.t > (b.dropped ? 70 : 40))) { b.state = 'fade'; b.t = 0; }
                         if (b.state === 'float' && S.hole && Math.hypot(b.x - S.hole.x, b.z - S.hole.z) < S.hole.r) { b.state = 'sink'; b.t = 0; b.sinkY = null; }
                         w = waterAt(b.x, b.z);
@@ -1356,6 +1519,7 @@
                 gl.scene.remove(gl.group);
                 gl.group = gl.terrain = gl.water = gl.lines = gl.points = gl.pin = gl.halo = gl.skirt = null;
                 gl.holeWall = gl.holeFloor = gl.holeRim = gl.holeGrate = gl.arrow = gl.label = null; gl.arrowBase = null;
+                gl.arrows = null;
             }
             function disposeScene() { disposeMeshes(); }
 
@@ -1451,8 +1615,10 @@
                 if (S.dirtyTerrain) updateTerrain();
                 if (S.dirtyWater) updateWater();
                 gl.waterMat.uniforms.uTime.value = S.clock;
-                gl.lines.visible = gl.points.visible = S.flow;
-                if (S.flow) updateParticles(dt);
+                gl.lines.visible = S.flow !== FLOW_OFF;          // 꼬리는 공·화살표 둘 다
+                gl.points.visible = S.flow === FLOW_BALL;        // 머리: 공 모드 = 동그라미
+                if (gl.arrows) gl.arrows.visible = S.flow === FLOW_ARROW;   // 화살표 모드 = 화살촉
+                if (S.flow !== FLOW_OFF) updateParticles(dt);
                 updateBoats(dt);
                 if (gl.halo) { const s = 1 + 0.25 * Math.sin(S.clock * 3); gl.halo.scale.set(s, s, 1); }
                 if (gl.arrow && gl.arrowBase != null) gl.arrow.position.y = gl.arrowBase + 0.009 * Math.sin(S.clock * 3.2);
@@ -1509,9 +1675,17 @@
             }
 
             return {
-                available, depthAt, setTerrain, addFrame, setTime, clear, show, hide, resetCamera,
+                available, depthAt, setTerrain, addFrame, setTime, setPlayback, clear, show, hide, resetCamera,
                 setExaggeration(v) { S.exag = v; S.dirtyTerrain = true; },
-                setFlow(on) { S.flow = !!on; },
+                // 0 = 꺼짐, 1 = 공, 2 = 화살표 (예전처럼 true/false 를 줘도 된다)
+                setFlow(mode) { S.flow = mode === true ? FLOW_BALL : (mode === false ? FLOW_OFF : (Number(mode) || 0)); S.dirtyArrows = true; },
+                // 배수구 후보를 나중에 정할 때 (침수 위험지역 계산이 끝난 뒤): 구멍·핀을 새 자리에 다시 만든다
+                setDrain(drain) {
+                    if (!available()) return;
+                    S.drain = drain || null;
+                    S.hole = S.drain ? { x: S.drain.x * (S.n - 1), z: S.drain.y * (S.n - 1), r: HOLE_R * (S.n - 1) } : null;
+                    if (S.gl && S.gl.group) buildScene();
+                },
                 setBoats(on, count) {
                     S.boat.on = !!on;
                     S.boat.count = Math.min(8, Math.max(1, Math.round(Number(count) || 3)));
@@ -2077,12 +2251,25 @@
                 showToast('이 기록에는 저장된 결과 그림이 없어요.');
                 return;
             }
+            const inThumb = record.params && record.params.input && record.params.input.thumb;
+            const rk = record.params && record.params.risk;          // 11/25 이후 기록: 침수 위험지역(빗금)과 그 기준
+            const dt = record.params && record.params.drain_time_s;
+            const sub = rk ? `물이 오래 고이는 곳 (${rk.win || rk.ref_time_s + '초'} 기준)`
+                : (dt != null ? `예측 유출이 가장 큰 지점 (${dt}초 기준)` : '예측 유출이 가장 큰 지점');
             showResult(
-                [{ key: 'saved', label: `${recordName(record)} · ${record.imageLabel || '저장된 결과'}`, src: record.thumbnail, marker: record.drain || null }],
+                [{ key: 'saved', label: `${recordName(record)} · ${record.imageLabel || '저장된 결과'}`, src: record.thumbnail, marker: record.drain || null }]
+                    .concat(inThumb ? [{ key: 'input', label: '입력한 지도 (미리보기)', src: inThumb }] : []),
                 record.info || [],
                 record.meta,
-                { src: record.thumbnail, marker: record.drain || null }   // 예측 화면과 같은 빨간 원 + 라벨
+                { src: record.thumbnail, marker: record.drain || null, markerSub: sub }   // 예측 화면과 같은 빨간 원 + 라벨
             );
+            if (rk && rk.mask_b64 && rk.n) {
+                try {
+                    const risk = { n: rk.n, mask: unpackMask(rk.mask_b64, rk.n), zones: new Array(rk.zones || 1).fill(null) };
+                    stageState.risk = risk;
+                    drawRiskOverlay(risk);
+                } catch (e) { console.error('저장된 위험지역을 그리지 못했습니다', e); }
+            }
             goToView('predict');   // 기록 화면에서 눌렀으면 예측 화면으로 넘어가서 결과를 지도에 보여준다
         }
 
@@ -2131,25 +2318,40 @@
             const d = recordDate(r);
             const p = r.params || {};
 
+            const inp = p.input || null;   // 사용자가 넣은 값 (이 기능 전에 저장된 기록에는 없음)
+
             document.getElementById('detail-title').textContent = recordName(r);
             const img = document.getElementById('detail-img');
-            img.style.display = r.thumbnail ? 'block' : 'none';
-            if (r.thumbnail) img.src = r.thumbnail;
+            img.src = r.thumbnail || '';
+            document.getElementById('detail-img-fig').style.display = r.thumbnail ? '' : 'none';
+            const inImg = document.getElementById('detail-input-img');
+            inImg.src = (inp && inp.thumb) || '';
+            document.getElementById('detail-input-fig').style.display = inp && inp.thumb ? '' : 'none';
             // 그림이 없는 기록(비로그인 시절·이전 서버)은 정보만 한 칸으로, 다시 열기 버튼도 숨김
-            document.querySelector('.detail-body').classList.toggle('no-img', !r.thumbnail);
+            document.querySelector('.detail-body').classList.toggle('no-img', !r.thumbnail && !(inp && inp.thumb));
             document.getElementById('detail-open-btn').style.display = r.thumbnail ? 'block' : 'none';
+            document.getElementById('detail-reuse-btn').style.display = p.mode && MODE_TEXT[p.mode] ? 'block' : 'none';
 
+            // 넣은 값과 서버가 실제로 쓴 값이 다르면 둘 다 보여준다 (예: 강우량이 학습 범위로 잘림)
+            const both = (inV, usedV, unit, fmt = v => v) => {
+                if (usedV == null && inV == null) return '—';
+                if (inV == null || usedV == null || Number(inV) === Number(usedV)) return `${fmt(usedV ?? inV)} ${unit}`;
+                return `입력 ${fmt(inV)} ${unit} → 적용 ${fmt(usedV)} ${unit}`;
+            };
             const rows = [
                 ['저장 시각', `${dateKey(d)} ${timeText(d)}`],
-                ['입력 파일', r.fileName],
+                ['입력 파일', r.fileName + (inp && inp.file_size ? ` (${formatBytes(inp.file_size)})` : '')],
                 ['입력 종류', MODE_TEXT[p.mode] ? MODE_TEXT[p.mode].short : (p.mode || '—')],
-                ['강우량', p.rain_mm != null ? `${p.rain_mm} mm` : (p.rainfall != null ? `${p.rainfall} mm/h` : '—')],
-                ['경과 시간', p.time_s != null ? `${p.time_s} 초` : '—'],
-                ['격자 셀 크기', p.dx != null ? `${Number(p.dx).toFixed(2)} m` : '—'],
+                ['강우량', p.rain_mm != null || inp ? both(inp && inp.rain_mm, p.rain_mm, 'mm') : (p.rainfall != null ? `${p.rainfall} mm/h` : '—')],
+                ['경과 시간', inp && p.time_s == null ? `입력 ${inp.time_s} 초 (모델이 시간을 쓰지 않음)` : both(inp && inp.time_s, p.time_s, '초')],
+                ['격자 셀 크기', both(inp && inp.dx, p.dx, 'm', v => Number(v).toFixed(2))]
+            ];
+            if (inp && inp.color) rows.push(['색 해석', colorSchemeLabel(inp.color.scheme) + (inp.color.reverse ? ' · 높낮이 반대' : '')]);
+            rows.push(
                 ['배수구 후보', drainText(r)],
                 ['모델', r.checkpoint || '—'],
                 ['대표 그림', r.imageLabel || '—']
-            ];
+            );
             document.getElementById('detail-list').innerHTML = rows.map(([k, v]) =>
                 `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd>`).join('');
             document.getElementById('detail-info').innerHTML =
@@ -2159,7 +2361,44 @@
                 closeDetail();
                 showRecord(id);
             };
+            document.getElementById('detail-reuse-btn').onclick = () => {
+                closeDetail();
+                applyRecordInputs(r);
+            };
             document.getElementById('detail-modal').style.display = 'flex';
+        }
+
+        function formatBytes(b) {
+            return b >= 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`;
+        }
+        function colorSchemeLabel(v) {
+            const o = [...byId('colorScheme').options].find(x => x.value === v);
+            return o ? o.textContent : (v || '자동 감지');
+        }
+
+        // 기록의 입력값을 조건 패널에 다시 넣는다. 파일은 브라우저 보안상 넣어 줄 수 없어 다시 골라야 한다
+        function applyRecordInputs(r) {
+            const p = r.params || {}, inp = p.input || {};
+            const radio = document.querySelector(`input[name="mode"][value="${p.mode}"]`);
+            if (radio && !radio.checked) { radio.checked = true; radio.dispatchEvent(new Event('change', { bubbles: true })); }
+            const setNum = (id, v) => {
+                if (v == null || v === '') return;
+                const el = byId(id);
+                el.value = v;
+                el.dispatchEvent(new Event('input', { bubbles: true }));   // 슬라이더·요약·빠른 선택도 함께 맞춘다
+            };
+            setNum('rainMm', inp.rain_mm ?? p.rain_mm);
+            setNum('timeS', inp.time_s ?? p.time_s);
+            if (p.mode === 'terrain') setNum('dx', inp.dx ?? p.dx);
+            if (inp.color) {
+                setColorOpts(inp.color);
+                if (!byId('colorScheme').value) byId('colorScheme').value = 'auto';   // 지금 서버에 없는 색 체계면 자동
+            }
+            if (typeof markRainPreset === 'function') markRainPreset();
+            updateRunSummary();
+            goToView('predict');
+            setPanelFolded(false);
+            showToast(`'${recordName(r)}' 조건을 넣었어요. 파일(${r.fileName || '입력 파일'})은 다시 골라 주세요.`);
         }
 
         function closeDetail() {
@@ -2206,7 +2445,7 @@
         // marker 를 주면 배수구 후보 자리에 빨간 원을 그려 넣는다 (분석 지도에는 별표가 이미 있어서 안 줌)
         // 기록에 남기는 그림은 예측 화면에서 본 것과 같은 해상도로 둔다 (예전엔 긴 변 360px 로 줄여서,
         // 기록에서 다시 열면 지도가 뭉개져 보였다). 너무 큰 그림만 1024px 로 줄인다. 서버 한도는 2MB.
-        function makeThumbnail(dataUrl, marker = null, maxSide = 1024) {
+        function makeThumbnail(dataUrl, marker = null, maxSide = 1024, quality = 0.92) {
             return new Promise(resolve => {
                 const img = new Image();
                 img.onload = () => {
@@ -2225,10 +2464,28 @@
                         ctx.arc(marker.x * canvas.width, marker.y * canvas.height, 10, 0, Math.PI * 2);
                         ctx.stroke();
                     }
-                    resolve(canvas.toDataURL('image/jpeg', 0.92));
+                    resolve(canvas.toDataURL('image/jpeg', quality));
                 };
                 img.onerror = () => resolve(null);
                 img.src = dataUrl;
+            });
+        }
+
+        // 입력 지도 미리보기: 서버는 params 를 DB 의 TEXT 칸(64KB)에 넣으므로 작게 줄여 40KB 안쪽으로 맞춘다
+        async function makeInputThumb(src) {
+            if (!src) return null;
+            for (const side of [256, 180, 120]) {
+                const t = await makeThumbnail(src, null, side, 0.8);
+                if (t && t.length < 40000) return t;
+            }
+            return null;
+        }
+        function fileToDataUrl(file) {
+            return new Promise(resolve => {
+                const fr = new FileReader();
+                fr.onload = () => resolve(fr.result);
+                fr.onerror = () => resolve(null);
+                fr.readAsDataURL(file);
             });
         }
 
@@ -2269,6 +2526,9 @@
             document.getElementById('dropzone-hint').textContent = t.fileHint;
             document.getElementById('dx-block').style.display = (getMode() === 'terrain') ? 'block' : 'none';
             document.getElementById('color-block').style.display = (getMode() === 'image') ? 'block' : 'none';
+            document.getElementById('cam-row').style.display = (getMode() === 'hand') ? 'block' : 'none';
+            if (getMode() === 'hand') document.getElementById('cam-note').textContent = cameraSupported() ? ''
+                : '카메라는 https 주소(ngrok)나 이 컴퓨터(localhost)에서 열 때만 켜져요. 지금은 사진 파일로 올려 주세요 (폰은 누르면 카메라 앱이 열려요).';
             clearFieldError('fileInput');
             updateRunSummary();
         }
@@ -3042,12 +3302,9 @@
             stageState.view = view;
             const is3d = view === '3d';
             const time = view === 'time' && timelapse.frames.length > 0;
-            const marker = stageState.marker;
             byId('stage-img').style.display = time ? 'none' : 'block';
             byId('timelapse-canvas').style.display = time ? 'block' : 'none';
-            byId('stage-marker').style.display = (!time && marker) ? 'block' : 'none';
-            byId('stage-marker-label').style.display = (!time && marker) ? 'flex' : 'none';
-            byId('timelapse-star').style.display = (time && timelapse.star) ? 'block' : 'none';
+            refreshMarkerDisplay();
             byId('stage-btn-map').classList.toggle('on', !time && !is3d);
             byId('stage-btn-map').setAttribute('aria-pressed', String(!time && !is3d));
             byId('stage-btn-time').classList.toggle('on', time);
@@ -3073,7 +3330,7 @@
                 View3D.hide();
             }
         }
-        byId('stage-btn-map').addEventListener('click', () => { stopTimelapsePlayback(); setStageView('map'); });
+        byId('stage-btn-map').addEventListener('click', () => { timelapse.autoplay = false; stopTimelapsePlayback(); setStageView('map'); });
         byId('stage-btn-time').addEventListener('click', () => setStageView('time'));
         byId('stage-btn-3d').addEventListener('click', () => setStageView('3d'));
 
@@ -3087,11 +3344,35 @@
             View3D.setExaggeration(Number(e.target.value));
             byId('v3d-exag-val').textContent = '×' + Number(e.target.value).toFixed(1);
         });
+        // 물 흐름 표시: 누를 때마다 꺼짐 → 공 → 화살표 → 꺼짐 … (마지막 선택은 이 브라우저에 기억)
+        const FLOW_MODE_KEY = 'yuche_flow_mode';
+        const FLOW_MODES = [
+            { label: '꺼짐', title: '물 흐름 표시 꺼짐 (누르면 공 모양)',
+              icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 9c2-2 4-2 6 0s4 2 6 0 4-2 6 0M3 15c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/><path d="M4 4l16 16"/></svg>' },
+            { label: '공', title: '흐르는 물방울로 보기 (누르면 화살표 모양)',
+              icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="17" cy="7" r="2.2" fill="currentColor"/><path d="M4 9.5l9-2" opacity="0.55"/><circle cx="15" cy="16" r="2.2" fill="currentColor"/><path d="M3 18l8.5-1.6" opacity="0.55"/></svg>' },
+            { label: '화살표', title: '흐르는 물방울 머리를 화살촉으로: 흐르는 방향이 보여요 (누르면 꺼짐)',
+              icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h11M10.5 3.5L14 7l-3.5 3.5"/><path d="M6 17h15M17.5 13.5L21 17l-3.5 3.5"/></svg>' },
+        ];
+        function applyFlowMode(mode) {
+            const m = FLOW_MODES[mode] ? mode : 1;
+            const b = byId('v3d-flow');
+            b.dataset.mode = String(m);
+            b.setAttribute('aria-pressed', String(m !== 0));
+            b.title = FLOW_MODES[m].title;
+            byId('v3d-flow-icon').innerHTML = FLOW_MODES[m].icon;
+            byId('v3d-flow-label').innerHTML = `<small>물 흐름</small>${FLOW_MODES[m].label}`;
+            View3D.setFlow(m);
+            try { localStorage.setItem(FLOW_MODE_KEY, String(m)); } catch (_) { /* 저장 못 해도 동작은 그대로 */ }
+        }
         byId('v3d-flow').addEventListener('click', (e) => {
-            const on = e.currentTarget.getAttribute('aria-pressed') !== 'true';
-            e.currentTarget.setAttribute('aria-pressed', String(on));
-            View3D.setFlow(on);
+            applyFlowMode((Number(e.currentTarget.dataset.mode) + 1) % FLOW_MODES.length);   // 0 → 1 → 2 → 0
         });
+        (() => {   // 처음에는 지난번 선택(없으면 '공')
+            let saved = 1;
+            try { const v = localStorage.getItem(FLOW_MODE_KEY); if (v !== null) saved = Number(v); } catch (_) { /* 무시 */ }
+            applyFlowMode(saved);
+        })();
         byId('v3d-reset').addEventListener('click', () => View3D.resetCamera());
 
         // 지도 한 장을 화면에 올린다. marker = 배수구 후보 {x, y} (0~1, 그림 왼쪽 위 기준)
@@ -3106,10 +3387,19 @@
             byId('view-predict').classList.add('has-back');   // 접힌 알약을 버튼 높이만큼 내린다 (펼친 패널은 제목 옆 ←)
             placeBackButton();
             updateBackLabel();
-            stageState.marker = stage.marker || null;
-            if (stage.marker) {
-                const m = stage.marker;
-                for (const id of ['stage-marker', 'stage-marker-label']) {
+            placeDrainMarker(stage.marker || null, stage.markerSub);
+            resetMapView();   // 새 결과는 확대·이동을 처음 상태로
+            updateStageFit();
+            setStageView('map');
+        }
+
+        // 배수구 후보 빨간 원(지도 보기)과 같은 자리의 원(시간 변화 보기)을 옮긴다. m = {x, y} (0~1) 또는 null.
+        // sub: 라벨 둘째 줄 (어떤 기준으로 고른 자리인지). 침수 위험지역 계산이 끝난 뒤에 다시 불러 자리를 바꾼다
+        function placeDrainMarker(m, sub) {
+            stageState.marker = m || null;
+            byId('stage-marker-sub').textContent = sub || '물이 가장 많이 고이는 곳';
+            if (m) {
+                for (const id of ['stage-marker', 'stage-marker-label', 'timelapse-star']) {
                     byId(id).style.left = `${m.x * 100}%`;
                     byId(id).style.top = `${m.y * 100}%`;
                 }
@@ -3118,9 +3408,16 @@
                 clearTimeout(markerPeekTimer);
                 markerPeekTimer = setTimeout(() => byId('stage-marker-label').classList.remove('peek'), 3000);
             }
-            resetMapView();   // 새 결과는 확대·이동을 처음 상태로
-            updateStageFit();
-            setStageView('map');
+            timelapse.star = !!m;
+            refreshMarkerDisplay();
+        }
+        // 지도 보기 = 빨간 원 + 라벨, 시간 변화 보기 = 같은 자리의 원만
+        function refreshMarkerDisplay() {
+            const time = stageState.view === 'time' && timelapse.frames.length > 0;
+            const marker = stageState.marker;
+            byId('stage-marker').style.display = (!time && marker) ? 'block' : 'none';
+            byId('stage-marker-label').style.display = (!time && marker) ? 'flex' : 'none';
+            byId('timelapse-star').style.display = (time && timelapse.star) ? 'block' : 'none';
         }
 
         /* ---------- 이전 화면으로 ---------- */
@@ -3141,6 +3438,7 @@
             stageState.result = null;
             stageState.recordId = null;
             stageState.from = null;
+            drawRiskOverlay(null);
             hidePredictError();
             clearSelectedFile();   // 처음 화면이니 올려 둔 파일(샘플 포함)도 비운다
             submitLabel = '배수 예측 실행';
@@ -3277,6 +3575,10 @@
             if (p.light) form.append('light', 'true');
             if (p.noAnalysis) form.append('no_analysis', 'true');
             if (p.noMap) form.append('no_map', 'true');
+            if (p.markX != null && p.markY != null) {     // 분석 지도 ★ 자리 (화면이 고른 배수구, 그림 좌표 0~1). 옛 서버는 무시한다
+                form.append('mark_x', p.markX);
+                form.append('mark_y', p.markY);
+            }
             if (p.mode === 'image') {                    // 이미지 색 체계: 서버가 높이로 읽어 학습 형식으로 다시 그림
                 form.append('color_scheme', p.color.scheme);
                 form.append('reverse', p.color.reverse ? 'true' : 'false');
@@ -3587,8 +3889,7 @@
         // images: [{ key, label, src, marker? }] - '결과 이미지' 창에 카드로 나란히 모인다. marker = 그림 위 배수구 후보 위치 {x, y} (0~1).
         // info: 문자열 배열, meta: 서버 meta (선택, meta.stats 가 있으면 지도 위 요약 칩에 쓴다)
         // stage: 지도 화면에 크게 보일 그림 { src, marker } (없으면 images[0])
-        function showResult(images, info, meta, stage) {
-            cancelTimelapse();
+        function renderResultGrid(images) {
             document.getElementById('result-grid').innerHTML = images.map(im => `
                 <figure class="result-card">
                     <figcaption>${escapeHtml(im.label)}</figcaption>
@@ -3599,9 +3900,19 @@
                     <a href="${im.src}" download="yuche_${escapeHtml(im.key)}.png">PNG 저장</a>
                 </figure>
             `).join('');
-
+        }
+        function renderResultInfo(info) {
             document.getElementById('result-info').innerHTML =
                 info.map(line => `<li>${escapeHtml(line)}</li>`).join('');
+        }
+        function showResult(images, info, meta, stage) {
+            cancelTimelapse();
+            stageState.runToken = null;  // 예측 제출이 다시 정한다 (뒤늦게 온 응답이 다른 결과를 덮지 않게)
+            stageState.retuneRisk = null;
+            drawRiskOverlay(null);       // 위험지역은 새 결과에서 다시 계산한다 (기록 보기는 저장된 것을 아래에서 다시 그림)
+            stageState.risk = null;
+            renderResultGrid(images);
+            renderResultInfo(info);
 
             showStageImage(stage || { src: images[0].src, marker: images[0].marker });
             // 결과 조건: 서버 meta 값(강우는 학습 범위로 잘린 값으로 맞춘다). 파일은 직접 예측했을 때만 제출 코드가 채운다
@@ -3629,6 +3940,160 @@
             });
         }
 
+        /* ---------- 침수 위험지역 · 배수구 후보 (11/26 팀 토론으로 바꿈) ----------
+           11/25 처음 기준(120초에 남은 물 >= 5cm)은 실제 모델에서 거의 비었다: 120초면 물이 대부분 빠지고,
+           모델이 최대 수심을 실제의 약 62% 로 낮게 예측해서 5cm 를 넘는 칸이 드물었다.
+           지금 기준 = '머문 시간': 보는 구간(18초 ~ 끝 시점) 동안 수심이 기준 깊이 이상인 상태가 몇 초 이어졌는가.
+             - 기준 깊이 = max(최소 깊이, 그 구간 최대 수심(젖은 칸 1cm+)의 상위 1% 값 x 상대 비율)
+             - 머문 시간 >= 기준 초 인 칸 = 위험. 잠깐 지나가는 물길은 빠지고, 고여서 머무는 곳만 남는다
+             - 배수구 = 위험지역 덩어리 중 '수심 x 시간'의 합이 가장 큰 덩어리에서 그 값이 가장 큰 칸
+           숫자 넷은 설정 창 '침수 위험지역 기준'에서 결과를 보며 바로 바꿀 수 있다 (이 브라우저에 기억).
+           AI 모델·서버는 건드리지 않고, 응답마다 오는 96x96 수심 격자(grid3d.depth_u16)로 화면에서 계산한다.
+           격자는 그림 방향(0행 = 위쪽)이라 배수구 좌표(그림 왼쪽 위 기준 0~1)·지도 그림과 그대로 겹친다. */
+        const RISK_WET_M = 0.01;       // 1cm 이상을 '젖은 칸'으로 보고 상위 1% 를 잰다
+        const RISK_MIN_CELLS = 2;      // 한두 칸짜리 튄 값은 위험지역에서 뺀다 (격자 한 칸 ≈ 10m)
+        const RISK_CFG_KEY = 'yuche_risk_cfg_v1';
+        const RISK_DEFAULTS = { absCm: 3, relPct: 40, staySec: 40, endS: 79 };   // 11/26 토론 시작값 (결과 보며 조절)
+        const riskCfg = (() => {
+            try { return { ...RISK_DEFAULTS, ...JSON.parse(localStorage.getItem(RISK_CFG_KEY) || '{}') }; } catch (_) { return { ...RISK_DEFAULTS }; }
+        })();
+        function riskWinText() { return `${TIMELAPSE_TIMES[0]}~${riskCfg.endS}초`; }
+
+        function decodeDepthGrid(grid) {   // grid3d -> { n, depth(Float32Array, m) } 또는 null
+            if (!grid || !grid.depth_u16 || !grid.n) return null;
+            const n = grid.n, bin = atob(grid.depth_u16);
+            if (bin.length !== n * n * 2) return null;
+            const unit = grid.depth_unit_m || 1e-4;
+            const depth = new Float32Array(n * n);
+            for (let i = 0; i < n * n; i++) depth[i] = (bin.charCodeAt(2 * i) | (bin.charCodeAt(2 * i + 1) << 8)) * unit;   // uint16 리틀엔디언
+            return { n, depth };
+        }
+
+        // frames: [{ time, depth }] (시간 순 아니어도 됨). 보는 구간 안의 시점이 2개 이상이어야 계산한다
+        function computeRiskFromFrames(n, frames) {
+            const cfg = riskCfg;
+            const fr = frames.filter(f => f.time <= cfg.endS).sort((p, q) => p.time - q.time);
+            if (fr.length < 2) return null;
+            const N = n * n, env = new Float32Array(N), integ = new Float32Array(N);
+            for (const f of fr) for (let i = 0; i < N; i++) if (f.depth[i] > env[i]) env[i] = f.depth[i];
+            const wet = [];
+            for (let i = 0; i < N; i++) if (env[i] >= RISK_WET_M) wet.push(env[i]);
+            wet.sort((a, b) => a - b);
+            const ref = wet.length ? wet[Math.min(wet.length - 1, Math.floor(wet.length * 0.99))] : 0;
+            const thr = Math.max(cfg.absCm / 100, cfg.relPct / 100 * ref);
+            const stay = new Float32Array(N);
+            for (let k = 0; k + 1 < fr.length; k++) {      // 이웃한 두 시점 사이: 둘 다 넘으면 그 간격 전부, 하나만이면 절반
+                const a = fr[k].depth, b = fr[k + 1].depth, dt = fr[k + 1].time - fr[k].time;
+                for (let i = 0; i < N; i++) {
+                    stay[i] += dt * ((a[i] >= thr ? 0.5 : 0) + (b[i] >= thr ? 0.5 : 0));
+                    integ[i] += dt * (a[i] + b[i]) / 2;
+                }
+            }
+            const span = fr[fr.length - 1].time - fr[0].time;
+            const need = Math.min(cfg.staySec, span);       // 구간이 기준 초보다 짧으면 구간 전체를 머문 곳
+            const mask = new Uint8Array(N);
+            for (let i = 0; i < N; i++) mask[i] = stay[i] >= need - 1e-6 && stay[i] > 0 ? 1 : 0;
+            // 위험 칸을 상하좌우로 이어진 덩어리로 나눈다
+            const seen = new Uint8Array(N), stack = new Int32Array(N), zones = [];
+            for (let s0 = 0; s0 < N; s0++) {
+                if (!mask[s0] || seen[s0]) continue;
+                const cells = [];
+                let top = 0, vol = 0, peak = s0;
+                stack[top++] = s0; seen[s0] = 1;
+                while (top) {
+                    const i = stack[--top];
+                    cells.push(i); vol += integ[i];
+                    if (integ[i] > integ[peak]) peak = i;
+                    const x = i % n;
+                    const nb = [x > 0 ? i - 1 : -1, x < n - 1 ? i + 1 : -1, i - n, i + n];
+                    for (const j of nb) if (j >= 0 && j < N && mask[j] && !seen[j]) { seen[j] = 1; stack[top++] = j; }
+                }
+                if (cells.length < RISK_MIN_CELLS) { for (const i of cells) mask[i] = 0; continue; }
+                zones.push({ cells: cells.length, vol, peak, maxDepth: env[peak] });
+            }
+            zones.sort((a, b) => b.vol - a.vol);
+            const r4 = v => Math.round(v * 1e4) / 1e4;
+            const pos = i => ({ x: r4((i % n) / (n - 1)), y: r4(Math.floor(i / n) / (n - 1)) });
+            const drain = zones[0] ? pos(zones[0].peak) : null;
+            let deep = 0;
+            for (let i = 1; i < N; i++) if (integ[i] > integ[deep]) deep = i;
+            const deepest = { ...pos(deep), depth: env[deep] };   // 위험지역이 없을 때 배수구 대신 자리 (수심 x 시간이 가장 큰 칸)
+            const riskCells = zones.reduce((a, z) => a + z.cells, 0);
+            return { n, mask, zones, thr, ref, drain, deepest, areaPct: riskCells / N * 100,
+                     win: `${fr[0].time}~${fr[fr.length - 1].time}초`, stayNeed: need, cfg: { ...cfg } };
+        }
+
+        // 기록 저장용: 위험 칸(n x n 비트)을 base64 로 접어 둔다 (96x96 = 1.5KB). 기록을 다시 열면 빗금을 그대로 그린다
+        function packMask(mask) {
+            const bytes = new Uint8Array(Math.ceil(mask.length / 8));
+            for (let i = 0; i < mask.length; i++) if (mask[i]) bytes[i >> 3] |= 1 << (i & 7);
+            let bin = '';
+            for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+            return btoa(bin);
+        }
+        function unpackMask(b64, n) {
+            const bin = atob(b64), mask = new Uint8Array(n * n);
+            for (let i = 0; i < mask.length; i++) mask[i] = (bin.charCodeAt(i >> 3) >> (i & 7)) & 1;
+            return mask;
+        }
+        function riskSummary(risk, refTime) {
+            return {
+                ref_time_s: refTime, win: risk.win, stay_s: risk.stayNeed, cfg: risk.cfg, thr_m: Math.round(risk.thr * 1e4) / 1e4, ref_m: Math.round(risk.ref * 1e4) / 1e4,
+                zones: risk.zones.length, area_pct: Math.round(risk.areaPct * 10) / 10, n: risk.n,
+                mask_b64: risk.zones.length ? packMask(risk.mask) : null
+            };
+        }
+        const cmText = m => (Math.round(m * 1000) / 10).toString();   // 0.05 -> "5", 0.123 -> "12.3"
+        function riskInfoLine(risk) {
+            const rule = `${risk.win} 동안 수심 ${cmText(risk.thr)}cm 이상이 ${Math.round(risk.stayNeed)}초 넘게 머문 곳`;
+            if (!risk.zones.length) return `침수 위험지역 없음: ${rule}이 없어요`;
+            return `침수 위험지역: ${risk.zones.length}곳 · 지도의 ${risk.areaPct.toFixed(1)}% (빨간 빗금, ${rule})`;
+        }
+
+        // 지도 위 빨간 빗금: 96x96 위험 칸을 부드럽게 키운 뒤 가장자리는 진한 선, 안쪽은 빗금 + 옅은 빨강
+        const RISK_PX = 1024;
+        function drawRiskOverlay(risk) {
+            const cv = byId('risk-canvas');
+            const has = !!(risk && risk.mask && risk.zones && risk.zones.length);
+            cv.style.display = has ? 'block' : 'none';
+            byId('risk-key').style.display = has ? 'flex' : 'none';
+            if (!has) return;
+            const n = risk.n, S = RISK_PX, sc = S / (n - 1);
+            const m = document.createElement('canvas');
+            m.width = m.height = n;
+            const mctx = m.getContext('2d');
+            const id = mctx.createImageData(n, n);
+            for (let i = 0; i < n * n; i++) {
+                id.data[i * 4] = id.data[i * 4 + 1] = id.data[i * 4 + 2] = 255;
+                id.data[i * 4 + 3] = risk.mask[i] ? 255 : 0;
+            }
+            mctx.putImageData(id, 0, 0);
+            const big = document.createElement('canvas');
+            big.width = big.height = S;
+            const b = big.getContext('2d');
+            b.imageSmoothingEnabled = true;
+            b.imageSmoothingQuality = 'high';
+            if ('filter' in b) b.filter = `blur(${Math.round(sc * 0.55)}px)`;   // 격자 계단을 둥글게 (모양·면적은 거의 그대로)
+            // 격자 칸 중심(i/(n-1))이 지도 좌표와 맞도록 반 칸 당겨 그린다 (배수구 원과 같은 좌표계)
+            b.drawImage(m, -0.5 * sc, -0.5 * sc, n * sc, n * sc);
+            const a = b.getImageData(0, 0, S, S).data;
+            cv.width = cv.height = S;
+            const ctx = cv.getContext('2d');
+            const out = ctx.createImageData(S, S), o = out.data;
+            const inside = (x, y) => (x < 0 || y < 0 || x >= S || y >= S) ? true : a[(y * S + x) * 4 + 3] >= 128;   // 지도 밖은 테두리를 안 그리게 '안'으로
+            const E = 3, PERIOD = 18, LINE = 4;
+            for (let y = 0; y < S; y++) {
+                for (let x = 0; x < S; x++) {
+                    const k = (y * S + x) * 4;
+                    if (a[k + 3] < 128) continue;
+                    const edge = !inside(x - E, y) || !inside(x + E, y) || !inside(x, y - E) || !inside(x, y + E);
+                    o[k] = 226; o[k + 1] = 30; o[k + 2] = 36;
+                    o[k + 3] = edge ? 245 : ((x + y) % PERIOD < LINE ? 200 : 40);   // 테두리 · '/' 빗금 · 옅은 바탕
+                }
+            }
+            ctx.putImageData(out, 0, 0);
+        }
+
         /* ---------- 시간 경과 재생 ---------- */
         // 학습 데이터의 6개 시점(18~120초) + 사용자가 입력한 시점을 키프레임으로 예측하고, 그 사이는 이미지를 섞어 잇는다
         let TIMELAPSE_TIMES = [18, 38, 59, 79, 100, 120];   // /api/health 의 timelapse_times 가 있으면 그 값으로 바뀐다
@@ -3638,7 +4103,41 @@
         const TIMELAPSE_SECONDS_PER_REAL_SECOND = 8.5;  // 재생 속도: 전체 약 12초
         const TIMELAPSE_HOLD_MS = 800;                  // 끝에서 잠깐 멈춤
         const TIMELAPSE_WRAP_FADE_MS = 700;             // 처음으로 돌아갈 때 부드럽게 전환
-        const timelapse = { controller: null, frames: [], elapsed: 0, last: 0, raf: null, star: false };
+        // planned: 받을 시점 전체 (시간 순), autoplay: 배수구가 정해지면 한 번 자동 재생할지 (사용자가 만지면 꺼진다)
+        const timelapse = { controller: null, frames: [], planned: null, elapsed: 0, last: 0, raf: null, star: false, autoplay: false };
+
+        // 처음 시점부터 빠짐없이 받은 마지막 시점. 아직 받는 중이면 재생은 여기까지만 가고 기다린다 (동영상 버퍼링처럼)
+        function timelapseAllLoaded() {
+            return !timelapse.planned || timelapse.frames.length >= timelapse.planned.length;
+        }
+        function timelapsePlayableEnd() {
+            const f = timelapse.frames;
+            if (!f.length) return null;
+            if (timelapseAllLoaded()) return f[f.length - 1].time;
+            const have = new Set(f.map(fr => fr.time));
+            let end = null;
+            for (const t of timelapse.planned) { if (!have.has(t)) break; end = t; }
+            return end;
+        }
+        function timelapseStart() { return timelapse.planned ? timelapse.planned[0] : (timelapse.frames[0] ? timelapse.frames[0].time : 0); }
+        // 받은 만큼 재생·슬라이더를 켠다 (예전엔 6개 시점을 다 받을 때까지 꺼 두었다)
+        function updateTimelapseControls() {
+            const end = timelapsePlayableEnd(), t0 = timelapseStart(), loaded = timelapseAllLoaded();
+            const canPlay = end != null && (loaded ? timelapse.frames.length >= 2 : true);   // 받는 중이면 18초만 있어도 재생(기다리며)
+            const canSeek = end != null && end > t0;
+            document.getElementById('timelapse-play').disabled = !canPlay;
+            document.getElementById('timelapse-range').disabled = !canSeek;
+        }
+        // 배수구 후보가 정해진 순간 한 번: '시간 변화' 보기로 바꾸고 처음 시점(18초)부터 재생 (3D 보기면 3D 그대로)
+        function startTimelapseAutoplay() {
+            if (!timelapse.autoplay) return;
+            timelapse.autoplay = false;
+            if (!timelapse.frames.length || !timelapse.planned || timelapse.planned.length < 2) return;
+            if (stageState.view !== '3d') setStageView('time');
+            timelapse.elapsed = 0;
+            drawTimelapseAt(timelapseStart());
+            startTimelapsePlayback();
+        }
 
         function timelapseSpanMs() {
             const f = timelapse.frames;
@@ -3674,8 +4173,20 @@
 
         function timelapseTick(now) {
             const f = timelapse.frames;
-            timelapse.elapsed += Math.min(now - timelapse.last, 100); // 탭 전환 뒤 급하게 건너뛰지 않게
+            const step = Math.min(now - timelapse.last, 100);   // 탭 전환 뒤 급하게 건너뛰지 않게
             timelapse.last = now;
+            if (!timelapseAllLoaded()) {
+                // 아직 받는 중: 빠짐없이 받은 구간까지만 재생하고, 끝에 닿으면 다음 시점이 올 때까지 그 자리에서 기다린다
+                const end = timelapsePlayableEnd(), t0 = timelapseStart();
+                if (end != null) {
+                    const maxMs = (end - t0) / TIMELAPSE_SECONDS_PER_REAL_SECOND * 1000;
+                    timelapse.elapsed = Math.min(timelapse.elapsed + step, maxMs);
+                    drawTimelapseAt(t0 + timelapse.elapsed / 1000 * TIMELAPSE_SECONDS_PER_REAL_SECOND);
+                }
+                timelapse.raf = requestAnimationFrame(timelapseTick);
+                return;
+            }
+            timelapse.elapsed += step;
             const span = timelapseSpanMs();
             const holdEnd = span + TIMELAPSE_HOLD_MS;
             if (timelapse.elapsed < span) {
@@ -3702,11 +4213,14 @@
             cancelAnimationFrame(timelapse.raf);
             timelapse.raf = null;
             setPlayButton(false);
+            View3D.setPlayback(false);   // 멈추면 오리배는 일정 속도로
         }
 
         function startTimelapsePlayback() {
-            if (timelapse.frames.length < 2 || timelapse.raf) return;
+            if (timelapse.raf || !timelapse.frames.length) return;
+            if (timelapseAllLoaded() && timelapse.frames.length < 2) return;   // 다 받았는데 한 장뿐이면 재생할 게 없다
             setPlayButton(true);
+            View3D.setPlayback(true, TIMELAPSE_SECONDS_PER_REAL_SECOND);   // 재생 중에는 유속 x 재생 배속
             timelapse.last = performance.now();
             timelapse.raf = requestAnimationFrame(timelapseTick);
         }
@@ -3716,6 +4230,9 @@
             timelapse.controller = null;
             stopTimelapsePlayback();
             timelapse.frames = [];
+            timelapse.planned = null;
+            timelapse.autoplay = false;
+            timelapse.depthFrames = {}; timelapse.depthN = 0;
             timelapse.elapsed = 0;
             document.getElementById('timelapse').style.display = 'none';
             document.getElementById('stage-toggle').style.display = 'none';
@@ -3756,9 +4273,19 @@
         // startTime: 사용자가 예측할 때 입력한 경과 시간. 슬라이더는 처음부터 이 시간을 가리키고,
         //   이 시점도 키프레임에 넣는다 (예전엔 18초부터 시작해서 입력한 시간과 달라 보였고, 18초보다 이른 시간은 못 갔다).
         // color: 예측에 쓴 이미지 색 해석 { scheme, reverse } (이미지 모드). 시점별 요청도 같은 해석을 써야 그림이 일관된다
-        async function runTimelapse(file, mode, rainMm, dx, preloaded, fixedPeak, startTime, color) {
+        // opts.riskEnd: 이 시점(보는 구간 끝)까지의 시점을 다 받으면 침수 위험지역·배수구를 계산해 opts.onRisk(risk, aborted) 로 넘긴다
+        //   (risk = null: 계산 못 함 → 서버가 준 배수구로 대신). onRisk 는 어떤 경우든 정확히 한 번 불린다.
+        // opts.autoplay: 배수구가 정해지면 시간 변화를 자동으로 재생 (사용자가 슬라이더·재생 버튼을 먼저 만지면 안 함)
+        async function runTimelapse(file, mode, rainMm, dx, preloaded, fixedPeak, startTime, color, opts = {}) {
             const controller = new AbortController();
             timelapse.controller = controller;
+            timelapse.autoplay = !!opts.autoplay;
+            let riskSent = false;
+            const deliverRisk = (risk, aborted = false) => {
+                if (riskSent) return;
+                riskSent = true;
+                if (opts.onRisk) { try { opts.onRisk(risk, aborted); } catch (e) { console.error(e); } }
+            };
             document.getElementById('timelapse').style.display = 'flex';
             document.getElementById('stage-toggle').style.display = 'flex';
             const png = b64 => 'data:image/png;base64,' + b64;
@@ -3767,6 +4294,15 @@
             const userTime = startTime != null ? Number(startTime) : TIMELAPSE_TIMES[0];
             const times = [...new Set([...TIMELAPSE_TIMES, userTime])].sort((p, q) => p - q);
             const total = times.length;
+            timelapse.planned = times;
+            const riskEnd = opts.riskEnd != null ? opts.riskEnd : null;
+            const winTimes = riskEnd != null ? times.filter(t => t <= riskEnd) : [];
+            timelapse.depthN = 0; timelapse.depthFrames = {};      // 시점별 수심 격자 (위험지역 계산·설정에서 다시 계산할 때 씀)
+            const doneWin = new Set();
+            const tryRisk = () => {   // 보는 구간 시점을 다 받았(거나 실패했)으면 한 번 계산
+                if (riskEnd == null || riskSent || !winTimes.every(t => doneWin.has(t))) return;
+                deliverRisk(computeRiskFromFrames(timelapse.depthN, Object.entries(timelapse.depthFrames).map(([t, d]) => ({ time: Number(t), depth: d }))));
+            };
             const secText = v => `${Number.isInteger(v) ? v : v.toFixed(1)}`;
             range.min = times[0];
             range.max = times[total - 1];
@@ -3776,62 +4312,86 @@
             document.getElementById('tl-max').textContent = `${secText(times[total - 1])}s`;
             document.getElementById('timelapse-time').textContent = `${secText(userTime)}초`;
 
-            if (fixedPeak) {
-                const star = document.getElementById('timelapse-star');
-                star.style.left = `${fixedPeak.x * 100}%`;
-                star.style.top = `${fixedPeak.y * 100}%`;
-                timelapse.star = true;   // 실제 표시는 '시간 변화' 보기일 때 setStageView 가 한다
-                setStageView(stageState.view);
-            }
-
-            try {
-                // 사용자가 고른 시점을 가장 먼저 (이미 받은 응답이라 바로 그려진다), 나머지는 시간 순서로
-                const order = [userTime, ...times.filter(v => v !== userTime)];
-                for (let i = 0; i < total; i++) {
-                    const time = order[i];
-                    setTimelapseStatus(`시점별 예측 중 ${i + 1} / ${total}`, i, total);
+            // fixedPeak(서버 배수구)를 쓸 때 시간 변화 보기의 원 자리는 showStageImage → placeDrainMarker 가 이미 맞춰 두었다
+            // 요청 순서: 사용자가 고른 시점(이미 받음) → 처음 시점(18초) → 위험지역 기준 시점(120초) → 나머지 시간 순.
+            // 120초를 앞당겨서 배수구가 응답 2~3개 만에 정해지고, 그 순간부터 18초부터 재생하며 나머지를 채운다.
+            // 한 시점이 실패해도 나머지는 계속 받는다 (예전엔 첫 실패에서 멈춰 뒤 시점이 모두 비었다). 연속 2번 실패하면 멈춘다
+            const order = [...new Set([userTime, ...times])];   // 사용자 시점(이미 받음) 다음은 시간 순 -> 보는 구간(18~80초)이 먼저 찬다
+            const failed = [];
+            let lastErr = null, streak = 0;
+            for (let i = 0; i < total; i++) {
+                const time = order[i];
+                const waitingDrain = riskEnd != null && !riskSent;
+                setTimelapseStatus(`${waitingDrain ? '배수구 위치 계산 중 · ' : ''}시점별 예측 ${i + 1} / ${total}`, i, total);
+                try {
                     let data = preloaded[time] || null;
                     if (!data) {
                         data = await requestPredict({ mode, file, rainMm, timeS: time, dx, color, light: true }, controller.signal);
                     }
-                    if (controller.signal.aborted) return;
+                    if (controller.signal.aborted) { deliverRisk(null, true); return; }
                     await addTimelapseFrame(time, png(data.overlay_png_base64));
                     if (data.grid3d) View3D.addFrame(time, data.grid3d);
                     if (i === 0) drawTimelapseAt(userTime);
+                    const g = decodeDepthGrid(data.grid3d);
+                    if (g) { timelapse.depthN = g.n; timelapse.depthFrames[time] = g.depth; }
+                    doneWin.add(time); tryRisk();
+                    if (i === 0 && opts.autoplayOnFirst) startTimelapseAutoplay();   // 배수구를 서버가 이미 정한 경우: 첫 장이 그려지면 바로 재생
+                    streak = 0;
+                } catch (err) {
+                    if (err.name === 'AbortError' || controller.signal.aborted) { deliverRisk(null, true); return; }
+                    console.error(err);
+                    failed.push(time); lastErr = err; streak++;
+                    timelapse.planned = timelapse.planned.filter(t => t !== time);   // 재생이 이 시점 앞에서 기다리지 않게
+                    doneWin.add(time); tryRisk();                                   // 실패한 시점은 빼고 계산 (2개 미만이면 서버 배수구로)
+                    if (streak >= 2) break;
                 }
-                setTimelapseStatus('');
-            } catch (err) {
-                if (err.name === 'AbortError') return;
-                console.error(err);
-                setTimelapseStatus(`일부 시점을 불러오지 못했습니다: ${err.message}`, 0, 0, true);
+                updateTimelapseControls();
             }
-            // 자동으로 재생하지 않는다. 다 받으면 재생 버튼·슬라이더를 켜고, 사용자가 누를 때 시작한다
+            if (failed.length || streak >= 2) {
+                const miss = order.filter(t => !timelapse.frames.some(fr => fr.time === t));
+                setTimelapseStatus(`일부 시점(${miss.map(t => t + '초').join(', ')})을 불러오지 못했습니다: ${lastErr ? lastErr.message : ''}`, 0, 0, true);
+            } else {
+                setTimelapseStatus('');
+            }
+            deliverRisk(null);   // 120초를 못 받았으면 여기서 '계산 못 함'으로 알린다 (이미 보냈으면 아무 일 없음)
+            if (controller.signal.aborted) return;
+            if (opts.onDone) { try { opts.onDone(); } catch (e) { console.error(e); } }   // 시점을 다 받은 뒤 할 일 (분석 지도 ★ 맞추기)
+            // 다 받았으면(또는 일부 실패) 받은 범위로 슬라이더를 맞춘다. 자동 재생 중이면 그대로 둔다
             const f = timelapse.frames;
-            document.getElementById('timelapse-play').disabled = f.length < 2;
-            range.disabled = f.length < 2;
+            timelapse.planned = f.map(fr => fr.time);      // 못 받은 시점은 계획에서 뺀다 (재생이 그 앞에서 멈추지 않게)
+            updateTimelapseControls();
             if (f.length >= 1) {
                 range.min = f[0].time;                // 일부 시점을 못 받았으면 받은 범위까지만
                 range.max = f[f.length - 1].time;
-                const tNow = Math.min(Math.max(userTime, f[0].time), f[f.length - 1].time);
-                timelapse.elapsed = (tNow - f[0].time) / TIMELAPSE_SECONDS_PER_REAL_SECOND * 1000;
-                drawTimelapseAt(tNow);
+                if (!timelapse.raf) {
+                    const tNow = stageState.view === 'map' ? Math.min(Math.max(userTime, f[0].time), f[f.length - 1].time)
+                        : Math.min(Math.max(Number(range.value), f[0].time), f[f.length - 1].time);
+                    timelapse.elapsed = (tNow - f[0].time) / TIMELAPSE_SECONDS_PER_REAL_SECOND * 1000;
+                    drawTimelapseAt(tNow);
+                }
             }
         }
 
         document.getElementById('timelapse-play').addEventListener('click', () => {
+            timelapse.autoplay = false;   // 사용자가 직접 재생·정지했으면 자동 재생은 더 하지 않는다
             if (timelapse.raf) stopTimelapsePlayback();
             else { if (stageState.view !== '3d') setStageView('time'); startTimelapsePlayback(); }   // 재생·슬라이더를 만지면 지도가 '시간 변화' 보기로 바뀐다
         });
         document.getElementById('timelapse-range').addEventListener('input', (e) => {
+            timelapse.autoplay = false;
             if (stageState.view !== '3d') setStageView('time');   // 3D 보기에서는 3D 인 채로 물만 바뀐다
             stopTimelapsePlayback();
-            const time = Number(e.target.value);
-            timelapse.elapsed = (time - timelapse.frames[0].time) / TIMELAPSE_SECONDS_PER_REAL_SECOND * 1000;
+            const end = timelapsePlayableEnd();
+            let time = Number(e.target.value);
+            if (end != null && time > end) { time = end; e.target.value = end; }   // 아직 안 받은 시점으로는 못 간다
+            timelapse.elapsed = (time - timelapseStart()) / TIMELAPSE_SECONDS_PER_REAL_SECOND * 1000;
             drawTimelapseAt(time);
         });
 
         document.getElementById('uploadForm').addEventListener('submit', async(e) => { //id가 "uploadform"인 요소를 찾아와서 폼이 제출될때 함수를 실행해라
             e.preventDefault(); // 브라우저 새로고침하지마!
+            const fromCamera = CAM.fromCamera;   // 손그림 카메라가 찍어서 바로 보낸 것 (서버가 못 읽으면 카메라로 돌아가 다시 찾는다)
+            CAM.fromCamera = false;
 
             if (!validateForm()) {
                 return;
@@ -3892,7 +4452,15 @@
                 }
                 const drainSource = refData || data;
                 const drainTime = refData ? DRAIN_REF_TIME_S : (meta.time_conditioned ? meta.time_s : null);
-                const drainPos = drainSource.drain_candidate ? drainSource.drain_candidate.image : null;
+                const drainPos = drainSource.drain_candidate ? drainSource.drain_candidate.image : null;   // 서버가 고른 자리 (18초 유출 최대점)
+                // 침수 위험지역(120초에 남은 물)으로 배수구를 다시 고를 수 있으면 그 결과를 쓴다 (수심 격자 + 시간 조건 모델).
+                // 계산이 끝나기 전에는 빨간 원을 띄우지 않는다 (서버 자리를 보여 줬다가 옮기면 관람객에게 버그처럼 보인다)
+                const riskTime = riskCfg.endS;   // 위험지역 보는 구간 끝 (설정에서 바꿈)
+                const riskCapable = !!(data.grid3d && data.grid3d.depth_u16 && meta.time_conditioned);
+                const shownDrain = riskCapable ? null : drainPos;
+                const serverDrainSub = drainTime != null ? `예측 유출이 가장 큰 지점 (${drainTime}초 기준)` : '예측 유출이 가장 큰 지점';
+                const riskSub = () => `물이 오래 고이는 곳 (${riskWinText()})`;
+                stageState.markerSub = riskCapable ? riskSub() : serverDrainSub;
 
                 // '결과 이미지' 창: 데이터 모드는 배수구 후보가 그려진 분석 지도를 맨 앞에
                 // (분석 지도의 ★도 빨간 원과 같은 위치가 되도록 배수구 기준 시점의 지도를 쓴다)
@@ -3901,21 +4469,24 @@
                     images.push({ key: 'hand', label: '이렇게 읽었어요 (왼쪽 내 그림 · 오른쪽 읽은 높이)', src: png(data.hand_preview_png_base64) });
                 }
                 if (drainSource.analysis_png_base64) {
-                    const label = drainTime != null ? `분석 지도 (배수구 후보 · ${drainTime}초 기준)` : '분석 지도 (배수구 후보)';
+                    // 분석 지도의 ★는 서버가 그림에 직접 그려 보낸 18초 유출 최대점이다. 화면의 배수구 후보(120초 고인 물)와
+                    // 다를 수 있어 라벨로 구분한다 (백엔드에 '★ 위치 받기' 옵션이 생기면 같은 자리로 맞출 예정)
+                    const label = riskCapable ? `분석 지도 (★ = ${drainTime}초 유출 최대점 · 배수구 후보는 지도 화면 기준)`
+                        : (drainTime != null ? `분석 지도 (배수구 후보 · ${drainTime}초 기준)` : '분석 지도 (배수구 후보)');
                     images.push({ key: 'analysis', label, src: png(drainSource.analysis_png_base64) });
                 }
                 if (data.original_png_base64) {   // 서버가 색 체계를 변환했을 때: 올린 원본도 함께
                     images.push({ key: 'original', label: '올린 원본 이미지', src: png(data.original_png_base64) });
                 }
                 images.push({ key: 'contour', label: '입력 등고선 (모델에 들어간 이미지)', src: png(data.contour_png_base64) });
-                images.push({ key: 'prediction', label: '예측 배수맵', src: png(data.prediction_png_base64), marker: drainPos });
-                images.push({ key: 'overlay', label: '오버레이 (등고선 + 예측)', src: png(data.overlay_png_base64), marker: drainPos });
+                images.push({ key: 'prediction', label: '예측 배수맵', src: png(data.prediction_png_base64), marker: shownDrain });
+                images.push({ key: 'overlay', label: '오버레이 (등고선 + 예측)', src: png(data.overlay_png_base64), marker: shownDrain });
 
                 // 지도 화면에 크게 보일 그림: 데이터 모드는 제목·컬러바 없는 지도(JPEG), 이미지 모드는 오버레이.
                 // 배수구 후보는 그림에 굽지 않고 화면의 빨간 원(비율 좌표)으로 얹는다
                 const stage = data.map_jpg_base64
-                    ? { src: 'data:image/jpeg;base64,' + data.map_jpg_base64, marker: drainPos, label: '예측 배수맵 (지도)' }
-                    : { src: png(data.overlay_png_base64), marker: drainPos, label: '오버레이 (등고선 + 예측)' };
+                    ? { src: 'data:image/jpeg;base64,' + data.map_jpg_base64, marker: shownDrain, markerSub: stageState.markerSub, label: '예측 배수맵 (지도)' }
+                    : { src: png(data.overlay_png_base64), marker: shownDrain, markerSub: stageState.markerSub, label: '오버레이 (등고선 + 예측)' };
 
                 // 서버 meta 에 들어간 값이 아니라 모델이 실제로 쓴 값을 보여준다 (강우는 학습 범위로 잘림)
                 const usedRain = Math.min(Math.max(rainMm, modelInfo.rainRange[0]), modelInfo.rainRange[1]);
@@ -3924,12 +4495,15 @@
                 if (mode === 'hand' && meta.hand_levels) {
                     info.push(`손그림: 동그라미를 ${meta.hand_levels}층 높이의 산으로 읽었어요 (결과 이미지의 '이렇게 읽었어요'에서 확인)`);
                 }
-                if (drainPos) {
-                    // 배수구는 경과 시간과 상관없이 물이 가장 많은 18초 예측에서 찾는다 -> 그 이유를 짧게 붙인다
+                const serverDrainLine = () => {
+                    // 서버 배수구: 경과 시간과 상관없이 물이 가장 많은 18초 예측에서 찾는다 -> 그 이유를 짧게 붙인다
                     const basis = drainTime === DRAIN_REF_TIME_S ? `물이 가장 많은 ${drainTime}초 기준`
                         : (drainTime != null ? `${drainTime}초 기준` : '');
-                    info.push(`배수구 후보: ${drainPositionText(drainPos)} 지점 (빨간 원${basis ? ', ' + basis : ''})`);
-                }
+                    return `배수구 후보: ${drainPositionText(drainPos)} 지점 (빨간 원${basis ? ', ' + basis : ''})`;
+                };
+                const drainLineIdx = info.length;   // 배수구 줄 자리 (위험지역 계산이 끝나면 바꿔 쓴다)
+                if (riskCapable) info.push('배수구 후보: 시점별 예측을 받아 계산하는 중…');
+                else if (drainPos) info.push(serverDrainLine());
                 const cond = [];
                 if (meta.rain_conditioned) cond.push(`강우 ${usedRain}mm`);
                 if (meta.time_conditioned) cond.push(`경과 ${meta.time_s}초`);
@@ -3945,12 +4519,14 @@
                 stageState.recordId = null;   // 저장되면(saveRecord) 그 기록이 기록 화면에서 강조된다
                 stageState.from = 'run';      // '이전 화면으로' = 처음 화면
                 showResult(images, info, recordMeta, stage);
+                const runToken = {};
+                stageState.runToken = runToken;
                 stageState.result.rain = usedRain;      // 모델이 실제로 쓴 값
                 stageState.result.file = fileKey(mapFile);
                 updateStale();
                 if (data.grid3d) {   // 3D 보기 자료: 지형은 한 번, 수심은 시점마다(runTimelapse 가 이어서 채운다)
                     const t0 = meta.time_conditioned ? meta.time_s : 0;
-                    View3D.setTerrain(data.grid3d, drainPos);
+                    View3D.setTerrain(data.grid3d, shownDrain);
                     View3D.addFrame(t0, data.grid3d);
                     View3D.setTime(t0);
                     refresh3dButton();
@@ -3965,20 +4541,56 @@
                 } else if (mode === 'hand') {
                     setFileStatus(`손그림 ${meta.hand_levels || ''}층으로 읽음`, 'ok');
                 }
-                if (meta.time_conditioned) {
-                    // 기다리지 않는다: 결과는 먼저 보여주고 재생용 프레임은 뒤에서 채운다
-                    const preloaded = { [meta.time_s]: data };
-                    if (refData) preloaded[DRAIN_REF_TIME_S] = refData;   // 기준 시점 응답도 재사용 (중복 요청 방지)
-                    runTimelapse(mapFile, mode, rainMm, dx, preloaded, drainPos, meta.time_s, base.color);
-                }
-                if (matchMedia(MOBILE_QUERY).matches) {   // 좁은 화면: 패널을 접고 지도를 맨 위로
-                    setPanelFolded(true);
-                    document.getElementById('stage-map').scrollIntoView({ behavior: 'smooth', block: 'start' });
-                } else if (settings.autoFold) {           // 설정 '예측하면 조건 패널 자동으로 접기' (기본 켬)
-                    setPanelFolded(true);
-                }
-
-                await saveRecord({   // id·저장 시각은 서버가 정한다
+                // 기록 저장: 배수구가 정해진 뒤에 한다 (위험지역 계산은 120초 응답을 기다리므로 예측 버튼은 먼저 풀어 준다)
+                const persist = async (risk) => {
+                    try {
+                        await saveRecord(await buildRecord(risk));
+                    } catch (e) { console.error(e); }
+                };
+                // 위험지역 계산 결과를 화면에 반영: 빗금 · 빨간 원 · 3D 구멍 · 결과 이미지 창 · 안내 문구
+                let riskLineAdded = false;
+                const applyRisk = (risk) => {
+                    stageState.risk = risk;
+                    stageState.markerSub = riskSub();
+                    drawRiskOverlay(risk);
+                    // [11/26] 위험지역(5cm 이상 남는 곳)이 없어도 배수구는 늘 보여 준다:
+                    //   120초에 물이 조금이라도(1cm+) 남은 가장 깊은 곳 -> 그것도 없으면 서버 자리(18초 유출 최대점)
+                    let d = risk.drain;
+                    if (!d) {
+                        if (risk.deepest && risk.deepest.depth >= RISK_WET_M) {
+                            d = { x: risk.deepest.x, y: risk.deepest.y };
+                            stageState.markerSub = `물이 가장 오래 머무는 곳 (${risk.win}, 위험지역은 없음)`;
+                        } else if (drainPos) {
+                            d = drainPos;
+                            stageState.markerSub = serverDrainSub + ' · 위험지역 없음';
+                        }
+                        risk.drain = d;   // 기록 저장·분석 지도 ★도 같은 자리
+                    }
+                    placeDrainMarker(d, stageState.markerSub);
+                    updateStageFit();             // 배수구가 패널에 가리지 않게 지도 창을 맞춘다
+                    View3D.setDrain(d);
+                    for (const im of images) if (im.key === 'prediction' || im.key === 'overlay') im.marker = d;
+                    renderResultGrid(images);
+                    info[drainLineIdx] = d
+                        ? `배수구 후보: ${drainPositionText(d)} 지점 (빨간 원, ${stageState.markerSub})`
+                        : `배수구 후보 없음: 물이 고이는 곳을 찾지 못했어요`;
+                    if (riskLineAdded) info[drainLineIdx + 1] = riskInfoLine(risk);
+                    else { info.splice(drainLineIdx + 1, 0, riskInfoLine(risk)); riskLineAdded = true; }
+                    renderResultInfo(info);
+                    // (11/26) '침수 위험지역 없음' 알림 띄우지 않음: 결과 설명 줄에만 남긴다
+                };
+                // 120초를 못 받았거나 수심 격자가 깨졌을 때: 서버가 고른 자리(18초)로 대신
+                const applyServerDrain = () => {
+                    stageState.markerSub = serverDrainSub;
+                    placeDrainMarker(drainPos, serverDrainSub);
+                    View3D.setDrain(drainPos);
+                    for (const im of images) if (im.key === 'prediction' || im.key === 'overlay') im.marker = drainPos;
+                    renderResultGrid(images);
+                    if (drainPos) info[drainLineIdx] = serverDrainLine() + ' · 시점 결과를 받지 못해 서버 기준으로 표시';
+                    else info.splice(drainLineIdx, 1);
+                    renderResultInfo(info);
+                };
+                const buildRecord = async (risk) => ({   // id·저장 시각은 서버가 정한다
                     name: null,                      // null 이면 화면에 '날짜 시간'이 기본 이름으로 보인다
                     meta: recordMeta,
                     fileName: mapFile.name,
@@ -3987,15 +4599,82 @@
                         rain_mm: usedRain,
                         time_s: meta.time_conditioned ? meta.time_s : null,
                         dx: meta.dx_m ?? null,
-                        drain_time_s: drainTime   // 배수구 위치를 찾은 시점 (보통 18초)
+                        drain_time_s: risk ? riskTime : drainTime,   // 배수구를 찾은 기준 (위험지역이면 보는 구간 끝, 아니면 18초)
+                        drain_basis: risk ? 'risk_ponding' : 'server_peak',
+                        risk: risk ? riskSummary(risk, riskTime) : null,   // 기록을 다시 열 때 빗금을 그대로 그린다
+                        // 사용자가 조건 패널에 넣은 값 그대로 (위 값은 서버가 실제로 쓴 값: 학습 범위로 잘리거나 파일 헤더 값일 수 있음)
+                        input: {
+                            rain_mm: rainMm,
+                            time_s: timeS,
+                            dx: mode === 'terrain' ? dx : null,
+                            color: mode === 'image' ? base.color : null,
+                            file_size: mapFile.size,
+                            file_type: mapFile.type || null,
+                            // 올린 지도 미리보기: 사진(이미지·손그림)은 올린 파일 그대로, 고도 격자는 모델에 들어간 등고선 그림
+                            thumb: getCurrentUser() ? await makeInputThumb(
+                                mode !== 'terrain' && /^image\//.test(mapFile.type || '')
+                                    ? await fileToDataUrl(mapFile)
+                                    : (data.contour_png_base64 ? png(data.contour_png_base64) : null)) : null
+                        }
                     },
-                    drain: drainPos,
+                    drain: risk ? risk.drain : drainPos,
                     checkpoint: data.checkpoint,
                     imageLabel: stage.label,
                     // 배수구 원은 그림에 굽지 않는다: 기록을 다시 열 때 저장된 좌표(drain)로 예측 화면과 똑같이 얹는다
                     thumbnail: getCurrentUser() ? await makeThumbnail(stage.src) : null,
-                    info
+                    info: info.slice()
                 });
+
+                // 분석 지도(고도격자·손그림)의 ★를 화면의 배수구(120초 침수 위험지역)와 같은 자리로 다시 받는다.
+                // 시점 예측이 다 끝난 뒤 한 번 (서버는 한 번에 하나씩 예측하므로 재생용 프레임을 늦추지 않게). 옛 서버는 옵션을 무시 -> 라벨 그대로
+                const refreshAnalysisMark = async () => {
+                    const risk = stageState.risk, im = images.find(x => x.key === 'analysis');
+                    if (!risk || !risk.drain || !im || !(mode === 'terrain' || mode === 'hand')) return;
+                    try {
+                        const d = await requestPredict({ ...base, timeS: DRAIN_REF_TIME_S, noMap: true, markX: risk.drain.x, markY: risk.drain.y });
+                        if (stageState.runToken !== runToken) return;          // 그사이 다른 결과로 넘어감
+                        if (d.analysis_png_base64 && d.meta && d.meta.analysis_mark === 'client') {
+                            im.src = png(d.analysis_png_base64);
+                            im.label = `분석 지도 (★ = 배수구 후보 · 침수 위험지역 기준)`;
+                            renderResultGrid(images);
+                        }
+                    } catch (e) { console.warn('분석 지도 ★ 를 맞추지 못했습니다', e); }
+                };
+                if (meta.time_conditioned) {
+                    // 기다리지 않는다: 결과는 먼저 보여주고 재생용 프레임은 뒤에서 채운다
+                    const preloaded = { [meta.time_s]: data };
+                    if (refData) preloaded[DRAIN_REF_TIME_S] = refData;   // 기준 시점 응답도 재사용 (중복 요청 방지)
+                    runTimelapse(mapFile, mode, rainMm, dx, preloaded, shownDrain, meta.time_s, base.color, {
+                        autoplay: true,
+                        autoplayOnFirst: !riskCapable,   // 배수구를 서버가 이미 정했다: 첫 장이 그려지면 바로 재생
+                        riskEnd: riskCapable ? riskTime : null,
+                        onDone: riskCapable ? refreshAnalysisMark : null,
+                        onRisk: riskCapable ? (risk, aborted) => {
+                            if (aborted) { persist(null); return; }   // 다른 결과로 넘어감: 화면은 건드리지 않고 기록만 남긴다
+                            if (risk) {
+                                applyRisk(risk);
+                                // 설정 창에서 기준을 바꾸면 받아 둔 시점들로 다시 계산해 바로 반영한다
+                                stageState.retuneRisk = () => {
+                                    if (stageState.runToken !== runToken) return;
+                                    const r = computeRiskFromFrames(timelapse.depthN, Object.entries(timelapse.depthFrames).map(([t, d]) => ({ time: Number(t), depth: d })));
+                                    if (r) applyRisk(r);
+                                };
+                            } else applyServerDrain();
+                            startTimelapseAutoplay();                 // 배수구가 정해진 순간 18초부터 자동 재생
+                            persist(risk);
+                        } : null
+                    });
+                    if (!riskCapable) persist(null);
+                } else {
+                    persist(null);
+                }
+                if (matchMedia(MOBILE_QUERY).matches) {   // 좁은 화면: 패널을 접고 지도를 맨 위로
+                    setPanelFolded(true);
+                    document.getElementById('stage-map').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                } else if (settings.autoFold) {           // 설정 '예측하면 조건 패널 자동으로 접기' (기본 켬)
+                    setPanelFolded(true);
+                }
+
 
             } catch (err) { //접속이 안된다면?
                 if (err.handled) return;   // 로그인 창을 이미 띄웠다
@@ -4003,7 +4682,10 @@
                 if (err.code === 'unreadable_image') {
                     openUnreadableDialog(err.detail, mapFile);   // 지형도 등: 다음 행동을 안내
                 } else if (mode === 'hand' && err.status === 422 && err.detail) {
-                    alert(err.detail);   // 손그림을 못 읽었을 때: 서버 안내 문구(어떻게 다시 찍을지)만 보여준다
+                    // 손그림을 못 읽었을 때: 카메라로 찍은 것이면 이유를 보여 주고 카메라가 다시 찾는다 ('인식될 때까지'),
+                    // 파일로 올린 것이면 서버 안내 문구(어떻게 다시 찍을지)만 보여준다
+                    if (fromCamera && cameraSupported()) openCamera({ message: '한 번 더 비춰 주세요', sub: err.detail, cooldownMs: 2500 });
+                    else alert(err.detail);
                 } else {
                     showPredictError(err);   // 지도 가운데에 이유와 다시 시도 버튼
                 }
@@ -4264,19 +4946,520 @@
         // 기본 샘플이 페이지에 들어 있어서 '샘플로 해보기'는 늘 보인다
         byId('empty-sample').style.display = 'inline-flex';
 
+        /* ---------- 손그림 카메라: 학습지 네 모서리 네모 찾기 (브라우저) ----------
+           서버 handdrawn.find_markers 와 같은 규칙을 JS 로 옮겼다 (11/25 팀 토론: 판별은 브라우저, 최종 판정은 서버).
+             - 잉크 = 그 자리 종이 밝기의 60% 보다 어둡고 색이 거의 없는 픽셀
+             - 네모 후보 = 꽉 찬 모양(60%+) · 가로세로 0.5~2배 · 종이 대비 55% 이하로 어두움
+             - 빈 네모 = 속 구멍이 4% 이상이고 가운데. 네 모서리는 넓이 + 변 길이·각이 종이다운 조합
+           img: ImageData (RGBA). 반환 { quad: [[x,y]x4 (왼위·오위·오아래·왼아래, 빈 네모가 왼위)], hollow, cands } 또는 { quad: null, cands } */
+        const SHEET = { DARK: 0.6, CONTRAST: 0.55, MIN_QUAD: 0.03 };
+        function findSheetMarkers(img) {
+            const W = img.width, H = img.height, d = img.data, N = W * H;
+            const lum = new Uint8Array(N), ink = new Uint8Array(N);
+            for (let i = 0, k = 0; i < N; i++, k += 4) {
+                const r = d[k], g = d[k + 1], b = d[k + 2];
+                const mx = r > g ? (r > b ? r : b) : (g > b ? g : b), mn = r < g ? (r < b ? r : b) : (g < b ? g : b);
+                lum[i] = mx; ink[i] = (mx - mn) < 60 ? 1 : 0;
+            }
+            // 종이 밝기: 4배 줄인 밝기에서 둘레 최대값 -> 상자 평균 (서버 _paper_brightness 와 같은 방식)
+            const s = 4, sw = Math.ceil(W / s), sh = Math.ceil(H / s);
+            let a = new Float32Array(sw * sh);
+            for (let y = 0; y < sh; y++) for (let x = 0; x < sw; x++) a[y * sw + x] = lum[Math.min(H - 1, y * s) * W + Math.min(W - 1, x * s)];
+            const k = Math.max(3, Math.floor(Math.max(W, H) / s / 16)), half = k >> 1;
+            const pass = (src, horiz, op) => {
+                const out = new Float32Array(src.length);
+                for (let y = 0; y < sh; y++) for (let x = 0; x < sw; x++) {
+                    let acc = op === 'max' ? -1 : 0, cnt = 0;
+                    for (let t = -half; t <= half; t++) {
+                        const xx = horiz ? x + t : x, yy = horiz ? y : y + t;
+                        if (xx < 0 || yy < 0 || xx >= sw || yy >= sh) continue;
+                        const v = src[yy * sw + xx];
+                        if (op === 'max') { if (v > acc) acc = v; } else { acc += v; cnt++; }
+                    }
+                    out[y * sw + x] = op === 'max' ? acc : acc / cnt;
+                }
+                return out;
+            };
+            a = pass(pass(pass(pass(a, true, 'max'), false, 'max'), true, 'mean'), false, 'mean');
+            const bgAt = (x, y) => a[Math.min(sh - 1, (y / s) | 0) * sw + Math.min(sw - 1, (x / s) | 0)];
+            const dark = new Uint8Array(N);
+            for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+                const i = y * W + x;
+                dark[i] = (ink[i] && lum[i] < Math.max(95, SHEET.DARK * bgAt(x, y))) ? 1 : 0;
+            }
+            // 이어진 덩어리 (상하좌우)
+            const lab = new Int32Array(N), stack = new Int32Array(N), comps = [];
+            let nl = 0;
+            for (let i0 = 0; i0 < N; i0++) {
+                if (!dark[i0] || lab[i0]) continue;
+                nl++;
+                let top = 0, area = 0, x0 = W, y0 = H, x1 = -1, y1 = -1, sl = 0, sb = 0;
+                stack[top++] = i0; lab[i0] = nl;
+                while (top) {
+                    const i = stack[--top], x = i % W, y = (i - x) / W;
+                    area++; sl += lum[i]; sb += bgAt(x, y);
+                    if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+                    if (x > 0 && dark[i - 1] && !lab[i - 1]) { lab[i - 1] = nl; stack[top++] = i - 1; }
+                    if (x < W - 1 && dark[i + 1] && !lab[i + 1]) { lab[i + 1] = nl; stack[top++] = i + 1; }
+                    if (y > 0 && dark[i - W] && !lab[i - W]) { lab[i - W] = nl; stack[top++] = i - W; }
+                    if (y < H - 1 && dark[i + W] && !lab[i + W]) { lab[i + W] = nl; stack[top++] = i + W; }
+                }
+                comps.push({ id: nl, area, x0, y0, x1, y1, con: sl / Math.max(sb, 1) });
+            }
+            const cands = [];
+            for (const c of comps) {
+                if (c.x0 === 0 || c.y0 === 0 || c.x1 === W - 1 || c.y1 === H - 1) continue;   // 화면 끝에 걸친 것(옷·책상)은 네모가 아님
+                if (!(N * 6e-5 < c.area && c.area < N * 1.5e-2)) continue;
+                const bw = c.x1 - c.x0 + 1, bh = c.y1 - c.y0 + 1;
+                if (!(bh / bw > 0.5 && bh / bw < 2.0)) continue;
+                if (c.con > SHEET.CONTRAST) continue;
+                // 속 채우기: 상자 테두리에서 닿는 '덩어리 밖' 픽셀만 바깥, 나머지는 구멍
+                const bw2 = bw + 2, bh2 = bh + 2, out = new Uint8Array(bw2 * bh2), st = [0];
+                const inC = (x, y) => x >= 1 && y >= 1 && x <= bw && y <= bh && lab[(c.y0 + y - 1) * W + (c.x0 + x - 1)] === c.id;
+                out[0] = 1;
+                while (st.length) {
+                    const j = st.pop(), x = j % bw2, y = (j - x) / bw2;
+                    const nb = [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]];
+                    for (const [xx, yy] of nb) {
+                        if (xx < 0 || yy < 0 || xx >= bw2 || yy >= bh2) continue;
+                        const jj = yy * bw2 + xx;
+                        if (out[jj] || inC(xx, yy)) continue;
+                        out[jj] = 1; st.push(jj);
+                    }
+                }
+                let filled = 0, fx = 0, fy = 0;
+                const hole = new Uint8Array(bw2 * bh2);
+                for (let y = 1; y <= bh; y++) for (let x = 1; x <= bw; x++) {
+                    const j = y * bw2 + x;
+                    if (out[j]) continue;
+                    filled++; fx += x; fy += y;
+                    if (!inC(x, y)) hole[j] = 1;
+                }
+                if (filled / (bw * bh) < 0.6) continue;
+                const cx = fx / filled, cy = fy / filled;
+                // 가장 큰 구멍의 넓이·중심
+                let best = 0, bhx = 0, bhy = 0;
+                for (let j0 = 0; j0 < hole.length; j0++) {
+                    if (hole[j0] !== 1) continue;
+                    let n = 0, hx = 0, hy = 0;
+                    const q = [j0]; hole[j0] = 2;
+                    while (q.length) {
+                        const j = q.pop(), x = j % bw2, y = (j - x) / bw2;
+                        n++; hx += x; hy += y;
+                        for (const jj of [j - 1, j + 1, j - bw2, j + bw2]) if (hole[jj] === 1) { hole[jj] = 2; q.push(jj); }
+                    }
+                    if (n > best) { best = n; bhx = hx / n; bhy = hy / n; }
+                }
+                const frac = best / filled, off = best ? Math.hypot(bhx - cx, bhy - cy) / Math.sqrt(filled) : 9;
+                cands.push({ x: c.x0 - 1 + cx, y: c.y0 - 1 + cy, area: filled, frac, hollow: frac >= 0.04 && off <= 0.25 });
+            }
+            if (cands.length < 4) return { quad: null, cands: cands.length };
+            cands.sort((p, q) => q.area - p.area);
+            const C = cands.slice(0, 12), cr = (p, q) => p[0] * q[1] - p[1] * q[0];
+            let bestQ = null;
+            for (let i = 0; i < C.length; i++) for (let j = i + 1; j < C.length; j++) for (let k2 = j + 1; k2 < C.length; k2++) for (let l = k2 + 1; l < C.length; l++) {
+                const q = [C[i], C[j], C[k2], C[l]];
+                const mx = (q[0].x + q[1].x + q[2].x + q[3].x) / 4, my = (q[0].y + q[1].y + q[2].y + q[3].y) / 4;
+                q.sort((u, v) => Math.atan2(u.y - my, u.x - mx) - Math.atan2(v.y - my, v.x - mx));   // 화면 시계 방향
+                const p = q.map(c => [c.x, c.y]);
+                const sub = (u, v) => [u[0] - v[0], u[1] - v[1]];
+                const crs = [0, 1, 2, 3].map(t => cr(sub(p[(t + 1) % 4], p[t]), sub(p[(t + 2) % 4], p[(t + 1) % 4])));
+                if (!(crs.every(v => v > 0) || crs.every(v => v < 0))) continue;
+                const sizes = q.map(c => c.area), smax = Math.max(...sizes), smin = Math.min(...sizes);
+                if (smax / smin > 4) continue;
+                let area2 = 0;
+                for (let t = 0; t < 4; t++) area2 += cr(p[t], p[(t + 1) % 4]);
+                const area = Math.abs(area2) / 2;
+                if (area < N * SHEET.MIN_QUAD) continue;
+                const len = (u) => Math.hypot(u[0], u[1]);
+                const sides = [0, 1, 2, 3].map(t => len(sub(p[(t + 1) % 4], p[t])));
+                const r1 = Math.max(sides[0], sides[2]) / Math.max(Math.min(sides[0], sides[2]), 1);
+                const r2 = Math.max(sides[1], sides[3]) / Math.max(Math.min(sides[1], sides[3]), 1);
+                let cosmax = 0;
+                for (let t = 0; t < 4; t++) {
+                    const u = sub(p[(t + 3) % 4], p[t]), v = sub(p[(t + 1) % 4], p[t]);
+                    cosmax = Math.max(cosmax, Math.abs(u[0] * v[0] + u[1] * v[1]) / (len(u) * len(v) + 1e-9));
+                }
+                if (r1 > 2.2 || r2 > 2.2 || cosmax > 0.7) continue;
+                const regular = Math.sqrt(smin / smax) / (1 + 0.5 * (r1 - 1) + 0.5 * (r2 - 1) + cosmax);
+                const nh = q.filter(c => c.hollow).length;
+                const score = area * regular * (nh === 1 ? 1.15 : 1);
+                if (!bestQ || score > bestQ.score) bestQ = { score, q, area };
+            }
+            if (!bestQ) return { quad: null, cands: Math.min(cands.length, 3) };
+            const quad = bestQ.q;
+            let hol = quad.map((c, i) => c.hollow ? i : -1).filter(i => i >= 0);
+            if (hol.length > 1) {
+                const fr = hol.map(i => [quad[i].frac, i]).sort((u, v) => v[0] - u[0]);
+                if (fr[0][0] >= 1.6 * fr[1][0]) hol = [fr[0][1]];
+            }
+            const k0 = hol.length === 1 ? hol[0] : quad.map(c => c.x + c.y).reduce((bi, v, i, arr) => v < arr[bi] ? i : bi, 0);
+            const ordered = quad.slice(k0).concat(quad.slice(0, k0));
+            return { quad: ordered.map(c => [c.x, c.y]), hollow: hol.length === 1, cands: 4, areaFrac: bestQ.area / N };
+        }
+
+        // 종이 안 파랑·빨강 선의 비율 (종이 흰색에 맞춰 색 보정한 뒤, 서버 _strokes 와 같은 색 기준). 빈 종이를 걸러낸다
+        function sheetInkFraction(img, quad) {
+            const W = img.width, H = img.height, d = img.data;
+            let x0 = W, y0 = H, x1 = 0, y1 = 0;
+            for (const [x, y] of quad) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+            x0 = Math.max(0, x0 | 0); y0 = Math.max(0, y0 | 0); x1 = Math.min(W - 1, Math.ceil(x1)); y1 = Math.min(H - 1, Math.ceil(y1));
+            const inside = (x, y) => {   // 볼록 사각형 안 (네 변의 같은 쪽)
+                let sgn = 0;
+                for (let t = 0; t < 4; t++) {
+                    const [ax, ay] = quad[t], [bx, by] = quad[(t + 1) % 4];
+                    const c = (bx - ax) * (y - ay) - (by - ay) * (x - ax);
+                    if (c !== 0) { if (sgn === 0) sgn = Math.sign(c); else if (Math.sign(c) !== sgn) return false; }
+                }
+                return true;
+            };
+            const st = 2, px = [];
+            for (let y = y0; y <= y1; y += st) for (let x = x0; x <= x1; x += st) if (inside(x, y)) px.push((y * W + x) * 4);
+            if (!px.length) return 0;
+            // 종이 흰색: 밝은 쪽 40% 픽셀의 채널별 90번째 값
+            const lums = px.map(k => Math.max(d[k], d[k + 1], d[k + 2])).sort((p, q) => p - q);
+            const cut = lums[Math.floor(lums.length * 0.6)];
+            const ch = [[], [], []];
+            for (const k of px) if (Math.max(d[k], d[k + 1], d[k + 2]) >= cut) { ch[0].push(d[k]); ch[1].push(d[k + 1]); ch[2].push(d[k + 2]); }
+            const g = ch.map(arr => { arr.sort((p, q) => p - q); return 245 / Math.max(arr[Math.floor(arr.length * 0.9)] || 245, 60); });
+            let n = 0;
+            for (const k of px) {
+                const r = d[k] * g[0], gg = d[k + 1] * g[1], b = d[k + 2] * g[2];
+                if ((b > r + 35 && b > gg + 15) || (r > gg + 60 && r > b + 35)) n++;
+            }
+            return n / px.length;
+        }
+
+        /* ---------- 손그림 카메라 (11/25) ----------
+           '인식될 때까지' 방식: 카운트다운 없이 계속 종이를 찾다가, 네 모서리 네모 + 빈 네모 + 파랑·빨강 선이 보이고
+           0.5초 동안 거의 안 움직이면 바로 찍어서 예측한다. 서버가 못 읽으면(422) 이유를 보여 주고 카메라가 다시 찾는다.
+           - 노트북 앞 카메라: 미리보기만 거울처럼 뒤집는다 (조준이 자연스럽게). 서버로 보내는 사진은 원본 방향
+             (좌우가 뒤집힌 사진은 돌려서 맞출 수 없어 빈 네모 방향 판별이 깨진다)
+           - 폰: 뒷카메라가 기본. 카메라는 https(ngrok) 또는 localhost 에서만 켜진다 -> 아니면 사진 올리기로 대신 */
+        const CAM = { stream: null, timer: null, mirror: false, prev: null, prevInk: 0, stableSince: 0, busy: false,
+                      cooldownUntil: 0, fromCamera: false, keepMsgUntil: 0, blankSince: 0 };
+        const CAM_DET_W = 960;          // 판별 해상도 (가로). 원본이 더 작으면 그대로
+        const CAM_INTERVAL_MS = 110;    // 판별 간격 (초당 약 9번)
+        const CAM_STABLE_MS = 500;      // 이만큼 거의 안 움직이면 찍는다
+        const CAM_MOVE_TOL = 0.012;     // 판별 사이 모서리 이동 허용 (화면 대각선 대비)
+        const CAM_MIN_AREA = 0.10;      // 네 네모가 감싸는 넓이가 화면의 10% 보다 작으면 '더 가까이' (멀면 선이 뭉개져 층수를 잘못 센다)
+        const CAM_MIN_INK = 0.01;       // 종이 안 파랑·빨강 선 비율 (빈 학습지는 0)
+
+        function cameraSupported() {
+            return !!(window.isSecureContext && navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+        }
+        function camSay(msg, sub, progress) {
+            if (performance.now() < CAM.keepMsgUntil) return;   // 서버가 못 읽은 이유는 잠깐 그대로 보여 준다
+            byId('cam-status').textContent = msg;
+            byId('cam-sub').textContent = sub || '';
+            byId('cam-progress-fill').style.width = `${Math.round(Math.min(1, progress || 0) * 100)}%`;
+        }
+        // https 가 아닐 때: 사진 올리기로 (폰은 capture 로 카메라 앱이 바로 열린다. 이 함수는 클릭 안에서 불러야 한다)
+        function cameraFallback() {
+            showToast('카메라는 https 주소(ngrok)나 이 컴퓨터(localhost)에서만 켜져요. 사진으로 올려 주세요');
+            document.querySelector('input[name="mode"][value="hand"]').checked = true;
+            applyMode();
+            fileInputEl.setAttribute('capture', 'environment');
+            fileInputEl.click();
+            setTimeout(() => fileInputEl.removeAttribute('capture'), 1500);
+        }
+        // 어떤 카메라를 쓸지: 사용자가 고른 것(기억) -> 없으면 이름으로 '노트북 내장 웹캠'다운 것.
+        // [11/26] Windows 의 '연결된 카메라(Phone Link)'로 휴대폰 카메라가 기본으로 잡혀 노트북 웹캠 대신 폰이 켜지던 문제
+        const CAM_DEVICE_KEY = 'yuche_cam_device';
+        function camLabelScore(label) {
+            const s = (label || '').toLowerCase();
+            let sc = 0;
+            if (/integrated|built-?in|내장|hd webcam|webcam|uvc|facetime|hd camera|user facing|front/.test(s)) sc += 3;
+            if (/phone|link|galaxy|iphone|android|휴대|폰|virtual|가상|droidcam|camo|obs|continuity|broadcast|snap camera|연결된/.test(s)) sc -= 5;
+            if (/\bir\b|infrared|적외선/.test(s)) sc -= 4;      // 얼굴 인식용 적외선 카메라 (흑백)
+            return sc;
+        }
+        function savedCamId() { try { return localStorage.getItem(CAM_DEVICE_KEY) || ''; } catch (_) { return ''; } }
+        function saveCamId(id) { try { localStorage.setItem(CAM_DEVICE_KEY, id); } catch (_) { /* 기억 못 해도 동작은 그대로 */ } }
+        async function listCameras() {
+            try { return (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput'); } catch (_) { return []; }
+        }
+        function bestCamera(devs) {
+            const saved = savedCamId();
+            const hit = saved && devs.find(d => d.deviceId === saved);
+            if (hit) return hit;
+            const named = devs.filter(d => d.label);   // 권한을 받기 전에는 이름이 비어 있다
+            if (!named.length) return null;
+            return named.slice().sort((a, b) => camLabelScore(b.label) - camLabelScore(a.label))[0];
+        }
+        function fillCameraSelect(devs, curId) {
+            const sel = byId('cam-select');
+            sel.innerHTML = devs.map((d, i) => `<option value="${escapeHtml(d.deviceId)}">${escapeHtml(d.label || `카메라 ${i + 1}`)}</option>`).join('');
+            if (curId) sel.value = curId;
+            byId('cam-pick').style.display = devs.length > 1 ? 'flex' : 'none';
+        }
+
+        async function openCamera(opts = {}) {
+            if (!cameraSupported()) { cameraFallback(); return; }
+            const modal = byId('cam-modal');
+            modal.style.display = 'flex';
+            CAM.prev = null; CAM.stableSince = 0; CAM.busy = false; CAM.blankSince = 0;
+            CAM.cooldownUntil = performance.now() + (opts.cooldownMs || 0);
+            CAM.keepMsgUntil = 0;
+            camSay(opts.message || '카메라를 켜는 중…', opts.sub || '');
+            if (opts.cooldownMs) CAM.keepMsgUntil = performance.now() + opts.cooldownMs;
+            if (!CAM.stream) {
+                const mobile = matchMedia('(pointer: coarse)').matches;
+                // 폰은 뒷카메라가 기본 (직접 고른 적이 있으면 그것). 노트북은 내장 웹캠을 이름으로 찾는다
+                const pick = opts.deviceId ? { deviceId: opts.deviceId } : ((mobile && !savedCamId()) ? null : bestCamera(await listCameras()));
+                const size = { width: { ideal: 1920 }, height: { ideal: 1080 } };
+                const want = pick ? { deviceId: { exact: pick.deviceId }, ...size } : (mobile ? { facingMode: { ideal: 'environment' }, ...size } : size);
+                try {
+                    try {
+                        CAM.stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: want });
+                    } catch (err) {
+                        if (!pick || err.name === 'NotAllowedError' || err.name === 'SecurityError') throw err;
+                        CAM.stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: size });   // 고른 카메라가 빠졌으면(폰 연결 끊김 등) 아무 카메라나
+                    }
+                } catch (err) {
+                    console.error(err);
+                    CAM.keepMsgUntil = 0;
+                    const denied = err && (err.name === 'NotAllowedError' || err.name === 'SecurityError');
+                    camSay(denied ? '카메라 권한이 막혀 있어요' : '카메라를 켜지 못했어요',
+                        denied ? '주소창 옆 카메라 아이콘에서 허용하거나, [사진 파일로]를 눌러 주세요'
+                            : (err && err.name === 'NotFoundError' ? '연결된 카메라가 없어요. [사진 파일로]를 눌러 주세요'
+                            : (err && err.name === 'NotReadableError' ? '다른 프로그램이 카메라를 쓰고 있어요. 그 프로그램을 끄거나 아래에서 다른 카메라를 골라 주세요' : String(err && err.message || err))));
+                    fillCameraSelect(await listCameras(), '');
+                    return;
+                }
+                if (byId('cam-modal').style.display === 'none') { stopCameraStream(); return; }   // 켜는 사이에 닫힘
+                const track = CAM.stream.getVideoTracks()[0];
+                const st = track && track.getSettings ? track.getSettings() : {};
+                const devs = await listCameras();   // 이제 권한이 있어 이름이 보인다
+                const cur = devs.find(d => d.deviceId === st.deviceId);
+                // 처음(고른 적 없음)인데 폰·가상 카메라가 잡혔고 더 나은 카메라(노트북 내장)가 있으면 그쪽으로 한 번 바꾼다
+                if (!mobile && !savedCamId() && !opts.deviceId && !opts.autoSwitched) {
+                    const best = bestCamera(devs);
+                    if (best && cur && best.deviceId !== cur.deviceId && camLabelScore(best.label) > camLabelScore(cur.label)) {
+                        stopCameraStream();
+                        return openCamera({ ...opts, deviceId: best.deviceId, autoSwitched: true });
+                    }
+                }
+                fillCameraSelect(devs, st.deviceId);
+                const backish = cur && /back|rear|environment|후면/.test((cur.label || '').toLowerCase());
+                CAM.mirror = st.facingMode ? st.facingMode === 'user' : (!mobile && !backish);   // 노트북 웹캠은 facingMode 를 안 알려 주는 경우가 많다
+                byId('cam-video').classList.toggle('mirror', CAM.mirror);
+                byId('cam-video').srcObject = CAM.stream;
+                try { await byId('cam-video').play(); } catch (_) { /* autoplay 로 곧 재생된다 */ }
+                if (!opts.message) camSay('종이를 카메라에 비춰 주세요', '네 모서리 네모가 모두 보이게 · 빈 네모는 왼쪽 위');
+            }
+            clearTimeout(CAM.timer);
+            CAM.timer = setTimeout(camLoop, CAM_INTERVAL_MS);
+        }
+        function stopCameraStream() {
+            clearTimeout(CAM.timer); CAM.timer = null;
+            if (CAM.stream) CAM.stream.getTracks().forEach(t => t.stop());   // 카메라 불을 끈다
+            CAM.stream = null;
+            byId('cam-video').srcObject = null;
+        }
+        function closeCamera() {
+            stopCameraStream();
+            byId('cam-modal').style.display = 'none';
+            const ov = byId('cam-overlay');
+            ov.getContext('2d').clearRect(0, 0, ov.width, ov.height);
+        }
+
+        const camDet = document.createElement('canvas');
+        // 픽셀의 85% 이상이 아주 어두우면(밝기 30 미만) 카메라가 막혔거나 영상이 안 오는 것으로 본다 (드문드문 표본만 센다)
+        function camLooksBlank(img) {
+            const d = img.data;
+            let dark = 0, n = 0;
+            for (let k = 0; k < d.length; k += 4 * 37) { n++; if (Math.max(d[k], d[k + 1], d[k + 2]) < 30) dark++; }
+            return n > 0 && dark / n > 0.85;
+        }
+        function camLoop() {
+            CAM.timer = null;
+            const v = byId('cam-video');
+            if (!CAM.stream) return;
+            if (v.readyState >= 2 && v.videoWidth && !CAM.busy) {
+                const vw = v.videoWidth, vh = v.videoHeight, sc = Math.min(1, CAM_DET_W / vw);
+                const w = Math.round(vw * sc), h = Math.round(vh * sc);
+                camDet.width = w; camDet.height = h;
+                const ctx = camDet.getContext('2d', { willReadFrequently: true });
+                ctx.drawImage(v, 0, 0, w, h);
+                const img = ctx.getImageData(0, 0, w, h);
+                if (camLooksBlank(img)) {
+                    // 화면이 거의 까맣다: 노트북 카메라 차단(삼성 '녹화 방지'·Fn 단축키), Windows 카메라 권한, 응답 없는 폰 카메라 등
+                    if (!CAM.blankSince) CAM.blankSince = performance.now();
+                    if (performance.now() - CAM.blankSince > 1500) {
+                        camSay('카메라 화면이 까맣게 나와요',
+                            '노트북 카메라 차단을 풀어 주세요 (삼성: Fn+F10 또는 삼성 설정 → 카메라·마이크 차단 끄기, Windows 설정 → 개인 정보 → 카메라 허용). 또는 오른쪽 아래에서 다른 카메라를 고르세요', 0);
+                        camDrawOverlay(null, false, false);
+                    }
+                } else {
+                    CAM.blankSince = 0;
+                    const r = findSheetMarkers(img);
+                    camEvaluate(r, img, w, h);
+                }
+            }
+            if (CAM.stream && !CAM.busy) CAM.timer = setTimeout(camLoop, CAM_INTERVAL_MS);
+        }
+        function camEvaluate(r, img, w, h) {
+            const now = performance.now();
+            let ok = false, ink = 0, msg, sub = '';
+            if (!r.quad) {
+                msg = r.cands >= 1 && r.cands <= 3 ? `모서리 네모가 ${r.cands}개만 보여요` : '종이를 카메라에 비춰 주세요';
+                sub = '네 모서리 네모가 모두 화면 안에 들어오게 · 빈 네모는 왼쪽 위';
+            } else if (r.areaFrac < CAM_MIN_AREA) {
+                msg = '조금 더 가까이 가져와 주세요'; sub = '종이가 화면을 넉넉히 채우게';
+            } else if (!r.hollow) {
+                msg = '왼쪽 위 빈 네모가 잘 안 보여요'; sub = '조금 더 가까이, 밝은 곳에서 비춰 주세요';
+            } else if ((ink = sheetInkFraction(img, r.quad)) < CAM_MIN_INK) {
+                msg = '파랑·빨강 선이 안 보여요'; sub = '동그라미를 굵게 그린 뒤 비춰 주세요';
+            } else {
+                ok = true;
+            }
+            const q = r.quad ? r.quad.map(([x, y]) => [x / w, y / h]) : null;
+            let progress = 0;
+            if (ok) {
+                const diag = Math.hypot(1, h / w);
+                const moved = CAM.prev ? Math.max(...q.map((p, i) => Math.hypot(p[0] - CAM.prev[i][0], (p[1] - CAM.prev[i][1]) * h / w))) / diag : 1;
+                const inkJump = CAM.prevInk ? Math.abs(ink - CAM.prevInk) / CAM.prevInk : 1;
+                if (moved > CAM_MOVE_TOL || inkJump > 0.25) CAM.stableSince = now;   // 움직이거나 아직 그리는 중
+                else if (!CAM.stableSince) CAM.stableSince = now;
+                progress = (now - CAM.stableSince) / CAM_STABLE_MS;
+                msg = '인식했어요 · 그대로 잠깐만요'; sub = '흔들리지 않게 들고 있어 주세요';
+                if (now < CAM.cooldownUntil) { progress = Math.min(progress, 0.95); }
+                else if (progress >= 1) { camDrawOverlay(q, true, true); camCapture(); return; }
+            } else {
+                CAM.stableSince = 0;
+            }
+            CAM.prev = ok ? q : null;
+            CAM.prevInk = ok ? ink : 0;
+            camSay(msg, sub, progress);
+            camDrawOverlay(q, ok, r.hollow);
+        }
+        // 찾은 네 모서리를 미리보기 위에 그린다 (초록 = 인식됨, 노랑 = 아직). 빈 네모(왼쪽 위) 자리에 표시
+        function camDrawOverlay(q, ok, hollow) {
+            const v = byId('cam-video'), ov = byId('cam-overlay');
+            const cw = ov.clientWidth, ch = ov.clientHeight, dpr = Math.min(devicePixelRatio || 1, 2);
+            if (ov.width !== Math.round(cw * dpr) || ov.height !== Math.round(ch * dpr)) { ov.width = Math.round(cw * dpr); ov.height = Math.round(ch * dpr); }
+            const ctx = ov.getContext('2d');
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctx.clearRect(0, 0, cw, ch);
+            if (!q || !v.videoWidth) return;
+            const s = Math.min(cw / v.videoWidth, ch / v.videoHeight);           // object-fit: contain 과 같은 자리
+            const dw = v.videoWidth * s, dh = v.videoHeight * s, ox = (cw - dw) / 2, oy = (ch - dh) / 2;
+            const P = q.map(([x, y]) => [ox + (CAM.mirror ? 1 - x : x) * dw, oy + y * dh]);
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = ok ? '#33d17a' : '#ffcc33';
+            ctx.fillStyle = ok ? 'rgba(51, 209, 122, 0.12)' : 'rgba(255, 204, 51, 0.08)';
+            ctx.beginPath();
+            P.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
+            ctx.closePath(); ctx.fill(); ctx.stroke();
+            P.forEach(([x, y], i) => {
+                ctx.beginPath(); ctx.arc(x, y, i === 0 ? 11 : 7, 0, Math.PI * 2);
+                ctx.fillStyle = i === 0 && hollow ? '#ffffff' : (ok ? '#33d17a' : '#ffcc33');
+                ctx.fill();
+            });
+            if (hollow) {
+                ctx.font = '600 13px "Noto Sans KR", sans-serif';
+                ctx.fillStyle = '#ffffff';
+                const label = '빈 네모 (왼쪽 위)', tw = ctx.measureText(label).width;
+                const lx = P[0][0] + 14 + tw > cw - 6 ? P[0][0] - 14 - tw : P[0][0] + 14;   // 화면 밖으로 나가면 반대쪽에
+                ctx.fillText(label, Math.max(6, lx), Math.max(16, P[0][1] - 10));
+            }
+        }
+        // 찍기: 원본 해상도·원본 방향으로 JPEG 를 만들어 손그림 모드로 바로 예측
+        async function camCapture(manual = false) {
+            const v = byId('cam-video');
+            if (!CAM.stream || !v.videoWidth || CAM.busy) return;
+            CAM.busy = true;
+            clearTimeout(CAM.timer);
+            const c = document.createElement('canvas');
+            c.width = v.videoWidth; c.height = v.videoHeight;
+            c.getContext('2d').drawImage(v, 0, 0);
+            const flash = byId('cam-flash');
+            flash.classList.remove('on'); void flash.offsetWidth; flash.classList.add('on');
+            camSay(manual ? '찍었어요' : '인식 완료!', '분석을 시작합니다', 1);
+            const blob = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.92));
+            const d = new Date(), pad = n => String(n).padStart(2, '0');
+            const file = new File([blob], `손그림_${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.jpg`, { type: 'image/jpeg' });
+            await new Promise(res => setTimeout(res, 250));   // 찰칵 효과를 잠깐 보여 준다
+            closeCamera();
+            CAM.busy = false;
+            document.querySelector('input[name="mode"][value="hand"]').checked = true;   // 사진 확장자만 보면 '등고선 이미지'로 갈 수 있어 손그림으로 고정
+            applyMode();
+            setInputFile(file);
+            CAM.fromCamera = true;
+            const form = byId('uploadForm');
+            if (form.requestSubmit) form.requestSubmit(); else byId('submit-btn').click();
+        }
+
+        byId('cam-open').addEventListener('click', () => openCamera());
+        byId('empty-cam').addEventListener('click', () => {
+            document.querySelector('input[name="mode"][value="hand"]').checked = true;
+            applyMode();
+            openCamera();
+        });
+        byId('cam-close').addEventListener('click', closeCamera);
+        byId('cam-shot').addEventListener('click', () => camCapture(true));   // 조건과 상관없이 지금 찍기 (판정은 서버가)
+        byId('cam-file').addEventListener('click', () => {
+            closeCamera();
+            document.querySelector('input[name="mode"][value="hand"]').checked = true;
+            applyMode();
+            fileInputEl.click();
+        });
+        byId('cam-select').addEventListener('change', (e) => {   // 고른 카메라는 다음에도 그대로
+            saveCamId(e.target.value);
+            stopCameraStream();
+            openCamera({ deviceId: e.target.value });
+        });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && byId('cam-modal').style.display !== 'none') closeCamera(); });
+        document.addEventListener('visibilitychange', () => { if (document.hidden && CAM.stream) closeCamera(); });   // 다른 탭으로 가면 카메라를 끈다
+
+
+        /* ---------- 설정: 침수 위험지역 기준 ---------- */
+        function applyRiskCfgUi() {
+            for (const [id, key] of [['risk-abs', 'absCm'], ['risk-rel', 'relPct'], ['risk-stay', 'staySec']]) {
+                byId(id).value = riskCfg[key];
+                if (document.activeElement !== byId(id + '-val')) byId(id + '-val').value = riskCfg[key];
+            }
+            byId('risk-end').value = String(riskCfg.endS);
+        }
+        let riskRetuneTimer = null;
+        function setRiskCfg(key, value) {
+            const lim = { absCm: [0.5, 10], relPct: [0, 90], staySec: [10, 100], endS: [38, 120] }[key];
+            const v = Number(value);
+            if (!Number.isFinite(v)) return;
+            riskCfg[key] = Math.min(lim[1], Math.max(lim[0], v));
+            try { localStorage.setItem(RISK_CFG_KEY, JSON.stringify(riskCfg)); } catch (_) { /* 기억 못 해도 지금은 적용 */ }
+            applyRiskCfgUi();
+            clearTimeout(riskRetuneTimer);   // 슬라이더를 끄는 동안 너무 자주 다시 그리지 않게
+            riskRetuneTimer = setTimeout(() => { if (stageState.retuneRisk) stageState.retuneRisk(); }, 120);
+        }
+        for (const [id, key] of [['risk-abs', 'absCm'], ['risk-rel', 'relPct'], ['risk-stay', 'staySec']]) {
+            byId(id).addEventListener('input', (e) => setRiskCfg(key, e.target.value));
+            byId(id + '-val').addEventListener('change', (e) => setRiskCfg(key, e.target.value));
+        }
+        byId('risk-end').addEventListener('change', (e) => {
+            setRiskCfg('endS', e.target.value);
+            showToast('보는 구간 끝은 다음 예측부터 배수구 정하는 시점에 반영돼요 (지금 결과는 받은 시점 안에서 다시 계산)');
+        });
+        byId('risk-reset').addEventListener('click', () => { for (const k of Object.keys(RISK_DEFAULTS)) riskCfg[k] = RISK_DEFAULTS[k]; setRiskCfg('absCm', riskCfg.absCm); });
+        applyRiskCfgUi();
+
         /* ---------- 첫 화면(로고) ---------- */
-        // 접속하면 로고를 먼저 보여 주고 잠시 뒤 본 화면으로 넘어간다. 화면을 누르거나 키를 누르면 바로 넘어간다.
-        const SPLASH_MS = 2200;
+        // 접속하면 로고를 보여 주고, 사용자가 화면을 클릭(탭)하거나 Enter·Space 를 눌러야 본 화면으로 넘어간다.
+        // [11/25 수정] 예전엔 2.2초 타이머(setTimeout(closeSplash, 2200))가 있어서 '누르면 시작'이라고 써 놓고
+        //   저절로 넘어갔다. 타이머를 없앴다. 아무 키나 받으면 Alt+Tab 같은 창 전환 키에도 넘어가므로 세 키만 받는다.
         function closeSplash() {
             const s = byId('splash');
             if (!s || s.classList.contains('hide')) return;
             s.classList.add('hide');
             setTimeout(() => s.remove(), 500);   // 사라지는 효과가 끝난 뒤 지운다
-            document.removeEventListener('keydown', closeSplash);
+            document.removeEventListener('keydown', onSplashKey);
+        }
+        function onSplashKey(e) {
+            if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') { e.preventDefault(); closeSplash(); }
         }
         byId('splash').addEventListener('click', closeSplash);
-        document.addEventListener('keydown', closeSplash);
-        setTimeout(closeSplash, SPLASH_MS);
+        document.addEventListener('keydown', onSplashKey);
 
         initTheme();
         initXmas();
