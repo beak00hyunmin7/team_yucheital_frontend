@@ -1719,6 +1719,19 @@
                 ? `${location.protocol}//${location.hostname}:8000`
                 : location.origin);
         const ANALYZE_API = (new URLSearchParams(location.search).get('api') || DEFAULT_API).replace(/\/+$/, '');  // AI 모델 서버 (예측)
+        // [11/27] ngrok 무료 터널은 처음 접속할 때 경고 페이지를 끼워 넣는다. API 요청에 이 헤더를 붙이면 경고 페이지 대신
+        //   진짜 응답(JSON)을 받는다. 화면과 API 가 같은 주소(터널 하나, 8000)면 CORS 사전 요청도 생기지 않는다.
+        //   (주소가 다르면 서버 CORS 가 모든 헤더를 허용하므로 그대로 동작)
+        const _rawFetch = window.fetch.bind(window);
+        window.fetch = (input, init = {}) => {
+            const url = typeof input === 'string' ? input : ((input && input.url) || '');
+            if (url.startsWith(ANALYZE_API) || url.startsWith('/')) {
+                const h = new Headers(init.headers || (input instanceof Request ? input.headers : undefined));
+                h.set('ngrok-skip-browser-warning', '1');
+                init = { ...init, headers: h };
+            }
+            return _rawFetch(input, init);
+        };
         const AUTH_API = ANALYZE_API;                  // 로그인도 같은 서버 (토큰을 받아야 예측 가능)
 
         const USER_KEY   = 'yuche_user';
