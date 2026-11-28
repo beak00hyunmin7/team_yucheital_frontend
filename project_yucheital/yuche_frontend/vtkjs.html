@@ -696,6 +696,7 @@
                 n: 0, hn: null, gx: null, gz: null, gRef: 1,      // 높이(0..1)와 그 기울기
                 frames: [], time: null, depth: null, dRef: 0.1,   // 시점별 수심[m], 지금 수심, 정규화 기준
                 drain: null, exag: 1, flow: FLOW_BALL,
+                riskCanvas: null,                                  // 침수 위험지역 빗금 그림 (2D 지도의 risk-canvas)
                 container: null, active: false, raf: null, last: 0, clock: 0,
                 cam: { theta: -0.62, phi: 0.98, radius: 2.35, tx: 0, ty: 0.04, tz: 0 },
                 gl: null,                                          // three 객체 묶음
@@ -857,6 +858,38 @@
             }
 
             /* ---------- 장면 만들기 ---------- */
+            // 침수 위험지역(물 고임) 빨간 빗금: 2D 지도와 같은 그림(risk-canvas, 그림 방향)을 지형 면에 그대로 덮는다.
+            // 지형과 같은 형상(geometry)을 같이 써서 높이 과장을 바꿔도 따라가고, 물 다음에 그려서(물은 깊이를 안 씀)
+            // 물에 잠긴 곳에서도 빗금이 보인다. 땅 위에 붙어 있으니 언덕 너머 빗금은 언덕에 가려진다.
+            function buildRiskLayer() {
+                const gl = S.gl;
+                if (!gl || !gl.group || !gl.terrain) return;
+                if (gl.risk) {
+                    gl.group.remove(gl.risk);
+                    gl.risk.material.map.dispose(); gl.risk.material.dispose();   // 형상은 지형 것이라 지우지 않는다
+                    gl.risk = null;
+                }
+                if (!S.riskCanvas) return;
+                const tex = new THREE.CanvasTexture(S.riskCanvas);
+                tex.colorSpace = THREE.SRGBColorSpace;
+                tex.anisotropy = 4;
+                const mat = new THREE.MeshBasicMaterial({
+                    map: tex, transparent: true, depthWrite: false,
+                    polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,   // 지형 면과 겹쳐도 깜빡이지 않게 살짝 앞으로
+                });
+                mat.onBeforeCompile = (sh) => {   // 배수구 구멍 자리는 지형처럼 비운다
+                    Object.assign(sh.uniforms, gl.holeU);
+                    sh.vertexShader = 'varying vec2 vHoleP;\n' + sh.vertexShader.replace('#include <project_vertex>',
+                        '#include <project_vertex>\n    vHoleP = (modelMatrix * vec4(transformed, 1.0)).xz;');
+                    sh.fragmentShader = 'uniform vec2 uHole;\nuniform float uHoleR;\nvarying vec2 vHoleP;\n' + sh.fragmentShader.replace('void main() {',
+                        'void main() {\n    if (uHoleR > 0.0 && distance(vHoleP, uHole) < uHoleR) discard;');
+                };
+                mat.customProgramCacheKey = () => 'risk-hole';
+                gl.risk = new THREE.Mesh(gl.terrain.geometry, mat);
+                gl.risk.renderOrder = 2.5;        // 물(2) 다음, 흐르는 입자(3) 앞
+                gl.group.add(gl.risk);
+            }
+
             function buildScene() {
                 const n = S.n, gl = S.gl;
                 disposeMeshes();
@@ -954,6 +987,7 @@
                 gl.water = new THREE.Mesh(wg, gl.waterMat);
                 gl.water.renderOrder = 2;
                 group.add(gl.water);
+                buildRiskLayer();
 
                 // 흐르는 입자: 물이 있는 곳에서 태어나 내리막을 따라 흐른다 (짧은 꼬리 + 머리 점)
                 const flowMat = (point) => new THREE.ShaderMaterial({
@@ -1517,7 +1551,7 @@
                     if (o.material) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); }
                 });
                 gl.scene.remove(gl.group);
-                gl.group = gl.terrain = gl.water = gl.lines = gl.points = gl.pin = gl.halo = gl.skirt = null;
+                gl.group = gl.terrain = gl.water = gl.lines = gl.points = gl.pin = gl.halo = gl.skirt = gl.risk = null;
                 gl.holeWall = gl.holeFloor = gl.holeRim = gl.holeGrate = gl.arrow = gl.label = null; gl.arrowBase = null;
                 gl.arrows = null;
             }
@@ -1685,6 +1719,11 @@
                     S.drain = drain || null;
                     S.hole = S.drain ? { x: S.drain.x * (S.n - 1), z: S.drain.y * (S.n - 1), r: HOLE_R * (S.n - 1) } : null;
                     if (S.gl && S.gl.group) buildScene();
+                },
+                // 침수 위험지역 빗금: canvas(2D 지도와 같은 그림) 또는 null(지움). 3D 가 아직 안 만들어졌으면 만들 때 붙인다
+                setRisk(canvas) {
+                    S.riskCanvas = canvas || null;
+                    if (S.gl && S.gl.group) buildRiskLayer();
                 },
                 setBoats(on, count) {
                     S.boat.on = !!on;
@@ -4137,7 +4176,7 @@
             const has = !!(risk && risk.mask && risk.zones && risk.zones.length);
             cv.style.display = has ? 'block' : 'none';
             byId('risk-key').style.display = has ? 'flex' : 'none';
-            if (!has) return;
+            if (!has) { View3D.setRisk(null); return; }
             const n = risk.n, S = RISK_PX, sc = S / (n - 1);
             const m = document.createElement('canvas');
             m.width = m.height = n;
@@ -4172,6 +4211,7 @@
                 }
             }
             ctx.putImageData(out, 0, 0);
+            View3D.setRisk(cv);   // 3D 지형 위에도 같은 빗금
         }
 
         /* ---------- 시간 경과 재생 ---------- */
