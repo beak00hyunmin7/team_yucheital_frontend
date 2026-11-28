@@ -283,8 +283,8 @@
                     </div>
                 </div>
                 <!-- 빨간 빗금 뜻 (위험지역이 있을 때만 보인다) -->
-                <div class="risk-key" id="risk-key" style="display: none;" title="빨간 빗금 = 침수 위험지역 (마지막 시점에도 물이 남는 곳)">
-                    <i class="rk-sw" aria-hidden="true"></i><span>침수<br>위험</span>
+                <div class="risk-key" id="risk-key" style="display: none;" title="빨간 빗금 = 물이 잘 안 빠지는 곳 (오래 고여 있는 곳)">
+                    <i class="rk-sw" aria-hidden="true"></i><span>물<br>고임</span>
                 </div>
                 <button type="button" id="zoom-in" aria-label="확대" title="확대 (마우스 휠)">+</button>
                 <button type="button" id="zoom-reset" aria-label="원래 크기로" title="원래 크기로 (더블클릭)">100%</button>
@@ -3202,6 +3202,32 @@
             byId('zoom-out').disabled = mapView.s <= MAP_ZOOM_MIN + 0.001;
             byId('zoom-in').disabled = mapView.s >= MAP_ZOOM_MAX - 0.001;
         }
+
+        // [11/28] 오른쪽 세로 패널(수심 범례 · 빗금 뜻 · 확대 버튼)을 지도 사진 오른쪽 옆에 붙인다.
+        // 지도를 옮기거나 확대하면 지도 오른쪽 끝을 따라가고(크기는 그대로), 화면 밖으로 나가면 화면 가장자리에서 멈춘다.
+        // 지도 위치는 여러 곳(배수구 쪽으로 옮기기, 전체 보기, 패널 접기 등)에서 바뀌므로 매 프레임 위치만 재서 달라졌을 때만 옮긴다.
+        const ZOOM_DOCK_GAP = 14, ZOOM_DOCK_EDGE = 16, ZOOM_DOCK_BOTTOM = 24;
+        let zoomDockKey = '';
+        function dockZoomPanel() {
+            const z = byId('stage-zoom'), sq = byId('stage-square');
+            const off = matchMedia(MOBILE_QUERY).matches || !z.getClientRects().length || !sq.getClientRects().length || stageState.view === '3d';
+            if (off) {
+                if (z.classList.contains('docked')) { z.classList.remove('docked'); z.style.left = ''; z.style.top = ''; zoomDockKey = ''; }
+                return;
+            }
+            const host = z.offsetParent || byId('stage-map');
+            const hr = host.getBoundingClientRect(), qr = sq.getBoundingClientRect(), zr = z.getBoundingClientRect();
+            const key = [hr.left, hr.top, hr.width, hr.height, qr.right, qr.bottom, zr.width, zr.height].map(Math.round).join(',');
+            if (key === zoomDockKey && z.classList.contains('docked')) return;
+            zoomDockKey = key;
+            const maxL = hr.width - zr.width - ZOOM_DOCK_EDGE, maxT = hr.height - zr.height - ZOOM_DOCK_BOTTOM;
+            const left = Math.max(ZOOM_DOCK_EDGE, Math.min(maxL, qr.right - hr.left + ZOOM_DOCK_GAP));
+            const top = Math.max(ZOOM_DOCK_EDGE, Math.min(maxT, qr.bottom - hr.top - zr.height));   // 아래 끝을 지도 아래 끝에 맞춘다
+            z.classList.add('docked');
+            z.style.left = Math.round(left) + 'px';
+            z.style.top = Math.round(top) + 'px';
+        }
+        (function dockLoop() { try { dockZoomPanel(); } catch (e) { /* 위치 계산 실패는 원래 자리로 둔다 */ } requestAnimationFrame(dockLoop); })();
 
         function resetMapView() {
             mapView.s = 1; mapView.tx = 0; mapView.ty = 0;

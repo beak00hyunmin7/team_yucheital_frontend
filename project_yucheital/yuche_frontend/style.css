@@ -2550,7 +2550,8 @@ input[type="password"]:focus-visible {
   align-items: center;
   gap: 4px;
   padding: 8px 0 9px;
-  font-size: 10px;
+  font-size: 12px;
+  font-weight: 700;
   line-height: 1.15;
   text-align: center;
   color: var(--text);
@@ -2558,8 +2559,9 @@ input[type="password"]:focus-visible {
   cursor: default;
 }
 .rk-sw {
-  width: 26px;
-  height: 15px;
+  width: 30px;
+  height: 18px;
+  flex: none;
   border: 2px solid #e21e24;
   border-radius: 3px;
   background: repeating-linear-gradient(135deg, rgba(226, 30, 36, 0.85) 0 2px, rgba(226, 30, 36, 0.14) 2px 6px);
@@ -2573,6 +2575,9 @@ input[type="password"]:focus-visible {
   .risk-key { padding: 6px 0; }
   .risk-key span { display: none; }   /* 좁은 화면: 범례 줄이 지도 위로 넘치지 않게 견본만 (뜻은 마우스·길게 누르기 title) */
 }
+
+/* 11/28 오른쪽 세로 패널을 지도 오른쪽 옆에 붙임 (위치는 JS dockZoomPanel). 크기 조절(%)은 그대로, 기준점만 왼쪽 위로 */
+.stage-zoom.docked { right: auto; bottom: auto; transform-origin: top left; }
 
 /* ===== 11/25 손그림 카메라 ===== */
 .cam-row { margin-top: 10px; }
