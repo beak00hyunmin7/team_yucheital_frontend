@@ -3803,7 +3803,9 @@
             byId('v3d-exag-val').textContent = '×' + Number(e.target.value).toFixed(1);
         });
         // 물 흐름 표시: 누를 때마다 꺼짐 → 공 → 화살표 → 꺼짐 … (마지막 선택은 이 브라우저에 기억)
-        const FLOW_MODE_KEY = 'yuche_flow_mode_v2';   // v2: 기본을 '꺼짐'으로 바꾸면서 예전 저장값(공)은 쓰지 않는다
+        // v3 (11/28): 기본을 '화살표'로 바꾸면서 예전 저장값(v2 의 '꺼짐')은 쓰지 않는다 -> 모든 브라우저가 화살표로 시작
+        const FLOW_MODE_KEY = 'yuche_flow_mode_v3';
+        const FLOW_MODE_DEFAULT = 2;   // 0 꺼짐 · 1 공 · 2 화살표 (전시·일반 모드 모두)
         const FLOW_MODES = [
             { label: '꺼짐', title: '물 흐름 표시 꺼짐 (누르면 공 모양)',
               icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 9c2-2 4-2 6 0s4 2 6 0 4-2 6 0M3 15c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/><path d="M4 4l16 16"/></svg>' },
@@ -3826,8 +3828,8 @@
         byId('v3d-flow').addEventListener('click', (e) => {
             applyFlowMode((Number(e.currentTarget.dataset.mode) + 1) % FLOW_MODES.length);   // 0 → 1 → 2 → 0
         });
-        (() => {   // 처음에는 지난번 선택(없으면 '꺼짐': 입자가 웅덩이에서 반짝여 화면이 복잡해 보여서 관람객이 켤 때만)
-            let saved = 0;
+        (() => {   // 처음에는 지난번 선택(없으면 '화살표': 물이 어디로 흐르는지 바로 보이게, 11/28 팀 결정)
+            let saved = FLOW_MODE_DEFAULT;
             try { const v = localStorage.getItem(FLOW_MODE_KEY); if (v !== null) saved = Number(v); } catch (_) { /* 무시 */ }
             applyFlowMode(saved);
         })();
