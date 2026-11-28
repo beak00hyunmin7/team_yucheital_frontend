@@ -3636,6 +3636,36 @@
             return data;
         }
 
+        // 시간 변화 장면 여러 개를 한 번에 받는다 (/api/predict/series). 파일은 한 번만 올린다.
+        // 폰은 업로드와 ngrok 왕복이 장면마다(5번) 쌓여 노트북보다 몇 초 늦었다. 반환: { 시점: 응답 } (실패한 시점은 빠짐).
+        // 옛 서버(404)·오류면 null -> 부르는 쪽이 예전처럼 시점마다 받는다
+        async function requestSeries(p, times, signal) {
+            const form = new FormData();
+            form.append('mode', p.mode);
+            form.append('file', p.file);
+            form.append('rain_mm', p.rainMm);
+            form.append('times', times.join(','));
+            form.append('dx', p.dx);
+            if (p.mode === 'image') {
+                form.append('color_scheme', p.color.scheme);
+                form.append('reverse', p.color.reverse ? 'true' : 'false');
+            }
+            try {
+                const res = await fetch(ANALYZE_API + '/api/predict/series', {
+                    method: 'POST', body: form, signal,
+                    headers: getToken() ? { Authorization: 'Bearer ' + getToken() } : {}
+                });
+                if (!res.ok) return null;
+                const data = await res.json();
+                const out = {};
+                for (const [t, d] of Object.entries(data.frames || {})) if (d && !d.error) out[Number(t)] = d;
+                return out;
+            } catch (e) {
+                if (e.name === 'AbortError') throw e;
+                return null;
+            }
+        }
+
         /* ---------- 입력 확인: 서버가 색을 높이로 읽어 변환했을 때 맞게 읽었는지 묻는다 ---------- */
         // data = 첫 예측 응답. requestAgain(opts) = 같은 파일을 다른 색 해석으로 다시 예측 (Promise<응답>)
         // 반환: 사용할 응답, 취소하면 null
@@ -4347,6 +4377,21 @@
             // 120초를 앞당겨서 배수구가 응답 2~3개 만에 정해지고, 그 순간부터 18초부터 재생하며 나머지를 채운다.
             // 한 시점이 실패해도 나머지는 계속 받는다 (예전엔 첫 실패에서 멈춰 뒤 시점이 모두 비었다). 연속 2번 실패하면 멈춘다
             const order = [...new Set([userTime, ...times])];   // 사용자 시점(이미 받음) 다음은 시간 순 -> 보는 구간(18~80초)이 먼저 찬다
+            // 아직 없는 시점은 묶어서 받는다 (묶음마다 파일 한 번 업로드). 빗금·배수구에 필요한 구간(~보는 구간 끝)을 먼저
+            // 한 묶음으로, 나머지(100·120초)는 반복문이 그 시점에 닿았을 때 또 한 묶음으로. 묶음 요청이 안 되면(옛 서버)
+            // 반복문이 예전처럼 하나씩 받는다
+            let seriesOk = true;
+            const fetchSeries = async (batch) => {
+                if (!seriesOk || batch.length < 2) return;
+                const got = await requestSeries({ mode, file, rainMm, dx, color }, batch, controller.signal);
+                if (got) Object.assign(preloaded, got); else seriesOk = false;
+            };
+            try {
+                await fetchSeries(order.filter(t => !preloaded[t] && (riskEnd == null || t <= riskEnd)));
+            } catch (err) {
+                if (err.name === 'AbortError' || controller.signal.aborted) { deliverRisk(null, true); return; }
+                seriesOk = false;
+            }
             const failed = [];
             let lastErr = null, streak = 0;
             for (let i = 0; i < total; i++) {
@@ -4354,6 +4399,7 @@
                 const waitingDrain = riskEnd != null && !riskSent;
                 setTimelapseStatus(`${waitingDrain ? '배수구 위치 계산 중 · ' : ''}시점별 예측 ${i + 1} / ${total}`, i, total);
                 try {
+                    if (!preloaded[time]) await fetchSeries(order.slice(i).filter(t => !preloaded[t]));   // 남은 시점을 한 묶음으로
                     let data = preloaded[time] || null;
                     if (!data) {
                         data = await requestPredict({ mode, file, rainMm, timeS: time, dx, color, light: true }, controller.signal);
