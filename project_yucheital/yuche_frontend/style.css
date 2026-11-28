@@ -90,6 +90,7 @@ button {
   background: var(--glass);
   border: 1px solid var(--glass-border);
   border-radius: 18px;
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
 }
 .brand-wrap { position: relative; display: inline-flex; align-items: center; justify-content: center; margin: 8px 0 14px; }
@@ -926,6 +927,7 @@ input:disabled {
   width: 640px;
   max-width: calc(100% - 32px);
   max-height: calc(100vh - 48px);
+  max-height: calc(100dvh - 48px);
   overflow-y: auto;
   padding: 24px;
   background-color: var(--panel);
@@ -1128,6 +1130,7 @@ body.dark {
   position: relative;
   z-index: 1;
   height: 100vh;
+  height: 100dvh;
   min-height: 640px;
   overflow: hidden;
 }
@@ -1310,6 +1313,7 @@ body:not(.dark) .marker-label b { color: #b42328; }
   background: var(--glass);
   border: 1px solid var(--glass-border);
   border-radius: 14px;
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   cursor: pointer;
 }
@@ -1358,6 +1362,7 @@ body:not(.dark) .marker-label b { color: #b42328; }
   border: 1px solid var(--glass-border);
   border-radius: 18px;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
 }
 .panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
@@ -1525,6 +1530,7 @@ body:not(.dark) .marker-label b { color: #b42328; }
   background: var(--glass);
   border: 1px solid var(--glass-border);
   border-radius: 14px;
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   transition: border-color 0.15s;
 }
@@ -1630,6 +1636,7 @@ body:not(.dark) .marker-label b { color: #b42328; }
   background: var(--glass);
   border: 1px solid var(--glass-border);
   border-radius: 14px;
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
 }
 .lg-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 12px; font-weight: 700; }
@@ -1676,6 +1683,7 @@ body:not(.dark) .marker-label b { color: #b42328; }
 .check-card,
 .unr-card {
   max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
   overflow-y: auto;
   padding: 28px 30px;
   background-color: var(--panel);
@@ -1868,6 +1876,7 @@ body:not(.dark) .unr-badge { color: #8a5200; }
     border: 0;
     border-bottom: 1px solid var(--glass-border);
     border-radius: 0;
+    -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
   .brand-wrap { margin: 0 6px 0 0; }
@@ -2144,12 +2153,14 @@ button.v3d-btn:hover { background-color: var(--accent-soft); }
   justify-content: center;
   padding: 16px;
   background-color: rgba(0, 0, 0, 0.55);
+  -webkit-backdrop-filter: blur(2px);
   backdrop-filter: blur(2px);
 }
 .settings-card {
   width: 520px;
   max-width: 100%;
   max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
   overflow-y: auto;
   padding: 22px 24px 24px;
   background-color: var(--panel);
@@ -2310,6 +2321,7 @@ button.set-row:hover { background-color: var(--subtle-bg); }
   background: var(--glass);
   border: 1px solid var(--glass-border);
   border-radius: 14px;
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   cursor: pointer;
   transform: scale(var(--panel-z));
@@ -2417,6 +2429,7 @@ input[type="password"]:focus-visible {
   background: var(--subtle-hover);
   border: 0;
   border-radius: 10px;
+  -webkit-backdrop-filter: none;
   backdrop-filter: none;
   animation: none;
 }
@@ -2436,6 +2449,7 @@ input[type="password"]:focus-visible {
   background: transparent;
   border: 0;
   border-radius: 8px;
+  -webkit-backdrop-filter: none;
   backdrop-filter: none;
   transform: none;
   animation: none;
@@ -2456,6 +2470,7 @@ input[type="password"]:focus-visible {
   background: transparent;
   border: 1px solid var(--glass-border);
   border-radius: 12px;
+  -webkit-backdrop-filter: none;
   backdrop-filter: none;
   transform: none;
   animation: none;
@@ -2578,6 +2593,8 @@ input[type="password"]:focus-visible {
 
 /* 11/28 오른쪽 세로 패널을 지도 오른쪽 옆에 붙임 (위치는 JS dockZoomPanel). 크기 조절(%)은 그대로, 기준점만 왼쪽 위로 */
 .stage-zoom.docked { right: auto; bottom: auto; transform-origin: top left; }
+/* 11/28 3D 도구 패널을 3D 지형 오른쪽 옆에 붙임 (위치는 JS dock3dTools). 위와 같이 기준점만 왼쪽 위로 */
+.v3d-tools.docked { right: auto; bottom: auto; transform-origin: top left; }
 
 /* ===== 11/25 손그림 카메라 ===== */
 .cam-row { margin-top: 10px; }
@@ -2693,9 +2710,270 @@ body.team .team-only { display: block; }
 }
 .result-image.result-pending { display: flex; align-items: center; justify-content: center; min-height: 180px; color: var(--muted); font-size: 14px; }
 
+/* ===== 11/28 예측 직후 첫 시간 변화 재생이 끝날 때까지 위험지역 빗금 · 배수구 원 · 범례를 숨긴다 (JS holdRiskReveal / revealRisk) ===== */
+.stage-map.reveal-wait .drain-marker,
+.stage-map.reveal-wait .risk-canvas,
+.stage-map.reveal-wait .risk-key { visibility: hidden !important; }
+
+/* ===== 11/28 지도 · 시간 변화 · 3D 탭 옆 '제자리' 버튼: 지금 보기의 확대·이동·회전을 처음 위치로 ===== */
+.stage-toggle .stage-home { display: inline-flex; align-items: center; justify-content: center; gap: 4px; margin-left: 4px;
+  border-left: 1px solid var(--border-light); border-radius: 0 8px 8px 0; padding: 0 10px; }
+.stage-toggle .stage-home svg { flex: none; }
+.stage-toggle .stage-home.attn { color: var(--on-accent); background-color: var(--accent); }
+@media (max-width: 1000px) { .timeline .stage-toggle .stage-home { flex: 0 0 auto; padding: 0 12px; } }
+
+/* ===== 11/28 폰 최적화 (안드로이드 크롬 · 아이폰/맥 사파리) =====
+   - 글자 크기 자동 키움 끔 (가로로 돌리면 사파리가 글자를 키워 패널이 넘쳤다)
+   - 버튼을 누를 때 회색 깜빡임 없애고, 두 번 눌러 확대(더블탭 줌)·클릭 300ms 지연을 없앤다
+   - 아이폰 홈 막대·노치 자리만큼 아래 도크를 띄운다 (viewport-fit=cover) */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+button, a, input, select, label, .tl-play { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+@media (max-width: 1000px) {
+  .timeline { margin-bottom: env(safe-area-inset-bottom, 0px); }
+  .page { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+}
+
+/* ===== 11/28 (2) ===== */
+/* 첫 재생 전에는 배수구 이름표도 숨긴다 */
+.stage-map.reveal-wait .marker-label { visibility: hidden !important; }
+
+/* 배수구 후보 2순위부터: 번호 붙은 작은 원. 1순위 원에도 '1' 배지 (후보가 둘 이상일 때) */
+.cand-markers { position: absolute; inset: 0; pointer-events: none; }
+.stage-square .drain-marker.cand {
+  width: 20px; height: 20px; border-width: 2px; border-style: dashed; display: block;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85), 0 0 14px rgba(255, 90, 95, 0.45);
+}
+.stage-square .drain-marker[data-rank]::after {
+  content: attr(data-rank);
+  position: absolute; left: 50%; top: -15px; transform: translateX(-50%);
+  min-width: 16px; height: 16px; padding: 0 4px; box-sizing: border-box;
+  font: 700 11px/16px "Noto Sans KR", sans-serif; text-align: center; color: #fff;
+  background: #e5484d; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+/* 지도 · 시간 변화 오른쪽 패널의 '초기화' (3D 도구의 초기화와 같은 모양) */
+.stage-zoom .zoom-home { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; height: 54px; font-size: 11px; font-weight: 600; }
+
+/* 🦆 버튼: 켜고 끄기 + 말풍선 (3D 를 열 때 · 켤 때 잠깐, 마우스를 올리면 계속) */
+.v3d-duck { cursor: pointer; }
+.v3d-duck::after { content: none; }
+.duck-bubble {
+  position: absolute; top: 50%; right: calc(100% + 12px); transform: translate(6px, -50%);
+  padding: 8px 12px; color: var(--text); font-size: 13px; font-weight: 700; white-space: nowrap; text-decoration: none !important;
+  background: var(--glass); border: 1px solid var(--glass-border); border-radius: 12px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s;
+}
+.duck-bubble::after {   /* 말풍선 꼬리 (버튼 쪽) */
+  content: ""; position: absolute; top: 50%; right: -7px; width: 12px; height: 12px; margin-top: -6px;
+  background: inherit; border-top: 1px solid var(--glass-border); border-right: 1px solid var(--glass-border); transform: rotate(45deg);
+}
+.duck-bubble.show, .v3d-duck:hover .duck-bubble { opacity: 1; transform: translate(0, -50%); }
+@media (max-width: 1000px) {   /* 폰: 3D 도구가 아래 가로 막대 -> 말풍선은 버튼 위로 */
+  .duck-bubble { top: auto; right: auto; left: 50%; bottom: calc(100% + 12px); transform: translate(-50%, 6px); }
+  .duck-bubble::after { top: auto; right: auto; left: 50%; bottom: -7px; margin: 0 0 0 -6px; transform: rotate(135deg); }
+  .duck-bubble.show, .v3d-duck:hover .duck-bubble { transform: translate(-50%, 0); }
+}
+
+/* 오리배 위에서는 '잡기' 손 모양 */
+.stage-3d canvas.over-boat { cursor: grab; }
+
+/* 폰에서 3D·지도를 누르면 화면 전체가 파랗게 번쩍이던 것 (안드로이드 크롬 탭 강조 · 길게 누르기 선택) */
+.stage-map, .stage-map *, .stage-3d, .stage-3d canvas {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ===== 11/28 (3) 좁은 폰 (안드로이드 360px 등): 3D 도구 막대 · 탭 줄이 화면 밖으로 잘리던 것 =====
+   - 3D 도구: 글자는 숨기고 아이콘만 (뜻은 버튼 title·aria-label). 높이 슬라이더는 조금 짧게
+   - 탭 줄: 글자가 두 줄로 꺾이지 않게, 아주 좁으면 '초기화' 는 아이콘만
+   - 🦆 말풍선: 버튼 오른쪽 끝에 맞춰 위로 (화면 밖으로 안 나가게) */
+@media (max-width: 1000px) {
+  .duck-bubble { left: auto; right: -6px; transform: translate(0, 6px); }
+  .duck-bubble::after { left: auto; right: 22px; margin: 0; }
+  .duck-bubble.show, .v3d-duck:hover .duck-bubble { transform: translate(0, 0); }
+  .timeline .stage-toggle button { white-space: nowrap; }
+}
+@media (max-width: 480px) {
+  .v3d-tools { max-width: calc(100% - 16px); left: 8px; right: 8px; }
+  .v3d-btn { padding: 0 9px; }
+  .v3d-btn > span:not(.v3d-emoji):not(.v3d-flow-icon):not(.duck-bubble) { display: none; }
+  .v3d-exag .v3d-cap { display: none; }
+  .v3d-exag input { width: 60px; }
+  .timeline .stage-toggle button { padding: 0 6px; font-size: 13px; }
+}
+@media (max-width: 380px) {
+  .timeline .stage-toggle .stage-home span { display: none; }
+}
+
+/* ===== 11/28 (4) ===== */
+/* 침수 위험지역 켜기/끄기: 지도 오른쪽 '위험지역' 범례를 누르거나 3D 도구 버튼 */
+.stage-map.risk-off .risk-canvas { display: none !important; }
+.risk-key { cursor: pointer; }
+.risk-key:hover { background-color: var(--accent-soft); }
+.risk-key[aria-pressed="false"] { color: var(--muted); }
+.risk-key[aria-pressed="false"] .rk-sw { opacity: 0.3; }
+.risk-key[aria-pressed="false"] span { text-decoration: line-through; }
+.v3d-risk .rk-sw { width: 20px; height: 14px; }
+
+/* 폰: 예측 결과가 나오면 지도가 화면을 채운다 (조건 창은 그 아래로 내려가 스크롤해야 보임).
+   높이 = 화면 - 위 막대(56) - 아래 시간 도크(약 150). 지도 그림은 '채우기'라 화면에 맞게 커진다 */
+@media (max-width: 1000px) {
+  #view-predict.has-back .stage-map {
+    aspect-ratio: auto;
+    max-height: none;
+    min-height: min(100vw, 340px);
+    height: min(calc(100vh - 56px - var(--dock-h, 150px) - 24px), 130vw);
+    height: min(calc(100dvh - 56px - var(--dock-h, 150px) - 24px - env(safe-area-inset-bottom, 0px)), 130vw);   /* 위 막대 · 아래 도크(실제 높이, JS --dock-h) · 여백. 너무 길면 양옆이 많이 잘려서 폭의 1.3배까지 */
+  }
+  /* 하단 탭: 글자가 서로 겹치지 않게 (버튼보다 길면 … 로 줄임) */
+  .timeline .stage-toggle button { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+}
+@media (max-width: 480px) {
+  .timeline .stage-toggle .stage-home { padding: 0 12px; }
+  .timeline .stage-toggle .stage-home span { display: none; }   /* 좁은 폰: 초기화는 아이콘만 */
+}
+
+/* 버튼·도크를 빠르게 누를 때 글자가 파랗게 선택되던 것 (폰 더블탭) */
+button, .timeline, .stage-toggle, .v3d-tools, .stage-zoom, .risk-key, #rail { -webkit-user-select: none; user-select: none; }
+
+/* ===== 11/28 (5) ===== */
+/* 로고 = 첫 화면으로 */
+#brand-home { cursor: pointer; border-radius: 10px; }
+#brand-home:hover .rail-logo { filter: drop-shadow(0 0 6px rgba(76, 195, 255, 0.6)); }
+
+/* 폰 아래 도크 손잡이 (PC 에서는 안 보임) */
+.sheet-handle { display: none; }
+@media (max-width: 1000px) {
+  .sheet-handle {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    flex: 1 1 100%; order: -2; height: 22px; margin: -6px 0 -4px; padding: 0;
+    color: var(--muted); font: inherit; font-size: 12px; background: transparent; border: 0; cursor: pointer; touch-action: none;
+  }
+  .sheet-handle i { width: 44px; height: 5px; border-radius: 3px; background: var(--muted); opacity: 0.55; }
+  .sheet-handle span { display: none; }
+  /* 내렸을 때: 도크는 손잡이 한 줄만, 지도가 그만큼 더 커진다 */
+  #view-predict.dock-down .timeline > :not(.sheet-handle) { display: none !important; }
+  #view-predict.dock-down .timeline { padding: 6px 12px; }
+  #view-predict.dock-down .sheet-handle { margin: 0; height: 30px; }
+  #view-predict.dock-down .sheet-handle span { display: inline; }
+  #view-predict.dock-down.has-back .stage-map {
+    height: calc(100vh - 56px - 64px);
+    height: calc(100dvh - 56px - 64px - env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* 오리배 아이콘: 켜짐 = 빵빵, 꺼짐 = 바람 빠짐 (납작해지고 고개가 처지고 주름, 색이 바램) */
+.duck-ico { overflow: visible; }
+.duck-ico * { transform-box: fill-box; }
+.duck-body { fill: #ffd84a; stroke: #c99a10; stroke-width: 0.8; transform-origin: 50% 100%; }
+.duck-head { fill: #ffd84a; stroke: #c99a10; stroke-width: 0.8; }
+.duck-wing { fill: none; stroke: #d9a514; stroke-width: 1.2; stroke-linecap: round; transform-origin: 50% 100%; }
+.duck-beak { fill: #ff8a24; }
+.duck-eye { fill: #15171a; }
+.duck-head-g { transform-origin: 20% 100%; }
+.duck-wrinkle { fill: none; stroke: #a59a6a; stroke-width: 0.9; stroke-linejoin: round; opacity: 0; }
+.duck-body, .duck-wing, .duck-head-g, .duck-head, .duck-wrinkle { transition: transform 0.45s cubic-bezier(0.3, 1.6, 0.5, 1), fill 0.3s, opacity 0.3s; }
+.v3d-duck[aria-pressed="false"] svg { opacity: 1; }
+.v3d-duck[aria-pressed="false"] span { text-decoration: none; }
+.v3d-duck[aria-pressed="false"] .duck-body { fill: #d8d2b4; stroke: #9e977a; transform: scale(1.06, 0.45); }
+.v3d-duck[aria-pressed="false"] .duck-wing { stroke: #b4ad8e; transform: scale(1, 0.45) translateY(6px); }
+.v3d-duck[aria-pressed="false"] .duck-head { fill: #d8d2b4; stroke: #9e977a; }
+.v3d-duck[aria-pressed="false"] .duck-head-g { transform: translate(-1px, 9px) rotate(38deg) scale(0.8); }
+.v3d-duck[aria-pressed="false"] .duck-beak { fill: #c9a888; }
+.v3d-duck[aria-pressed="false"] .duck-wrinkle { opacity: 1; }
+
+/* 위험지역 아이콘: 켜짐 = 빨강, 꺼짐 = 회색 (지도 범례 · 3D 도구 둘 다) */
+.risk-key[aria-pressed="false"] .rk-sw,
+.v3d-risk[aria-pressed="false"] .rk-sw {
+  opacity: 1;
+  border-color: #8a9099;
+  background: repeating-linear-gradient(135deg, rgba(138, 144, 153, 0.85) 0 2px, rgba(138, 144, 153, 0.14) 2px 6px);
+}
+.risk-key[aria-pressed="false"] span, .v3d-risk[aria-pressed="false"] span { text-decoration: none; }
+
+/* ===== 11/28 (6) 폰 첫 화면: '등고선을 올리면…' 안내 카드가 정사각형 지도 칸(375px)보다 길어서 위아래가 잘렸다
+   -> 결과가 없을 때는 칸 높이를 내용에 맞춘다 (높이 크기 기준 container 는 내용 높이를 못 따라가서 inline-size 로) */
+@media (max-width: 1000px) {
+  #view-predict:not(.has-back) .stage-map { container-type: inline-size; aspect-ratio: auto; height: auto; min-height: 0; max-height: none; padding: 12px 0; }
+  #view-predict:not(.has-back) .stage-empty { margin: 0 12px; padding: 24px 20px; }
+}
+/* 폰: 설정 '패널 크기'(PC 용)는 쓰지 않는다. 76% 로 저장돼 있으면 폰에서 조건 창이 작게 쪼그라들었다 */
+@media (max-width: 1000px) {
+  .panel, .panel-pill, .stage-gallery, .stage-legend, .chips, .stage-zoom, .v3d-tools, .v3d-tools.movable, .timeline, .timeline.movable { --panel-z: 1; }
+  .panel, .panel-pill, .stage-gallery, .stage-legend { transform: none !important; }
+}
+
+/* ===== 11/28 (7) 첫 화면 사용 방법 ===== */
+.stage-empty:has(.guide-steps) { max-width: 600px; gap: 10px; }
+.guide-kicker { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; color: var(--accent); }
+.stage-empty .guide-steps + .guide-tip, .stage-empty .viewer-empty-title { margin: 0; }
+.guide-steps { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; margin: 6px 0 2px; padding: 0; list-style: none; text-align: left; }
+.guide-steps li { display: flex; align-items: flex-start; gap: 10px; padding: 12px; background: var(--panel); border: 1px solid var(--border-light); border-radius: 12px; }
+.gs-ico { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 38px; height: 38px; color: var(--accent); background: var(--accent-soft); border-radius: 10px; }
+.gs-risk { background: rgba(226, 30, 36, 0.08); }
+.gs-risk .rk-sw { width: 22px; height: 15px; }
+.gs-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.gs-text b { font-size: 14px; color: var(--text); }
+.gs-text span { font-size: 12.5px; line-height: 1.45; color: var(--muted); }
+.guide-tip { margin: 2px 0 0; padding: 8px 12px; font-size: 13px; color: var(--label); background: var(--accent-soft); border-radius: 10px; }
+@media (max-width: 560px) {
+  .guide-steps { grid-template-columns: 1fr; gap: 8px; }
+  .guide-steps li { padding: 10px 12px; }
+  .stage-empty .viewer-empty-title { font-size: 16px; }
+}
+/* 폰: 도크 손잡이 누르는 자리를 조금 크게 */
+@media (max-width: 1000px) { .sheet-handle { height: 28px; margin: -8px 0 -4px; } }
+
+/* ===== 11/28 (8) 불편 목록 고침 ===== */
+/* 로그인 창: 회원가입으로 바꾸기 */
+.auth-switch { margin: 10px 0 0; font-size: 13px; color: var(--muted); text-align: center; }
+.auth-switch-btn { padding: 2px 4px; font: inherit; font-weight: 700; color: var(--accent); background: none; border: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+
+/* 첫 재생 안내 줄 */
+.reveal-hint { flex: 1 1 100%; order: 5; margin: 0; font-size: 12.5px; color: var(--muted); text-align: center; }
+
+/* 손가락 화면에서는 '끌어다 놓기' 안내가 의미 없다 */
+@media (pointer: coarse) { .viewer-empty-sub { display: none; } }
+
+/* 폰: 아래 시트(도크 + 조건 창 + 결과 이미지 버튼)를 접으면 조건 창도 같이 사라진다 */
+@media (max-width: 1000px) {
+  #view-predict.dock-down :is(#panel-pill, #cond-panel, #btn-gallery) { display: none !important; }
+  #view-predict.dock-down .reveal-hint { display: none !important; }
+  /* 접었을 때 지도가 너무 길어 배수구 후보가 잘리지 않게 폭의 1.5배까지 */
+  #view-predict.dock-down.has-back .stage-map { max-height: 150vw; }
+}
+/* 폰 가로: 지도 칸 최소 높이(340px)가 화면보다 커서 밀려나던 것 */
+@media (max-width: 1000px) and (orientation: landscape) and (max-height: 520px) {
+  #view-predict.has-back .stage-map { min-height: 0; max-height: none; }
+}
+
+/* 초기화 버튼이 한 화면에 두 개 보이지 않게: PC = 각 보기 패널(지도 오른쪽 · 3D 도구)의 초기화, 폰 = 아래 탭 줄의 초기화 */
+@media (min-width: 1001px) { .timeline .stage-toggle .stage-home { display: none; } }
+@media (max-width: 1000px) { #v3d-reset { display: none; } }
+
+/* 기록 표: 폰에서는 이름(지형 · 강우)과 버튼만 (옆으로 밀어야 보이던 칸 숨김) */
+@media (max-width: 600px) {
+  .history-table th:nth-child(n+2):nth-child(-n+5),
+  .history-table tr:not(.date-row) td:nth-child(n+2):nth-child(-n+5) { display: none; }
+  .btn-clear { font-size: 12px; padding: 4px 8px; opacity: 0.8; }
+}
+/* PC: 재생 안내는 시간 막대 위에 작은 말풍선으로 (막대 안에 넣으면 슬라이더가 좁아졌다) */
+@media (min-width: 1001px) {
+  .reveal-hint {
+    position: absolute; left: 50%; bottom: calc(100% + 10px); transform: translateX(-50%);
+    width: max-content; max-width: 90%; padding: 6px 12px; font-size: 12.5px; color: var(--text);
+    background: var(--glass); border: 1px solid var(--glass-border); border-radius: 10px;
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); pointer-events: none;
+  }
+}
+
 /* ===== 11/28 전시 모드 (서버 YUCHE_EXPO=1 -> body.expo): 로그인·기록을 숨기고 안내 한 줄 ===== */
 body.expo .account,
-body.expo #rail .view-tab[data-view="history"] { display: none !important; }
+body.expo #rail .view-tab[data-view="history"],
+body.expo #history-clear { display: none !important; }
 .expo-note {
   position: absolute; z-index: 4; left: 50%; bottom: 8px; transform: translateX(-50%);
   margin: 0; padding: 4px 10px; max-width: calc(100% - 24px);
@@ -2703,4 +2981,12 @@ body.expo #rail .view-tab[data-view="history"] { display: none !important; }
   background: var(--glass); border: 1px solid var(--glass-border); border-radius: 8px;
   pointer-events: none;
 }
-@media (max-width: 1000px) { .expo-note { bottom: 6px; font-size: 11px; } }
+@media (max-width: 1000px) { .expo-note { display: none !important; } }   /* 폰: 지도 위 안내 글씨는 뺀다 (11/28 요청) */
+
+/* ===== 11/28 (11) 수심 범례의 주황 선(마우스를 올린 곳 · 폰은 누른 곳) 옆에 수심 숫자 ===== */
+.dl-hover::after {
+  content: attr(data-cm);
+  position: absolute; left: calc(100% + 1px); top: 50%; transform: translateY(-50%); z-index: 1;
+  padding: 1px 4px; font-size: 10.5px; font-weight: 700; line-height: 1.3; color: #fff; white-space: nowrap;
+  background: #ff8a3d; border-radius: 4px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); pointer-events: none;
+}
