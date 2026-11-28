@@ -6,7 +6,7 @@
     <title>유체이탈 · 배수 예측</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap">
-    <link rel="stylesheet" href="./style.css?v=20261126g">
+    <link rel="stylesheet" href="./style.css?v=20261128expo">
 </head>
 <body>
     <!-- 첫 화면: 프로젝트 로고. 클릭(탭)하거나 Enter·Space 를 눌러야 본 화면으로 넘어간다 (저절로 넘어가지 않음) -->
@@ -201,6 +201,8 @@
                 <span class="drain-marker" id="timelapse-star" style="display: none;" title="배수구 후보"></span>
             </div>
             <div class="stage-scrim" aria-hidden="true"></div>
+            <!-- [11/28] 전시 모드: 손그림 결과가 저장될 때만 -->
+            <p class="expo-note" id="expo-note" style="display: none;">체험 결과는 전시 기록용으로 저장되며 전시 후 삭제됩니다</p>
             <!-- 3D 지형 보기: 높이를 세운 지형 위에 물 면과 흐르는 입자를 얹는다 (드래그 회전 · 휠 확대 · Shift+드래그 이동) -->
             <div class="stage-3d" id="stage-3d" style="display: none;" aria-label="3D 지형 보기"></div>
             <div class="v3d-tools" id="v3d-tools" style="display: none;" role="group" aria-label="3D 보기 설정">
@@ -2099,6 +2101,7 @@
         // 저장 실패가 '예측 실패'로 보이면 안 되므로 여기서 처리하고 결과 안내에 한 줄 남긴다
         async function saveRecord(record) {
             if (!getCurrentUser()) return;          // 비로그인이면 저장 안 함
+            if (modelInfo.expo) return;             // 전시 모드: 기록 저장 안 함 (관람객은 토큰이 없다)
             try {
                 const saved = await historyRequest('', 'POST', record);
                 stageState.recordId = saved.id;
@@ -2680,6 +2683,7 @@
                 modelInfo.rainConditioned = !!h.rain_conditioned;
                 modelInfo.timeConditioned = !!h.time_conditioned;
                 modelInfo.authEnabled = !!h.auth_enabled && h.db === 'ok';
+                applyExpo(!!h.expo);
                 if (Array.isArray(h.rain_range_mm)) modelInfo.rainRange = h.rain_range_mm;
                 if (Array.isArray(h.time_range_s)) modelInfo.timeRange = h.time_range_s;
                 if (Array.isArray(h.timelapse_times) && h.timelapse_times.length) TIMELAPSE_TIMES = h.timelapse_times.map(Number);
@@ -2719,6 +2723,50 @@
         }
 
         // 저장된 토큰이 아직 유효한지 확인 (만료됐으면 로그아웃 처리)
+        /* ---------- [11/28] 전시 모드 (서버 YUCHE_EXPO=1 -> /api/health 의 expo) ----------
+           - 로그인·회원가입을 건너뛰고 바로 예측 (서버가 토큰 없이 받아 준다)
+           - 왼쪽 '기록' 탭과 계정 메뉴를 숨기고, 기록 저장(/api/history)은 하지 않는다 (토큰이 없어 401 이 난다)
+           - 손그림 결과는 서버가 준 expo_id 로 결과 그림 한 장만 보낸다 (sendExpoResult). 입력 사진은 다시 올리지 않는다 */
+        function applyExpo(on) {
+            modelInfo.expo = on;
+            document.body.classList.toggle('expo', on);
+            if (on && currentView() === 'history') goToView('predict');
+        }
+
+        // 결과 그림: 18초 지도 + 빨간 빗금 + 배수구 동그라미를 한 장으로 (긴 변 1024, JPEG 0.85).
+        // 재생바 위치와 상관없이 18초 기준 (사용자 시점이 18초가 아니면 18초 응답의 오버레이 그림을 바탕으로)
+        async function sendExpoResult(expoId, mapSrc, risk, drain, rainMm) {
+            const S = 1024;
+            const img = await loadImage(mapSrc);
+            const c = document.createElement('canvas');
+            const k = S / Math.max(img.naturalWidth, img.naturalHeight);
+            c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+            const g = c.getContext('2d');
+            g.drawImage(img, 0, 0, c.width, c.height);
+            const hasRisk = !!(risk && risk.zones && risk.zones.length);
+            if (hasRisk) g.drawImage(byId('risk-canvas'), 0, 0, c.width, c.height);   // 지도와 같은 좌표로 그려 둔 빗금
+            if (drain) {   // 화면의 배수구 빨간 원과 같은 모양
+                const x = drain.x * c.width, y = drain.y * c.height, r = Math.max(10, c.width * 0.018);
+                g.lineWidth = r * 0.55; g.strokeStyle = 'rgba(255,255,255,0.95)';
+                g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.stroke();
+                g.lineWidth = r * 0.3; g.strokeStyle = '#ff3b42';
+                g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.stroke();
+            }
+            const blob = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.85));
+            const meta = {
+                rain_mm: rainMm,
+                drain: drain ? { x: drain.x, y: drain.y } : null,
+                risk_area_pct: hasRisk ? Math.round(risk.areaPct * 10) / 10 : 0,
+                risk_threshold: risk ? { thr_cm: Math.round(risk.thr * 1000) / 10, win: risk.win, stay_s: risk.stayNeed, cfg: risk.cfg } : null,
+            };
+            const form = new FormData();
+            form.append('expo_id', expoId);
+            form.append('meta', JSON.stringify(meta));
+            form.append('result_image', blob, 'result.jpg');
+            const r = await fetch(ANALYZE_API + '/api/expo/result', { method: 'POST', body: form });
+            if (!r.ok) console.warn('전시 결과 저장 실패', r.status, await r.text().catch(() => ''));
+        }
+
         async function verifySavedToken() {
             if (!getToken()) {
                 if (getCurrentUser()) logout();   // 예전 로그인 서버 시절 상태 -> 토큰이 없으니 정리
@@ -3506,6 +3554,7 @@
         // 지도의 결과를 내리고 처음(빈) 화면으로 되돌린다. 조건 패널은 다시 펼친다
         function clearStage() {
             cancelTimelapse();
+            byId('expo-note').style.display = 'none';
             byId('stage-square').style.display = 'none';
             byId('stage-bg').style.display = 'none';
             byId('viewer-placeholder').style.display = '';
@@ -4538,7 +4587,7 @@
             if (!validateForm()) {
                 return;
             }
-            if (modelInfo.authEnabled && !getToken()) {
+            if (modelInfo.authEnabled && !modelInfo.expo && !getToken()) {
                 openAuthModal('login', '이 서버는 로그인해야 예측할 수 있어요.');
                 return;
             }
@@ -4689,11 +4738,22 @@
                     setFileStatus(`손그림 ${meta.hand_levels || ''}층으로 읽음`, 'ok');
                 }
                 // 기록 저장: 배수구가 정해진 뒤에 한다 (위험지역 계산은 120초 응답을 기다리므로 예측 버튼은 먼저 풀어 준다)
-                const persist = async (risk) => {
+                const persist = async (risk, aborted = false) => {
+                    if (modelInfo.expo) {   // 전시 모드: 기록 대신, 손그림이면(expo_id) 결과 그림 한 장을 서버로
+                        if (data.expo_id && !aborted) {
+                            const map18 = meta.time_s === DRAIN_REF_TIME_S ? stage.src
+                                : (refData && refData.overlay_png_base64 ? png(refData.overlay_png_base64) : stage.src);
+                            const d = (risk && risk.drain) || drainPos || null;
+                            sendExpoResult(data.expo_id, map18, risk, d, usedRain).catch(e => console.warn('전시 결과 저장 실패', e));
+                        }
+                        return;
+                    }
                     try {
                         await saveRecord(await buildRecord(risk));
                     } catch (e) { console.error(e); }
                 };
+                // 전시 모드 안내 (손그림 결과가 전시 기록으로 저장될 때만)
+                byId('expo-note').style.display = (modelInfo.expo && data.expo_id) ? '' : 'none';
                 // 위험지역 계산 결과를 화면에 반영: 빗금 · 빨간 원 · 3D 구멍 · 결과 이미지 창 · 안내 문구
                 let riskLineAdded = false;
                 const applyRisk = (risk) => {
@@ -4808,7 +4868,7 @@
                         riskEnd: riskCapable ? riskTime : null,
                         onDone: null,
                         onRisk: riskCapable ? (risk, aborted) => {
-                            if (aborted) { persist(null); return; }   // 다른 결과로 넘어감: 화면은 건드리지 않고 기록만 남긴다
+                            if (aborted) { persist(null, true); return; }   // 다른 결과로 넘어감: 화면은 건드리지 않고 기록만 남긴다 (전시 결과 그림은 안 보냄)
                             if (risk) {
                                 applyRisk(risk);
                                 // 설정 창에서 기준을 바꾸면 받아 둔 시점들로 다시 계산해 바로 반영한다
