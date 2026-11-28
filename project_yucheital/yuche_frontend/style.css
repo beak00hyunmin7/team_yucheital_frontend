@@ -2672,3 +2672,17 @@ input[type="password"]:focus-visible {
   .v3d-btn { padding: 0 8px; }
   .marker-label { font-size: 12px; }
 }
+
+/* ===== 11/28 전시 정리 ===== */
+/* 팀 전용 설정(침수 위험지역 기준)은 주소 뒤 ?team 일 때만 (body.team) */
+.team-only { display: none; }
+body.team .team-only { display: block; }
+.set-title small { font-weight: 400; color: var(--muted); }
+
+/* 폰: 아이폰 사파리는 16px 보다 작은 입력칸을 누르면 화면을 확대하고 그대로 둔다 -> 회원가입 뒤 결과 화면이 양옆으로 잘리고 가로로 밀렸다.
+   입력칸 글자를 16px 로 맞추고, 무엇이 살짝 넘쳐도 페이지가 가로로는 움직이지 않게 막는다 (세로 스크롤만) */
+@media (max-width: 1000px) {
+  input[type="text"], input[type="email"], input[type="password"], input[type="number"], input[type="search"], select, textarea,
+  .auth-modal-card input { font-size: 16px; }
+  html, body { max-width: 100%; overflow-x: hidden; overflow-x: clip; }
+}
