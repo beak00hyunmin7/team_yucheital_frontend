@@ -3551,7 +3551,10 @@
 
         /* ---------- 결과 이미지 모아보기 ---------- */
         function closeGallery() { byId('gallery-modal').style.display = 'none'; }
-        byId('btn-gallery').addEventListener('click', () => { byId('gallery-modal').style.display = 'flex'; });
+        byId('btn-gallery').addEventListener('click', () => {
+            byId('gallery-modal').style.display = 'flex';
+            if (stageState.loadAnalysis) stageState.loadAnalysis();   // 분석 지도는 이 창을 처음 열 때 그린다
+        });
         byId('gallery-close').addEventListener('click', closeGallery);
         byId('gallery-modal').addEventListener('click', (e) => { if (e.target.id === 'gallery-modal') closeGallery(); });
 
@@ -3907,7 +3910,11 @@
         // info: 문자열 배열, meta: 서버 meta (선택, meta.stats 가 있으면 지도 위 요약 칩에 쓴다)
         // stage: 지도 화면에 크게 보일 그림 { src, marker } (없으면 images[0])
         function renderResultGrid(images) {
-            document.getElementById('result-grid').innerHTML = images.map(im => `
+            document.getElementById('result-grid').innerHTML = images.map(im => !im.src ? `
+                <figure class="result-card">
+                    <figcaption>${escapeHtml(im.label)}</figcaption>
+                    <div class="result-image result-pending">${im.failed ? '그리지 못했어요. 창을 다시 열어 주세요' : '그리는 중..'}</div>
+                </figure>` : `
                 <figure class="result-card">
                     <figcaption>${escapeHtml(im.label)}</figcaption>
                     <div class="result-image">
@@ -4445,9 +4452,14 @@
             btn.textContent = '예측 중...'; //버튼 글자 바꾸기
             hidePredictError();
             startLoading('분석중..');
+            // 서버는 예측을 한 번에 하나씩 처리한다. 3초가 넘으면 다른 관람객 순서를 기다리는 중이라고 알려 준다
+            const waitTimer = setTimeout(() => setLoadingStep('사람이 많아 순서를 기다리는 중..'), 3000);
 
             try {
-                let data = await requestPredict({ ...base, timeS, noAnalysis: !!refPromise });   // AI 모델 서버 /api/predict (주소는 위의 ANALYZE_API)
+                // 분석 지도(제목·컬러바 그림, 약 1초)는 첫 화면에서 그리지 않는다: '결과 이미지' 창을 열 때만 그린다.
+                // 대부분의 관람객은 그 창을 열지 않으므로 서버 시간을 1명당 1~2초 아껴 동시 접속 대기를 줄인다
+                let data = await requestPredict({ ...base, timeS, noAnalysis: true });   // AI 모델 서버 /api/predict (주소는 위의 ANALYZE_API)
+                clearTimeout(waitTimer);
 
                 // 학습 형식이 아닌 색 체계라 서버가 높이로 읽어 변환했다면, 맞게 읽었는지(높낮이가 안 뒤집혔는지) 확인받는다
                 if (mode === 'image' && data.color_info && data.color_info.converted) {
@@ -4470,10 +4482,7 @@
                 if (meta.time_conditioned) {
                     refData = meta.time_s === DRAIN_REF_TIME_S ? data : await refPromise;
                 }
-                if (!refData && (mode === 'terrain' || mode === 'hand') && !data.analysis_png_base64) {
-                    // 18초 요청이 실패해 분석 지도가 없다 -> 사용자 시점으로 분석 지도까지 다시 받는다
-                    data = await requestPredict({ ...base, timeS });
-                }
+                // (분석 지도는 첫 화면에서 받지 않는다. '결과 이미지' 창을 열 때 loadAnalysis 가 받는다)
                 const drainSource = refData || data;
                 const drainTime = refData ? DRAIN_REF_TIME_S : (meta.time_conditioned ? meta.time_s : null);
                 const drainPos = drainSource.drain_candidate ? drainSource.drain_candidate.image : null;   // 서버가 고른 자리 (18초 유출 최대점)
@@ -4492,7 +4501,9 @@
                 if (data.hand_preview_png_base64) {   // 손그림: 사진을 어떻게 읽었는지 (왼쪽 편 사진 | 오른쪽 읽은 높이)
                     images.push({ key: 'hand', label: '이렇게 읽었어요 (왼쪽 내 그림 · 오른쪽 읽은 높이)', src: png(data.hand_preview_png_base64) });
                 }
-                if (drainSource.analysis_png_base64) {
+                if (!drainSource.analysis_png_base64 && (mode === 'terrain' || mode === 'hand')) {
+                    images.push({ key: 'analysis', label: '분석 지도 (배수구 후보 ★)', src: null, lazy: true });
+                } else if (drainSource.analysis_png_base64) {
                     // 분석 지도의 ★는 서버가 그림에 직접 그려 보낸 18초 유출 최대점이다. 화면의 배수구 후보(120초 고인 물)와
                     // 다를 수 있어 라벨로 구분한다 (백엔드에 '★ 위치 받기' 옵션이 생기면 같은 자리로 맞출 예정)
                     const label = riskCapable ? `분석 지도 (★ = ${drainTime}초 유출 최대점 · 배수구 후보는 지도 화면 기준)`
@@ -4649,21 +4660,32 @@
                     info: info.slice()
                 });
 
-                // 분석 지도(고도격자·손그림)의 ★를 화면의 배수구(120초 침수 위험지역)와 같은 자리로 다시 받는다.
-                // 시점 예측이 다 끝난 뒤 한 번 (서버는 한 번에 하나씩 예측하므로 재생용 프레임을 늦추지 않게). 옛 서버는 옵션을 무시 -> 라벨 그대로
-                const refreshAnalysisMark = async () => {
-                    const risk = stageState.risk, im = images.find(x => x.key === 'analysis');
-                    if (!risk || !risk.drain || !im || !(mode === 'terrain' || mode === 'hand')) return;
+                // 분석 지도(고도격자·손그림): '결과 이미지' 창을 처음 열 때 한 번 받는다. ★는 화면의 배수구와 같은 자리로.
+                // (예전엔 첫 화면에서 한 번 + 위험지역이 정해진 뒤 ★ 맞추려고 한 번 더, 1명당 약 2초를 안 보는 그림에 썼다)
+                const loadAnalysis = async () => {
+                    const im = images.find(x => x.key === 'analysis');
+                    if (!im || !im.lazy || im.loading) return;
+                    im.loading = true;
+                    const risk = stageState.risk;
+                    const mark = risk && risk.drain ? { markX: risk.drain.x, markY: risk.drain.y } : {};
                     try {
-                        const d = await requestPredict({ ...base, timeS: DRAIN_REF_TIME_S, noMap: true, markX: risk.drain.x, markY: risk.drain.y });
+                        const d = await requestPredict({ ...base, timeS: DRAIN_REF_TIME_S, noMap: true, ...mark });
                         if (stageState.runToken !== runToken) return;          // 그사이 다른 결과로 넘어감
-                        if (d.analysis_png_base64 && d.meta && d.meta.analysis_mark === 'client') {
+                        if (d.analysis_png_base64) {
                             im.src = png(d.analysis_png_base64);
-                            im.label = `분석 지도 (★ = 배수구 후보 · 침수 위험지역 기준)`;
-                            renderResultGrid(images);
-                        }
-                    } catch (e) { console.warn('분석 지도 ★ 를 맞추지 못했습니다', e); }
+                            im.lazy = false;
+                            im.label = (d.meta && d.meta.analysis_mark === 'client')
+                                ? '분석 지도 (★ = 배수구 후보 · 침수 위험지역 기준)'
+                                : `분석 지도 (★ = ${DRAIN_REF_TIME_S}초 유출 최대점)`;
+                        } else { im.failed = true; }
+                    } catch (e) {
+                        console.warn('분석 지도를 받지 못했습니다', e);
+                        im.failed = true;
+                    }
+                    im.loading = false;
+                    renderResultGrid(images);
                 };
+                stageState.loadAnalysis = loadAnalysis;
                 if (meta.time_conditioned) {
                     // 기다리지 않는다: 결과는 먼저 보여주고 재생용 프레임은 뒤에서 채운다
                     const preloaded = { [meta.time_s]: data };
@@ -4672,7 +4694,7 @@
                         autoplay: true,
                         autoplayOnFirst: !riskCapable,   // 배수구를 서버가 이미 정했다: 첫 장이 그려지면 바로 재생
                         riskEnd: riskCapable ? riskTime : null,
-                        onDone: riskCapable ? refreshAnalysisMark : null,
+                        onDone: null,
                         onRisk: riskCapable ? (risk, aborted) => {
                             if (aborted) { persist(null); return; }   // 다른 결과로 넘어감: 화면은 건드리지 않고 기록만 남긴다
                             if (risk) {
@@ -4701,6 +4723,7 @@
 
 
             } catch (err) { //접속이 안된다면?
+                clearTimeout(waitTimer);
                 if (err.handled) return;   // 로그인 창을 이미 띄웠다
                 console.error(err);
                 if (err.code === 'unreadable_image') {
